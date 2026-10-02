@@ -1,169 +1,188 @@
-# Chakravyuh — ML & Data Pipeline <-> Backend Integration Contract
+# Chakravyuh — ML & Data Pipeline <-> Express (TypeScript) Integration Contract
 
-This document defines the clear data flow, file formats, and expectations between the **Data/ML Engineer** and the **Backend Engineer**.
-
----
-
-## 1. High-Level Architecture Overview
-
-```
-+---------------------+       Generates Files       +-----------------------+
-|                     | --------------------------> |                       |
-|   ML & Data Layer   |                             |    data/ (JSON/CSV)   |
-|   (Python scripts)  | <-------------------------- |                       |
-+---------------------+    Reads for Feature Eng    +-----------------------+
-           |                                                    |
-           | Exposes Python Functions                           | Ingests / Queries
-           v                                                    v
-+---------------------------------------------------------------------------+
-|                              Backend Layer                                |
-|                        (FastAPI / Flask / Node.js)                        |
-|                                                                           |
-|   - Serves REST APIs for Investigator UI                                  |
-|   - Reads processed accounts, transactions, fraud rings, & risk scores    |
-|   - Calls ML inference functions on-demand for specific account drilldowns|
-+---------------------------------------------------------------------------+
-```
+This document provides the exact integration specifications, JSON schemas, and **TypeScript interfaces** for connecting the Python ML/Data layer with an **Express + TypeScript** backend.
 
 ---
 
-## 2. From ML/Data Guy -> To Backend Guy (What You Give Him)
+## 1. Architecture Flow for Express (TypeScript)
 
-You provide **two delivery formats**:
-1. **Static Data Dumps (JSON files in `data/`)**: For the backend to load into a database / cache or serve directly.
-2. **Python Module Functions (`ml/models.py`, `ml/features.py`)**: For on-demand risk scoring and graph extraction.
+Since the backend is in Node.js/Express, Python and Node communicate primarily via **JSON data files in `data/`** (or a child process if dynamic inference is needed).
 
----
-
-### A. Generated Data Files (in `data/`)
-
-#### 1. `data/accounts.json`
-List of all bank accounts in the system.
-```json
-[
-  {
-    "_id": "ACC10001",
-    "account_number": "100019283746",
-    "name": "Rajesh Sharma",
-    "account_type": "SAVINGS",
-    "created_at": "2024-01-15T10:00:00Z",
-    "opening_balance": 5000000,
-    "phone": "+919876543210",
-    "pan_masked": "ABCDE****F",
-    "kyc_status": "VERIFIED"
-  }
-]
 ```
-> **Note on Money**: All currency values (`opening_balance`, `amount`) are stored as **integer paise** (e.g. ₹50,000.00 = `5000000` paise). The frontend/backend divides by 100 for display.
-
-#### 2. `data/transactions.json`
-All synthetic transactions across accounts.
-```json
-[
-  {
-    "txn_id": "TXN9081234",
-    "timestamp": "2024-02-01T14:22:10Z",
-    "from_account": "ACC10001",
-    "to_account": "ACC10042",
-    "amount": 2500000,
-    "txn_type": "UPI",
-    "status": "COMPLETED",
-    "description": "P2P transfer"
-  }
-]
-```
-
-#### 3. `data/predictions.json` (ML Risk Scoring Output)
-Predictions computed by the ML models for every account.
-```json
-[
-  {
-    "account_id": "ACC10001",
-    "risk_score": 0.89,
-    "risk_band": "CRITICAL",
-    "model_version": "V2_GRAPH_TABULAR",
-    "is_mule": true,
-    "top_contributing_features": [
-      {"feature": "cycle_participation_count", "impact": 0.42, "value": 3},
-      {"feature": "in_out_turnover_ratio_24h", "impact": 0.31, "value": 0.98},
-      {"feature": "smurfing_entropy", "impact": 0.16, "value": 0.12}
-    ]
-  }
-]
-```
-
-#### 4. `data/detected_rings.json` (Graph Topology & Rings)
-Fraud rings detected by cycle detection, fan-in/fan-out, and community clustering.
-```json
-[
-  {
-    "ring_id": "RING_001",
-    "pattern_type": "CYCLE",
-    "risk_level": "CRITICAL",
-    "member_accounts": ["ACC10001", "ACC10042", "ACC10099"],
-    "total_flow_amount": 15000000,
-    "first_seen": "2024-02-01T10:00:00Z",
-    "last_seen": "2024-02-01T18:00:00Z",
-    "summary": "Circular flow detected: ACC10001 -> ACC10042 -> ACC10099 -> ACC10001"
-  }
-]
++------------------------------------+
+|        Python ML Pipeline          |
+|  (generate.py -> models.py)        |
++------------------------------------+
+                  |
+                  | Writes precomputed JSONs to disk
+                  v
++------------------------------------+
+|               data/                |
+|  - accounts.json                   |
+|  - transactions.json               |
+|  - predictions.json                |
+|  - detected_rings.json             |
+|  - graph_network.json              |
++------------------------------------+
+                  |
+                  | Express reads files directly (fs / import)
+                  v
++------------------------------------+
+|     Express + TypeScript Server    |
+|   (REST API routes for UI)         |
++------------------------------------+
 ```
 
 ---
 
-### B. Python Functions Backend Can Import Directly
+## 2. Ready-to-Use TypeScript Interfaces (`types.ts`)
 
-If the backend is built in Python (FastAPI/Flask), the backend can directly import functions from `ml/`:
+Give these types to the backend developer so they have full type safety:
 
-```python
-# In backend's service/route file:
-from ml.models import predict_account_risk, get_feature_importance
-from ml.features import extract_account_subgraph
+```typescript
+// types/chakravyuh.ts
 
-# 1. Score a single account on-the-fly
-result = predict_account_risk(account_id="ACC10001")
-# returns: {"risk_score": 0.89, "risk_band": "CRITICAL", "reasons": [...]}
+export type RiskBand = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+export type KycStatus = 'VERIFIED' | 'PENDING' | 'FLAGGED';
+export type AccountType = 'SAVINGS' | 'CURRENT' | 'SALARY';
+export type TxnType = 'UPI' | 'IMPS' | 'NEFT' | 'ATM' | 'SALARY_CREDIT';
+export type RingPatternType = 'CYCLE' | 'FAN_IN' | 'FAN_OUT' | 'COMMUNITY';
 
-# 2. Get ego network graph for visualizer (nodes & links)
-subgraph = extract_account_subgraph(account_id="ACC10001", hops=2)
-# returns: {"nodes": [...], "edges": [...]}
+export interface Account {
+  _id: string;              // e.g. "ACC10001"
+  account_number: string;   // e.g. "100019283746"
+  name: string;             // e.g. "Rajesh Sharma"
+  account_type: AccountType;
+  created_at: string;       // ISO 8601 string
+  opening_balance: number;  // In INTEGER PAISE (₹50,000 = 5000000)
+  phone: string;
+  pan_masked: string;
+  kyc_status: KycStatus;
+}
+
+export interface Transaction {
+  txn_id: string;           // e.g. "TXN9081234"
+  timestamp: string;        // ISO 8601 string
+  from: string;             // Sender Account ID (e.g. "ACC10001" or "SALARY")
+  to: string;               // Receiver Account ID (e.g. "ACC10042" or "CASH")
+  amount: number;           // In INTEGER PAISE (e.g. 2500000 = ₹25,000.00)
+  txn_type: TxnType;
+  status: 'COMPLETED' | 'FAILED';
+  description?: string;
+}
+
+export interface FeatureContribution {
+  feature: string;          // e.g. "cycle_participation_count"
+  impact: number;           // Relative weight/impact (0.0 to 1.0)
+  value: number;            // Observed feature value
+}
+
+export interface PredictionScore {
+  account_id: string;
+  risk_score: number;       // Normalized score (0.00 to 1.00 or 0 to 100)
+  risk_band: RiskBand;      // "LOW" | "MEDIUM" | "HIGH" | "CRITICAL"
+  is_mule: boolean;
+  reasons: string[];        // Human-readable fraud flags
+  top_features: FeatureContribution[];
+}
+
+export interface DetectedRing {
+  ring_id: string;
+  pattern_type: RingPatternType;
+  risk_level: RiskBand;
+  member_accounts: string[];
+  total_flow_amount: number; // In paise
+  first_seen: string;
+  last_seen: string;
+  summary: string;
+}
+
+export interface GraphNode {
+  id: string;
+  label: string;
+  risk_score: number;
+  risk_band: RiskBand;
+  is_mule: boolean;
+}
+
+export interface GraphLink {
+  source: string;
+  target: string;
+  amount: number;
+  count: number;
+}
+
+export interface GraphNetwork {
+  nodes: GraphNode[];
+  links: GraphLink[];
+}
 ```
 
 ---
 
-## 3. From Backend Guy -> To ML Guy (What He Gives You / What to Expect)
+## 3. How Express Loads the Data (Code Example)
 
-1. **Target Account Queries for Dynamic Re-scoring**:
-   - Backend sends: `account_id: str` or a batch list `account_ids: list[str]`.
-   - ML returns: Score, explanations, and risk band.
-2. **Graph Expansion Parameters**:
-   - Backend sends: `account_id`, `hops` (e.g. 1 or 2 depth), and `date_range`.
-   - ML/Graph module returns: Filtered node/edge list formatted for the visualizer.
-3. **New Ingested Transactions (Optional Live Simulation)**:
-   - Backend sends: New transaction dictionary `{from, to, amount, timestamp}`.
-   - ML module updates feature graph and recalculates impacted node scores.
+The Express backend can read the pre-generated JSON files directly on startup into memory (or serve them via repository services):
+
+```typescript
+import express, { Request, Response } from 'express';
+import fs from 'fs';
+import path from 'path';
+import { Account, Transaction, PredictionScore, DetectedRing, GraphNetwork } from './types/chakravyuh';
+
+const app = express();
+const DATA_DIR = path.join(__dirname, '../data');
+
+// Load JSON data synchronously or via cache
+const accounts: Account[] = JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'accounts.json'), 'utf-8'));
+const transactions: Transaction[] = JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'transactions.json'), 'utf-8'));
+const predictions: PredictionScore[] = JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'predictions.json'), 'utf-8'));
+const rings: DetectedRing[] = JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'detected_rings.json'), 'utf-8'));
+const graph: GraphNetwork = JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'graph_network.json'), 'utf-8'));
+
+// 1. Get Top High Risk Accounts for Dashboard
+app.get('/api/accounts/flagged', (req: Request, res: Response) => {
+  const highRisk = predictions
+    .filter(p => p.risk_band === 'HIGH' || p.risk_band === 'CRITICAL')
+    .sort((a, b) => b.risk_score - a.risk_score);
+  res.json(highRisk);
+});
+
+// 2. Get Account Details + Risk Profile
+app.get('/api/accounts/:id', (req: Request, res: Response) => {
+  const acc = accounts.find(a => a._id === req.params.id);
+  const score = predictions.find(p => p.account_id === req.params.id);
+  if (!acc) return res.status(404).json({ error: 'Account not found' });
+  res.json({ ...acc, prediction: score });
+});
+
+// 3. Get Full Fraud Network for Visualizer (Cytoscape / D3 / Sigma)
+app.get('/api/graph/network', (req: Request, res: Response) => {
+  res.json(graph);
+});
+
+// 4. Get Detected Fraud Rings
+app.get('/api/rings', (req: Request, res: Response) => {
+  res.json(rings);
+});
+```
 
 ---
 
-## 4. Summary Quick-Reference Table
+## 4. Money & Unit Rules
 
-| Item | Direction | Format | Purpose |
-|---|---|---|---|
-| `accounts.json` | ML -> Backend | JSON File | Account metadata & opening balances |
-| `transactions.json` | ML -> Backend | JSON File | All transaction events |
-| `predictions.json` | ML -> Backend | JSON File | Precomputed ML risk scores & feature explanations |
-| `detected_rings.json` | ML -> Backend | JSON File | Detected mule rings & graph cycle structures |
-| `ml.models.predict_account_risk()` | ML -> Backend | Python Call | Live single account risk scoring |
-| `account_id` / `filter_params` | Backend -> ML | Python/HTTP | Investigation drilldown requests from UI |
+- **Amounts in integer paise**: All monetary values are integers (1 INR = 100 paise).
+  - To display in UI: `(amount / 100).toLocaleString('en-IN', { style: 'currency', currency: 'INR' })`
+- **Zero Database Requirement**: Express does not need MongoDB running; reading the compiled JSONs from disk or memory is fast (<1ms) and perfectly portable.
 
 ---
 
-## 5. How to Run & Verify
+## 5. Workflow Step-by-Step
 
-1. **ML Guy runs**:
+1. **You (Data/ML)** run the generation & modeling scripts:
    ```bash
    python ml/generate.py --profile demo
    python ml/models.py --train --predict
    ```
-2. **Backend Guy runs**:
-   - Reads files directly from `data/` or runs backend server to serve the JSON payloads to Frontend.
+   This generates all `.json` files into the `data/` folder.
+2. **He (Express/TS Backend)** reads the `data/*.json` files and serves the REST endpoints to the Frontend.
