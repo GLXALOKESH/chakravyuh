@@ -378,7 +378,8 @@ def build_metrics(eval_metrics, ouroboros_results=None):
 # =========================================================================
 
 def run_full_pipeline(profile="demo", skip_generate=False,
-                      skip_ouroboros=False, ouroboros_rounds=3, geo=True):
+                      skip_ouroboros=False, ouroboros_rounds=3, geo=True,
+                      push_mongo=True, mongo_url=None):
     t_start = time.time()
     section(f"CHAKRAVYUH FULL PIPELINE  --  {profile.upper()}")
 
@@ -457,7 +458,8 @@ def run_full_pipeline(profile="demo", skip_generate=False,
         print(f"  [WARN] {len(bad)} transactions still have invalid channels")
 
     # --- STEP 6: Write to data/<profile>/ for npm run seed ----------------
-    section("STEP 6 / 6  --  Writing output for npm run seed")
+    # --- Step 6: Export & direct MongoDB ingestion ------------------------
+    section("STEP 6 / 6  --  Writing output & Ingesting to MongoDB")
     dest_root = DATA_DIR / profile
     dest_out  = dest_root / "outputs"
 
@@ -473,6 +475,26 @@ def run_full_pipeline(profile="demo", skip_generate=False,
     if ouroboros_results:
         save_json(ouroboros_results, dest_out / "ouroboros_results.json")
 
+    # Direct MongoDB push
+    mongo_pushed = False
+    if push_mongo or mongo_url:
+        try:
+            from mongo_pusher import push_to_mongodb
+            push_to_mongodb(
+                accounts=accounts_out,
+                transactions=transactions_out,
+                identifiers=identifiers,
+                rings=rings_out,
+                alerts=alerts_out,
+                metrics=metrics_out,
+                recruits=recruits_out,
+                mongo_url=mongo_url,
+                profile=profile,
+            )
+            mongo_pushed = True
+        except Exception as e:
+            print(f"  [mongo_pusher] Warning: Direct MongoDB push failed: {e}")
+
     elapsed = time.time() - t_start
 
     # --- Final summary ----------------------------------------------------
@@ -486,16 +508,14 @@ def run_full_pipeline(profile="demo", skip_generate=False,
   Rings:        {len(rings_out)}
   Alerts:       {len(alerts_out)}
   Recruits:     {len(recruits_out)}
+  Mongo Pushed: {mongo_pushed}
 
   Metrics:
     V1 PR-AUC:     {metrics_out['rows'][0]['pr_auc']:.4f}
     V2 PR-AUC:     {metrics_out['rows'][1]['pr_auc']:.4f}
     Ring Recall:   {metrics_out['rows'][0]['ring_recall']:.4f}
 
-  Output: {dest_root}
-
-  Next step:
-    cd server && pnpm run seed
+  Local Output: {dest_root}
 """)
 
     if ouroboros_results:
@@ -513,6 +533,7 @@ def run_full_pipeline(profile="demo", skip_generate=False,
         "n_alerts":       len(alerts_out),
         "n_recruits":     len(recruits_out),
         "metrics":        metrics_out,
+        "mongo_pushed":   mongo_pushed,
         "ouroboros":      ouroboros_results is not None,
     }
 
@@ -523,7 +544,7 @@ def run_full_pipeline(profile="demo", skip_generate=False,
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(
-        description="Chakravyuh master pipeline: generate, train, detect, export")
+        description="Chakravyuh master pipeline: generate, train, detect, export, push")
     ap.add_argument("--profile",        default="demo",
                     choices=["demo", "train", "test"])
     ap.add_argument("--skip-generate",  action="store_true",
@@ -534,6 +555,12 @@ if __name__ == "__main__":
                     help="Ouroboros rounds (default: 3)")
     ap.add_argument("--no-geo",         action="store_true",
                     help="Disable geo features in V2 model")
+    ap.add_argument("--push-mongo",     action="store_true", default=True,
+                    help="Directly push generated dataset to MongoDB Atlas (default: True)")
+    ap.add_argument("--no-push-mongo",  action="store_false", dest="push_mongo",
+                    help="Do not push to MongoDB Atlas")
+    ap.add_argument("--mongo-url",      type=str, default=None,
+                    help="MongoDB connection URI")
     args = ap.parse_args()
 
     run_full_pipeline(
@@ -542,4 +569,7 @@ if __name__ == "__main__":
         skip_ouroboros=args.skip_ouroboros,
         ouroboros_rounds=args.rounds,
         geo=not args.no_geo,
+        push_mongo=args.push_mongo,
+        mongo_url=args.mongo_url,
     )
+

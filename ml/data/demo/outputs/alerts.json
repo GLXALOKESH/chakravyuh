@@ -2,19 +2,19 @@
   {
     "_id": "ALT01",
     "ring_id": "RING01",
-    "fired_at": "2026-09-23T13:28:00Z",
-    "reason": "5 linked accounts forwarding within minutes"
+    "fired_at": "2026-09-21T18:19:00Z",
+    "reason": "10 linked accounts forwarding within minutes"
   },
   {
     "_id": "ALT02",
     "ring_id": "RING02",
-    "fired_at": "2026-09-21T11:49:00Z",
-    "reason": "11 linked accounts forwarding within minutes"
+    "fired_at": "2026-09-23T13:28:00Z",
+    "reason": "5 linked accounts forwarding within minutes"
   },
   {
     "_id": "ALT03",
     "ring_id": "RING03",
-    "fired_at": "2026-09-21T18:19:00Z",
-    "reason": "10 linked accounts forwarding within minutes"
+    "fired_at": "2026-09-21T11:49:00Z",
+    "reason": "11 linked accounts forwarding within minutes"
   }
 ]

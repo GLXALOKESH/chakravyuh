@@ -3,14 +3,14 @@
     {
       "model": "V1 transaction only",
       "pr_auc": 1.0,
-      "ring_recall": 1.0,
-      "pattern_d_recall": 1.0
+      "ring_recall": 0.0,
+      "pattern_d_recall": 0.0
     },
     {
       "model": "V2 with identity",
       "pr_auc": 1.0,
-      "ring_recall": 1.0,
-      "pattern_d_recall": 1.0
+      "ring_recall": 0.0,
+      "pattern_d_recall": 0.0
     }
   ],
   "note": "Synthetic data, rings planted by the team"
