@@ -1,0 +1,16 @@
+{
+  "//1": "Build-only config: compiles src/ to dist/ and nothing else.",
+  "//2": "The dev and test paths run through tsx and vitest, which need no",
+  "//3": "emitted output, so tests stay out of the shipped tree.",
+  "//4": "The generated Prisma client under src/repositories/prisma/ is NOT",
+  "//5": "excluded here: it is imported by src/configs/prisma.ts, so the build",
+  "//6": "has to emit it or dist/ is missing its query engine.",
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "types": ["node"]
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "dist", "test"]
+}

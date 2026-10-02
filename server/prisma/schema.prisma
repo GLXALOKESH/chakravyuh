@@ -1,0 +1,160 @@
+// Chakravyuh schema.
+//
+// Ported from the TRD section 6 document shapes. Two deliberate differences from
+// the original SQL, both for reasons stated inline.
+//
+// Money is Float, not Decimal. Prisma maps Decimal to a Decimal object that
+// serialises as a JSON string, and TRD section 8 requires JSON numbers. The
+// largest figure in this dataset is far inside float64's exact-integer range.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/repositories/prisma"
+}
+
+// Prisma 7 moved the connection URL out of the schema and into
+// prisma.config.ts, and requires a driver adapter on the client. See
+// prisma.config.ts and src/configs/prisma.ts.
+datasource db {
+  provider = "postgresql"
+}
+
+// Rings are created first: accounts.ring_id, alerts.ring_id and recruits.ring_id
+// all reference them.
+
+model Ring {
+  id            String   @id
+  memberIds     String[] @default([])
+  edges         Json     @default("[]")
+  identityLinks Json     @default("[]")
+  volume        Float    @default(0)
+  risk          Float    @default(0)
+  geoSpreadKm   Float    @default(0) @map("geo_spread_km")
+  victimTxnIds  String[] @default([]) @map("victim_txn_ids")
+
+  // Cached Python responses, replayed when the ML service is unreachable
+  // (TRD section 3). These are the fallbacks, not a second source of truth.
+  defaultTaint  Json? @map("default_taint")
+  defaultFreeze Json? @map("default_freeze")
+
+  accounts Account[]
+  alerts   Alert[]
+  recruits Recruit[]
+
+  @@map("rings")
+}
+
+model Account {
+  id             String    @id
+  holder         String?
+  bank           String?
+  home           Json?
+  openedAt       DateTime? @map("opened_at")
+  openingBalance Float     @default(0) @map("opening_balance")
+  features       Json      @default("{}")
+  riskV1         Float?    @map("risk_v1")
+  riskV2         Float?    @map("risk_v2")
+  signals        Json      @default("[]")
+  ringId         String?   @map("ring_id")
+  // A string, not an enum. Prisma forbids hyphens in enum names, so "cash-out"
+  // would need @map -- and Prisma 7's generated enum still emits the underscore
+  // spelling to TypeScript. That mismatch is only observable against a live
+  // database, and getting it wrong would silently null out every role in the
+  // demo. The closed set is enforced by the AccountRole union in
+  // src/interfaces and by the seeder instead. TRD section 7.5.
+  role           String?    @map("role")
+  roleReason     String?    @map("role_reason")
+
+  ring Ring? @relation(fields: [ringId], references: [id], onDelete: SetNull)
+
+  @@index([ringId])
+  @@map("accounts")
+}
+
+// TRD section 6: identifiers are shared, so this is one row holding an array of
+// linked accounts rather than a row per link. GIN because the entity panel asks
+// "every identifier touching this account".
+model Identifier {
+  id         String       @id
+  type       IdentifierType
+  accountIds String[]     @default([]) @map("account_ids")
+
+  @@index([type])
+  @@index([accountIds], type: Gin)
+  @@map("identifiers")
+}
+
+// No relation to Account: cash-out is a transfer to the sentinel account id
+// CASH, which is not a row in accounts. A foreign key would either reject
+// cash-out or force a fake account row into every account listing.
+model Transaction {
+  id         String        @id
+  fromAccount String       @map("from_account")
+  toAccount   String        @map("to_account")
+  amount      Float
+  ts          DateTime
+  channel     Channel
+  // { city, lat, lng } on ATM rows, null otherwise (TRD section 6).
+  location    Json?
+  // Ground truth. Never serialised to the dashboard. See mappers/transaction.mapper.ts.
+  isFraud     Boolean       @default(false) @map("is_fraud")
+
+  @@index([ts])
+  @@index([fromAccount])
+  @@index([toAccount])
+  @@map("transactions")
+}
+
+model Alert {
+  id      String   @id
+  ringId  String?  @map("ring_id")
+  firedAt DateTime @map("fired_at")
+  reason  String?
+
+  ring Ring? @relation(fields: [ringId], references: [id], onDelete: Cascade)
+
+  @@index([firedAt])
+  @@map("alerts")
+}
+
+// Not in TRD section 6, but GET /rings/:id/recruits has to be answerable without
+// Python (TRD section 3 allows only taint and freeze to call it live), so the
+// pipeline output is stored here.
+model Recruit {
+  ringId      String  @map("ring_id")
+  accountId   String  @map("account_id")
+  probability Float   @default(0)
+  reasons     Json    @default("[]")
+
+  ring Ring @relation(fields: [ringId], references: [id], onDelete: Cascade)
+
+  @@id([ringId, accountId])
+  @@map("recruits")
+}
+
+// Single row. TRD section 6 "metrics (single document)".
+model Metric {
+  key  String @id @default("main")
+  rows Json   @default("[]")
+  note String?
+}
+
+// Lets the demo report how fresh the data is and makes "seed is safe to run
+// repeatedly" (TRD section 9) observable.
+model SeedMeta {
+  key   String @id
+  value Json
+}
+
+enum Channel {
+  UPI
+  IMPS
+  NEFT
+  ATM
+}
+
+enum IdentifierType {
+  device
+  phone
+  ip
+}
