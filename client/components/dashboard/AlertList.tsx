@@ -5,7 +5,7 @@ import { FormationGlyph } from "@/components/graph/FormationGlyph";
 import { ArrowIcon } from "@/components/ui/icons";
 import { P2Chip } from "@/components/ui/P2Chip";
 import { ringHref, ringLabel } from "@/lib/constants";
-import { count, inr, pct, shortTime } from "@/lib/format";
+import { count, duration, inr, pct, shortDate, shortTime } from "@/lib/format";
 import { useDashboard } from "@/lib/store";
 import type { Alert } from "@/lib/types";
 
@@ -18,7 +18,7 @@ function Countdown({ alert }: { alert: Alert }) {
     <span className="flex items-center gap-1.5 whitespace-nowrap">
       {left > 0 ? (
         <>
-          Cash-out in about <b className="fig text-base text-stage">{left} min</b>
+          Cash-out in about <b className="fig text-base text-stage">{duration(left)}</b>
         </>
       ) : (
         <b className="text-stage">Cash-out has started</b>
@@ -49,7 +49,9 @@ function AlertCard({ alert }: { alert: Alert }) {
           <div className="min-w-0 flex-1">
             <div className="flex items-baseline justify-between gap-2">
               <h3 className="text-xl font-bold leading-tight">{ringLabel(alert.ring_id)}</h3>
-              <span className="fig text-base font-medium text-on-stone-2">{shortTime(Date.parse(alert.fired_at))}</span>
+              <span className="fig text-base font-medium text-on-stone-2">
+                {shortDate(Date.parse(alert.fired_at))}, {shortTime(Date.parse(alert.fired_at))}
+              </span>
             </div>
             <div className="fig text-[1.75rem] leading-none text-stage">
               {pct(alert.risk)} <span className="text-base text-on-stone-2">risk</span>
@@ -75,7 +77,6 @@ function AlertCard({ alert }: { alert: Alert }) {
 export function AlertList() {
   const alerts = useDashboard((s) => s.alerts);
   const status = useDashboard((s) => s.status);
-  const total = useDashboard((s) => Object.keys(s.rings).length);
   return (
     <section aria-labelledby="alerts-heading" className="flex min-h-0 flex-col">
       <div className="flex items-baseline justify-between px-4 pb-3 pt-4">
@@ -98,7 +99,7 @@ export function AlertList() {
           <p className="text-base">
             {status === "idle"
               ? "No alerts yet. Start the replay and rings will appear here as they are detected."
-              : status === "ended" && total === 0
+              : status === "ended"
                 ? "The replay finished without an alert."
                 : "Watching. No ring has crossed the risk line yet."}
           </p>

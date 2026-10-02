@@ -15,6 +15,10 @@ export interface Alert {
   cashout_eta_min?: number;
 }
 
+/**
+ * `victim` and `cash` are not in the API's ring graph: the client adds them
+ * (see lib/ring.ts) so a formation has a centre and a rim.
+ */
 export type RingNodeType = "account" | "device" | "phone" | "ip" | "victim" | "cash";
 
 export interface RingNode {
@@ -31,21 +35,20 @@ export interface RingEdge {
   amount?: number;
 }
 
-/** mock-only: an ordinary account and, when known, where it stands in the overview graph. */
-export interface GraphAccount {
-  id: string;
-  pos?: [x: number, y: number];
-}
-
+/** GET /rings/:id */
 export interface RingDetail {
   id: string;
   risk: number;
   volume: number;
-  /** mock-only: centre and radius of the ring's formation in the overview graph. */
-  site?: { x: number; y: number; r: number };
   nodes: RingNode[];
   edges: RingEdge[];
   victim_txn_ids: string[];
+}
+
+export interface GeoPoint {
+  city: string;
+  lat: number;
+  lng: number;
 }
 
 export interface Txn {
@@ -55,6 +58,78 @@ export interface Txn {
   amount: number;
   ts: string;
   channel: "UPI" | "IMPS" | "NEFT" | "ATM";
+  /** mock-only on the socket: where an ATM withdrawal happened, for the map. */
+  location?: GeoPoint;
+}
+
+export interface Signal {
+  feature: string;
+  /** The plain sentence shown to the investigator. */
+  label: string;
+  weight: number;
+}
+
+export interface Identifier {
+  id: string;
+  type: "device" | "phone" | "ip";
+  account_ids: string[];
+}
+
+/** GET /accounts/:id */
+export interface AccountDetail {
+  id: string;
+  holder: string;
+  bank: string;
+  home: GeoPoint | null;
+  opened_at: string;
+  risk_v1: number;
+  risk_v2: number;
+  signals: Signal[];
+  ring_id: string | null;
+  role: Role | null;
+  role_reason: string | null;
+  linked_identifiers: Identifier[];
+}
+
+/** GET /rings/:id/taint */
+export interface TaintResult {
+  victim_amount: number;
+  as_of: string | null;
+  cached: boolean;
+  accounts: { id: string; balance: number; tainted: number; lien: number }[];
+  lost_to_cash: number;
+  links: { source: string; target: string; value: number }[];
+}
+
+/** POST /rings/:id/freeze */
+export interface FreezeRequest {
+  k: number;
+  exclude: string[];
+  txn?: string;
+  as_of?: string;
+}
+
+export interface FreezeResult {
+  freeze: string[];
+  at_risk_before: number;
+  secured: number;
+  pct_stopped: number;
+  cached: boolean;
+}
+
+/** GET /rings/:id/recruits */
+export interface Recruit {
+  id: string;
+  probability: number;
+  reasons: string[];
+}
+
+/** GET /rings/:id/geo */
+export interface RingGeo {
+  spread_km: number;
+  cities: number;
+  homes: ({ account_id: string } & GeoPoint)[];
+  cashouts: ({ txn_id: string; account_id: string; amount: number; ts: string } & GeoPoint)[];
 }
 
 export interface MetricsRow {

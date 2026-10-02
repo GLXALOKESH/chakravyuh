@@ -7,7 +7,7 @@ to data/ adhering strictly to BACKEND_INTERFACE.md JSON schemas.
 
 import json
 from pathlib import Path
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from ml.config import DATA_DIR
 
 
@@ -17,6 +17,7 @@ def export_backend_payloads(
     predictions: List[Dict[str, Any]],
     detected_rings: List[Dict[str, Any]],
     graph_network: Dict[str, Any],
+    heatmap_locations: Optional[Dict[str, Any]] = None,
     target_dir: Path = DATA_DIR,
 ):
     """
@@ -31,6 +32,8 @@ def export_backend_payloads(
         "detected_rings.json": detected_rings,
         "graph_network.json": graph_network,
     }
+    if heatmap_locations is not None:
+        files["heatmap_locations.json"] = heatmap_locations
 
     for filename, payload in files.items():
         filepath = target_dir / filename

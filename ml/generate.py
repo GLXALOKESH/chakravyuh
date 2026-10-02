@@ -34,13 +34,13 @@ from pathlib import Path
 PROFILE_CONFIG = {
     "demo": {
         "seed":          42,
-        "n_accounts":    600,
-        "n_normal_txns": 5000,
-        "days":          7,
-        "n_rings":       3,          # patterns A, B, C  (one each)
-        "include_d":     False,
-        "start_date":    "2026-09-25T00:00:00Z",
-        "account_e":     True,       # recruitment candidate
+        "n_accounts":    900,            # ↑ from 600  — wider normal population
+        "n_normal_txns": 8000,           # ↑ from 5000 — more realistic traffic density
+        "days":          14,             # ↑ from 7    — two-week window for richer patterns
+        "n_rings":       5,              # ↑ from 3    — patterns A, B, C + 2 more (A2, B2)
+        "include_d":     True,           # now ON — pattern D (cross-border hop) included
+        "start_date":    "2026-09-20T00:00:00Z",
+        "account_e":     True,           # recruitment candidate
     },
     "train": {
         "seed":          1337,
@@ -67,6 +67,7 @@ PROFILE_CONFIG = {
 # ─────────────────────────────────────────────────────────────────
 # 2.  STATIC TABLES
 # ─────────────────────────────────────────────────────────────────
+
 
 BANKS = [
     "State Bank", "HDFC Bank", "ICICI Bank", "Axis Bank", "PNB",
@@ -1015,22 +1016,67 @@ def generate_profile(profile: str):
     else:
         print("  OK: No negative balances.")
 
-    # 9. Write output (both in ml/data and repo root data/)
-    out_dirs = [
-        Path(__file__).resolve().parent / "data" / profile,
-        Path(__file__).resolve().parent.parent / "data" / profile,
-    ]
+    # Add 'amount' (rupees) to every transaction alongside 'amount_paise'
+    for txn in all_txns:
+        if 'amount' not in txn:
+            txn['amount'] = max(0, txn.get('amount_paise', 0) // 100)
 
-    for out in out_dirs:
-        out.mkdir(parents=True, exist_ok=True)
-        with open(out / "accounts.json",    "w", encoding="utf-8") as f:
-            json.dump(all_accs,  f, indent=2, ensure_ascii=False)
-        with open(out / "identifiers.json", "w", encoding="utf-8") as f:
-            json.dump(id_list,   f, indent=2, ensure_ascii=False)
-        with open(out / "transactions.json","w", encoding="utf-8") as f:
-            json.dump(all_txns,  f, indent=2, ensure_ascii=False)
-        with open(out / "ground_truth.json","w", encoding="utf-8") as f:
-            json.dump(all_gt,    f, indent=2, ensure_ascii=False)
+    # 9. Write output (both in ml/data and repo root data/)
+    ml_out_dir = Path(__file__).resolve().parent / 'data' / profile
+    root_out_dir = Path(__file__).resolve().parent.parent / 'data' / profile
+
+    ml_out_dir.mkdir(parents=True, exist_ok=True)
+    root_out_dir.mkdir(parents=True, exist_ok=True)
+
+    # ML internal data (keeps both amount and amount_paise)
+    with open(ml_out_dir / 'accounts.json', 'w', encoding='utf-8') as f:
+        json.dump(all_accs, f, indent=2, ensure_ascii=False)
+    with open(ml_out_dir / 'identifiers.json', 'w', encoding='utf-8') as f:
+        json.dump(id_list, f, indent=2, ensure_ascii=False)
+    with open(ml_out_dir / 'transactions.json', 'w', encoding='utf-8') as f:
+        json.dump(all_txns, f, indent=2, ensure_ascii=False)
+    with open(ml_out_dir / 'ground_truth.json', 'w', encoding='utf-8') as f:
+        json.dump(all_gt, f, indent=2, ensure_ascii=False)
+
+    # Repo root data (Server seeder format: rupees, clean channels, no SALARY)
+    valid_channels = {'UPI', 'IMPS', 'NEFT', 'ATM'}
+    clean_txns = []
+    for t in all_txns:
+        frm = t.get('from', '')
+        if frm == 'SALARY' or frm.startswith('SALARY'):
+            continue
+        ch = t.get('channel', 'UPI')
+        if ch not in valid_channels:
+            ch = 'NEFT'
+        amt = t.get('amount', t.get('amount_paise', 0) // 100)
+        clean_txns.append({
+            '_id': t['_id'],
+            'from': frm,
+            'to': t['to'],
+            'amount': amt,
+            'ts': t['ts'],
+            'channel': ch,
+            'location': t.get('location') if ch == 'ATM' else None,
+            'is_fraud': bool(t.get('is_fraud', False)),
+        })
+
+    clean_accs = []
+    for a in all_accs:
+        bal = a.get('opening_balance', 0)
+        bal_rupees = bal // 100 if bal > 5_000_000 else bal
+        clean_accs.append({
+            **a,
+            'opening_balance': bal_rupees,
+        })
+
+    with open(root_out_dir / 'accounts.json', 'w', encoding='utf-8') as f:
+        json.dump(clean_accs, f, indent=2, ensure_ascii=False)
+    with open(root_out_dir / 'identifiers.json', 'w', encoding='utf-8') as f:
+        json.dump(id_list, f, indent=2, ensure_ascii=False)
+    with open(root_out_dir / 'transactions.json', 'w', encoding='utf-8') as f:
+        json.dump(clean_txns, f, indent=2, ensure_ascii=False)
+    with open(root_out_dir / 'ground_truth.json', 'w', encoding='utf-8') as f:
+        json.dump(all_gt, f, indent=2, ensure_ascii=False)
 
     fraud_ids  = {m for gt in all_gt for m in gt["member_ids"]}
     fraud_txns = sum(1 for t in all_txns if t.get("is_fraud"))

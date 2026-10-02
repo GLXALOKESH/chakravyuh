@@ -21,8 +21,6 @@ export function OverviewGraph() {
 
   const ready = useDashboard((s) => s.ready);
   const error = useDashboard((s) => s.error);
-  const rings = useDashboard((s) => s.rings);
-  const accounts = useDashboard((s) => s.accounts);
   const alerts = useDashboard((s) => s.alerts);
   const status = useDashboard((s) => s.status);
   const view = useDashboard((s) => s.view);
@@ -42,13 +40,11 @@ export function OverviewGraph() {
     scene.current = s;
     const el = wrap.current;
     s.resize(el.clientWidth, el.clientHeight);
-    s.setData(
-      accounts,
-      Object.values(rings).sort((a, b) => a.id.localeCompare(b.id)),
-    );
+    s.fit(false);
+
     // Catch up with a replay that started before this graph was mounted.
     for (const t of history.txns) s.addTxn(t, true);
-    for (const a of history.alerts) s.fireAlert(a.ring_id, true);
+    for (const ring of Object.values(useDashboard.getState().rings)) s.addRing(ring, true);
 
     const observer = new ResizeObserver(() => s.resize(el.clientWidth, el.clientHeight));
     observer.observe(el);
@@ -64,10 +60,13 @@ export function OverviewGraph() {
 
     const off = [
       socket.on("txn", (t) => s.addTxn(t)),
-      socket.on("alert", (a) => s.fireAlert(a.ring_id)),
       socket.on("replay:reset", () => s.reset()),
       socket.on("replay:end", () => s.fit()),
-      useDashboard.subscribe((state) => s.setFocus(state.focusRing)),
+      // A ring is drawn when its detail arrives, a moment after its alert.
+      useDashboard.subscribe((state) => {
+        s.setFocus(state.focusRing);
+        for (const ring of Object.values(state.rings)) if (!s.hasRing(ring.id)) s.addRing(ring);
+      }),
     ];
     return () => {
       off.forEach((f) => f());
@@ -76,7 +75,7 @@ export function OverviewGraph() {
       s.dispose();
       scene.current = null;
     };
-  }, [ready, rings, accounts]);
+  }, [ready]);
 
   // Drag to pan. A drag that starts on a ring tag is left to the link.
   const drag = useRef<{ id: number; x: number; y: number } | null>(null);
@@ -146,7 +145,7 @@ export function OverviewGraph() {
     >
       <canvas ref={canvas} aria-hidden="true" className="absolute inset-0 h-full w-full" />
       <p className="sr-only" aria-live="polite">
-        {alerts.length} of {Object.keys(rings).length} rings detected so far.
+        {alerts.length} {alerts.length === 1 ? "ring" : "rings"} detected so far.
       </p>
 
       {anchors.map((a) => {
@@ -161,8 +160,8 @@ export function OverviewGraph() {
               onPointerLeave={() => setFocusRing(null)}
               onFocus={() => setFocusRing(a.ringId)}
               onBlur={() => setFocusRing(null)}
-              style={{ left: a.x, top: a.tagBelow ? a.y + a.r + 14 : a.y - a.r - 14 }}
-              className={`ring-tag absolute flex -translate-x-1/2 ${a.tagBelow ? "" : "-translate-y-full"} items-center gap-2 whitespace-nowrap rounded-full bg-stone-hi py-1 pl-3.5 pr-2.5 text-on-stone shadow-[0_6px_18px_-6px_rgb(0_0_0/0.6)] transition-colors hover:bg-turmeric`}
+              style={{ left: a.x, top: a.y - a.r - 8 }}
+              className="ring-tag absolute flex -translate-x-1/2 -translate-y-full items-center gap-2 whitespace-nowrap rounded-full bg-stone-hi py-1 pl-3.5 pr-2.5 text-on-stone shadow-[0_6px_18px_-6px_rgb(0_0_0/0.6)] transition-colors hover:bg-turmeric"
             >
               <span className="font-bold">{ringLabel(a.ringId)}</span>
               <span className="fig">{count(alert.members)} accounts</span>
@@ -195,18 +194,17 @@ export function OverviewGraph() {
             <b>Cash withdrawn</b>
           ) : tip.kind === "other" ? (
             <>
-              <b className="fig">{tip.id}</b> · not in a ring
+              <b className="fig">{tip.id}</b> · not in a ring · dealt with{" "}
+              <span className="fig">{tip.partners ?? 0}</span> {tip.partners === 1 ? "account" : "accounts"}
             </>
           ) : (
             <>
               <b className="fig">{tip.id}</b>
-              {tip.alerted && tip.role ? (
+              {tip.role && (
                 <>
                   {" "}
                   · {ROLES[tip.role].label} · <span className="fig">{pct(tip.risk ?? 0)}</span> risk
                 </>
-              ) : (
-                " · not flagged yet"
               )}
             </>
           )}

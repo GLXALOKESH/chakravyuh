@@ -121,6 +121,41 @@ html[data-entered] .enter-screen {
   animation: enter-clear 0.5s 6s forwards;
 }
 
+/* The map. Street tiles are toned toward the stone rails so the oxblood marks
+   are the only strong colour on them. */
+.cash-map .leaflet-container {
+  background: var(--color-stone);
+  font: inherit;
+}
+.cash-map .leaflet-tile-pane {
+  filter: grayscale(1) sepia(0.32) contrast(0.92) brightness(1.02);
+}
+.cash-map .leaflet-tooltip {
+  border: 0;
+  border-radius: 0.375rem;
+  background: var(--color-ink);
+  color: var(--color-on-ink);
+  font-size: 1rem;
+  padding: 0.375rem 0.75rem;
+  box-shadow: 0 8px 20px -8px rgb(0 0 0 / 0.7);
+}
+.cash-map .leaflet-tooltip::before {
+  display: none;
+}
+.cash-map .leaflet-control-attribution {
+  font-size: 0.75rem;
+}
+
+/* Selectable marks inside an SVG (ring accounts, flow bars): the focus ring
+   is drawn on the mark's own halo, since an SVG group has no outline box. */
+.ring-node:focus-visible .ring-node-halo {
+  stroke: var(--color-turmeric);
+  stroke-width: 3;
+}
+.ring-node:hover .ring-node-halo {
+  fill: rgb(243 236 221 / 0.12);
+}
+
 /* A new alert lands lit in turmeric, then settles. */
 @keyframes alert-in {
   from {

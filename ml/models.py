@@ -175,10 +175,10 @@ def score_accounts(df: pd.DataFrame, v1_model, v2_model, iso_model,
     combined = np.clip(combined, 0.0, 1.0)
 
     result = df.copy()
-    result["risk_v1"]       = _normalise_to_100(prob_v1)
-    result["risk_v2"]       = _normalise_to_100(prob_v2)
+    result["risk_v1"]       = np.round(prob_v1, 4)
+    result["risk_v2"]       = np.round(prob_v2, 4)
     result["anomaly_score"] = np.round(iso_norm, 4)
-    result["risk_combined"] = _normalise_to_100(combined)
+    result["risk_combined"] = np.round(combined, 4)
     result["prob_v1"]       = np.round(prob_v1, 6)
     result["prob_v2"]       = np.round(prob_v2, 6)
 

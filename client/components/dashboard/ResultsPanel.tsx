@@ -8,11 +8,10 @@ import type { MetricsRow } from "@/lib/types";
 function LiveCounts() {
   const counts = useDashboard((s) => s.counts);
   const alerts = useDashboard((s) => s.alerts);
-  const total = useDashboard((s) => Object.keys(s.rings).length);
   const rows: [string, string][] = [
     ["Transactions", count(counts.txns)],
     ["Accounts seen", count(counts.accounts)],
-    ["Rings found", `${alerts.length} of ${total}`],
+    ["Rings found", count(alerts.length)],
     ["Money in flagged rings", inr(alerts.reduce((sum, a) => sum + a.volume, 0))],
   ];
   return (
@@ -55,10 +54,8 @@ function Results() {
         <p className="mt-3 text-on-stone-2">Loading results…</p>
       ) : (
         <>
-          {/* Kept against the heading so the invented figures never show without it. */}
-          <p className="mt-1 leading-snug text-on-stone-2">
-            <b className="text-on-stone">Sample figures for layout, not results.</b> {metrics.note}
-          </p>
+          {/* Kept against the heading so the figures never show without what they were measured on. */}
+          <p className="mt-1 leading-snug text-on-stone-2">{metrics.note}.</p>
           <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-0.5 text-on-stone-2">
             {metrics.rows.map((row, i) => (
               <li key={row.model} className="flex items-center gap-2">

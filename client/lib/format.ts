@@ -27,3 +27,8 @@ export const pct = (n: number) => `${Math.round(n * 100)}%`;
 export const clockTime = (ms: number) => timeFormat.format(ms);
 export const shortTime = (ms: number) => shortTimeFormat.format(ms);
 export const clockDate = (ms: number) => dateFormat.format(ms);
+const shortDateFormat = new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "short", timeZone: "Asia/Kolkata" });
+export const shortDate = (ms: number) => shortDateFormat.format(ms);
+/** "about 3 h 35 min", "about 40 min". */
+export const duration = (minutes: number) =>
+  minutes >= 60 ? `${Math.floor(minutes / 60)} h${minutes % 60 ? ` ${minutes % 60} min` : ""}` : `${minutes} min`;

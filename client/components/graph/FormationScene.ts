@@ -1,48 +1,63 @@
 // The overview graph, drawn on one WebGL canvas that can be panned and zoomed.
-// Ordinary accounts are points that join the picture the first time they
-// transact, with a thin line for every pair that has paid each other. Each ring
-// is a formation of concentric gated layers that closes when its alert fires.
-// Everything is placed in world units; the camera maps world to stage pixels.
+//
+// Every account starts as an ordinary node in a plain node-link graph. Nothing
+// is known in advance: an account appears the first time it transacts, a line
+// joins every pair that has paid each other, and a force simulation
+// (layout.worker.ts) arranges them by who deals with whom, so whatever
+// structure the data has is the structure on screen. Accounts with more
+// counterparties are drawn larger.
+//
+// A ring only becomes known when its alert arrives. At that moment its
+// accounts leave the crowd and line up in a panel of their own as a flow
+// diagram, victim on the left and cash on the right, which opens at the edge
+// of the graph and pushes the other accounts out of its way.
 
 import gsap from "gsap";
 import * as THREE from "three";
 import { COLORS, ROLES } from "@/lib/constants";
-import { buildFormation, GATE, gateStart, nodePoint, type Formation } from "@/lib/formation";
-import type { GraphAccount, RingDetail, Role, Txn } from "@/lib/types";
+import { buildFormation, type Formation } from "@/lib/formation";
+import { CASH, isPseudoAccount } from "@/lib/ring";
+import type { RingDetail, Role, Txn } from "@/lib/types";
+import type { LayoutFrame, LayoutMessage } from "./layout.worker";
 
+/** A ring's panel: its centre and half its width and height, in world units. */
 interface Site {
   x: number;
   y: number;
-  r: number;
+  hw: number;
+  hh: number;
 }
 
-// Used when a ring arrives without a `site` of its own.
-const FALLBACK_SITES: Site[] = [
-  { x: 900, y: 990, r: 230 },
-  { x: 1830, y: 560, r: 150 },
-  { x: 1780, y: 1360, r: 150 },
-];
-/** Rotation of each formation, in the order rings are given, so labels fall in open space. */
-const TURNS = [2.2, 1.3, 2.6];
-/** Half the stroke of a formation layer, in world units. */
-const LAYER_HALF = 2.3;
-/** Radius of an ordinary account, in world units, and its limits on screen in pixels. */
-const POINT_RADIUS = 3.4;
-const POINT_MIN_PX = 2.4;
-const POINT_MAX_PX = 16;
-/** Most pairs of ordinary accounts that can be linked. */
-const MAX_LINKS = 24000;
-const LINK_REST = 0.16;
-const ZOOM_OUT_LIMIT = 0.6; // relative to the zoom that fits everything
-const ZOOM_IN_LIMIT = 7;
-const TAU = Math.PI * 2;
+/** World units per unit of the ring layout, and the panel's margin round the accounts. */
+const RING_SCALE_X = 0.62;
+const RING_SCALE_Y = 0.85;
+const PANEL_PAD = 40;
+/** Clear space kept between two panels, and the extra a panel's tag needs above it. */
+const PANEL_GAP = 60;
+const TAG_ROOM = 70;
+/** Radius of an ordinary account with one counterparty, in world units, and its limits on screen in pixels. */
+const POINT_RADIUS = 3.6;
+const POINT_MIN_PX = 2.2;
+const POINT_MAX_PX = 15;
+/** Room for accounts and for links between them; beyond these, new ones are not drawn. */
+const MAX_NODES = 40000;
+const MAX_LINKS = 60000;
+/** Strength of a link at rest when everything is in view, and once zoomed in. */
+const LINK_FAR = 0.1;
+const LINK_NEAR = 0.5;
+const ZOOM_OUT_LIMIT = 0.5; // relative to the zoom that fits everything
+const ZOOM_IN_LIMIT = 9;
+/** With nothing on the stage yet, the camera frames this much of the world. */
+const EMPTY_VIEW = 420;
+/** Stage pixels kept clear round the graph when everything is in view. */
+const FIT_TOP = 96;
+const FIT_SIDE = 64;
 
 export interface RingAnchor {
   ringId: string;
   x: number;
   y: number;
   r: number;
-  tagBelow: boolean;
   specials: { id: string; label: string; x: number; y: number; above: boolean }[];
 }
 
@@ -51,6 +66,8 @@ export interface NodeHit {
   kind: "account" | "victim" | "cash" | "other";
   role?: Role;
   risk?: number;
+  /** For an ordinary account: how many others it has dealt with. */
+  partners?: number;
   x: number;
   y: number;
 }
@@ -74,27 +91,15 @@ interface EdgeVis {
   seen: boolean;
 }
 
-interface ArcVis {
-  mesh: THREE.Mesh<THREE.BufferGeometry, THREE.MeshBasicMaterial>;
-  radius: number;
-  start: number;
-  spin: number;
-  state: { p: number };
-}
-
 interface RingVis {
   id: string;
   site: Site;
-  tagBelow: boolean;
   formation: Formation;
   group: THREE.Group;
   nodes: Map<string, NodeVis>;
   edges: Map<string, EdgeVis>;
-  arcs: ArcVis[];
-  disc: THREE.Mesh<THREE.BufferGeometry, THREE.MeshBasicMaterial>;
   links: THREE.Line<THREE.BufferGeometry, THREE.LineDashedMaterial>[];
   materials: THREE.Material[];
-  alerted: boolean;
   state: { dim: number };
 }
 
@@ -117,6 +122,8 @@ export class FormationScene {
   private world = new THREE.Group();
   private rings = new Map<string, RingVis>();
   private nodeRing = new Map<string, RingVis>();
+  /** Rings whose alert has arrived but whose accounts the layout has not placed yet. */
+  private waiting: { detail: RingDetail; instant: boolean }[] = [];
   private tweens = new Set<gsap.core.Tween>();
   private frame = 0;
   private lastTime = 0;
@@ -125,29 +132,47 @@ export class FormationScene {
   // Camera: stage pixel = world * scale + (x, y).
   private view = { scale: 1, x: 0, y: 0 };
   private size = { w: 1, h: 1 };
-  private bounds = { x0: 0, y0: 0, x1: 1, y1: 1 };
+  private bounds = { x0: -EMPTY_VIEW, y0: -EMPTY_VIEW, x1: EMPTY_VIEW, y1: EMPTY_VIEW };
   private fitScale = 1;
   private cameraDirty = true;
   /** When the person last moved the camera themselves; the graph does not steer it away from them. */
   private lastHandled = -Infinity;
-  /** True until the person moves the camera, so a resize keeps everything in view. */
+  /** While true the camera keeps the whole graph in view as it grows. */
   private following = true;
 
-  private crowd: THREE.Points<THREE.BufferGeometry, THREE.ShaderMaterial> | null = null;
+  private worker: Worker;
+  private pendingLinks: number[] = [];
+  private pendingSettle = false;
+  private sentCount = 0;
+
+  private crowd: THREE.Points<THREE.BufferGeometry, THREE.ShaderMaterial>;
   private crowdIndex = new Map<string, number>();
   private crowdIds: string[] = [];
-  private crowdPos = new Float32Array(0);
-  private crowdAlpha = new Float32Array(0);
-  private crowdHeat = new Float32Array(0);
+  private crowdPos = new Float32Array(MAX_NODES * 3);
+  private crowdHeat = new Float32Array(MAX_NODES);
+  private crowdSize = new Float32Array(MAX_NODES);
+  private crowdDegree = new Uint16Array(MAX_NODES);
+  /** 1 for an account that has left the crowd to stand in a formation. */
+  private crowdGone = new Uint8Array(MAX_NODES);
+  /** How many accounts the layout has placed so far; only these are drawn. */
+  private placed = 0;
   private crowdState = { dim: 1 };
+  /** Accounts that have withdrawn cash, so a formation knows its cash line has been used. */
+  private cashedOut = new Set<string>();
 
   private links: THREE.LineSegments<THREE.BufferGeometry, THREE.LineBasicMaterial>;
   private linkPos = new Float32Array(MAX_LINKS * 6);
   private linkColor = new Float32Array(MAX_LINKS * 8);
+  /** Two account numbers per link. */
+  private linkEnds = new Int32Array(MAX_LINKS * 2);
   private linkCount = 0;
-  private linkSeen = new Set<number>();
+  private linkSeen = new Set<string>();
   /** Links still settling from their bright arrival to their resting strength. */
   private fresh: { index: number; life: number }[] = [];
+  /** 1 for a short link, less for a long one: long links are drawn fainter so they do not bury the rest. */
+  private linkReach = new Float32Array(MAX_LINKS).fill(1);
+  /** 1 for a link now drawn as part of a formation instead. */
+  private linkGone = new Uint8Array(MAX_LINKS);
 
   private circle = new THREE.CircleGeometry(1, 40);
   private diamond = new THREE.CircleGeometry(1, 4);
@@ -178,228 +203,59 @@ export class FormationScene {
     this.links.renderOrder = 1;
     this.world.add(this.links);
 
-    this.frame = requestAnimationFrame(this.loop);
-  }
-
-  // ---- setup -------------------------------------------------------------
-
-  setData(accounts: GraphAccount[], rings: RingDetail[]) {
-    for (const ring of this.rings.values()) this.world.remove(ring.group);
-    this.rings.clear();
-    this.nodeRing.clear();
-    if (this.crowd) this.world.remove(this.crowd);
-
-    const sites = rings.map((r, i) => r.site ?? FALLBACK_SITES[i % FALLBACK_SITES.length]);
-    this.buildCrowd(accounts, sites);
-    rings.forEach((detail, index) => this.buildRing(detail, sites[index], index));
-
-    // The world is whatever the accounts and formations cover.
-    const b = { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity };
-    const grow = (x: number, y: number, pad: number) => {
-      b.x0 = Math.min(b.x0, x - pad);
-      b.y0 = Math.min(b.y0, y - pad);
-      b.x1 = Math.max(b.x1, x + pad);
-      b.y1 = Math.max(b.y1, y + pad);
-    };
-    for (let i = 0; i < this.crowdIds.length; i++) grow(this.crowdPos[i * 3], this.crowdPos[i * 3 + 1], 0);
-    for (const s of sites) grow(s.x, s.y, s.r + 40);
-    if (b.x0 === Infinity) grow(0, 0, 400);
-    this.bounds = b;
-    this.fit(false);
-  }
-
-  private buildCrowd(accounts: GraphAccount[], sites: Site[]) {
-    const n = accounts.length;
-    this.crowdIndex.clear();
-    this.crowdIds = accounts.map((a) => a.id);
-    this.crowdPos = new Float32Array(n * 3);
-    this.crowdAlpha = new Float32Array(n);
-    this.crowdHeat = new Float32Array(n);
-    accounts.forEach((a, i) => {
-      this.crowdIndex.set(a.id, i);
-      let x: number;
-      let y: number;
-      if (a.pos) [x, y] = a.pos;
-      else {
-        // No position in the data: stand the account on a sunflower spiral,
-        // pushed out of any formation it would land in.
-        const angle = i * 2.39996;
-        const radius = 26 * Math.sqrt(i + 1);
-        x = 1300 + Math.cos(angle) * radius;
-        y = 950 + Math.sin(angle) * radius;
-        for (const s of sites) {
-          const d = Math.hypot(x - s.x, y - s.y);
-          if (d < s.r + 30) {
-            x = s.x + ((x - s.x) / (d || 1)) * (s.r + 30);
-            y = s.y + ((y - s.y) / (d || 1)) * (s.r + 30);
-          }
-        }
-      }
-      this.crowdPos.set([x, y, 0], i * 3);
-    });
-
-    const geometry = new THREE.BufferGeometry();
-    geometry.setAttribute("position", new THREE.BufferAttribute(this.crowdPos, 3));
-    geometry.setAttribute("aAlpha", new THREE.BufferAttribute(this.crowdAlpha, 1));
-    geometry.setAttribute("aHeat", new THREE.BufferAttribute(this.crowdHeat, 1));
+    const crowdGeometry = new THREE.BufferGeometry();
+    crowdGeometry.setAttribute("position", new THREE.BufferAttribute(this.crowdPos, 3));
+    crowdGeometry.setAttribute("aHeat", new THREE.BufferAttribute(this.crowdHeat, 1));
+    crowdGeometry.setAttribute("aSize", new THREE.BufferAttribute(this.crowdSize, 1));
+    crowdGeometry.setDrawRange(0, 0);
     this.crowd = new THREE.Points(
-      geometry,
+      crowdGeometry,
       new THREE.ShaderMaterial({
         transparent: true,
         depthTest: false,
         uniforms: {
-          uSize: { value: 6 },
+          uScale: { value: 1 },
+          uMin: { value: POINT_MIN_PX },
+          uMax: { value: POINT_MAX_PX },
           uDim: { value: 1 },
           uColor: { value: new THREE.Color(COLORS.crowd) },
           uHot: { value: new THREE.Color(COLORS.crowdHot) },
         },
         vertexShader: `
-          attribute float aAlpha;
           attribute float aHeat;
-          uniform float uSize;
-          varying float vAlpha;
+          attribute float aSize;
+          uniform float uScale;
+          uniform float uMin;
+          uniform float uMax;
           varying float vHeat;
+          varying float vShow;
           void main() {
-            vAlpha = aAlpha;
             vHeat = aHeat;
+            vShow = step(0.001, aSize);
             gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-            gl_PointSize = uSize * (1.0 + aHeat * 1.2);
+            gl_PointSize = clamp(aSize * uScale, uMin, uMax * (0.6 + 0.4 * aSize)) * (1.0 + aHeat * 0.9) * vShow;
           }`,
         fragmentShader: `
           uniform vec3 uColor;
           uniform vec3 uHot;
           uniform float uDim;
-          varying float vAlpha;
           varying float vHeat;
+          varying float vShow;
           void main() {
             float d = length(gl_PointCoord - 0.5);
-            float disc = smoothstep(0.5, 0.36, d);
-            gl_FragColor = vec4(mix(uColor, uHot, vHeat), disc * vAlpha * uDim * (0.7 + 0.3 * vHeat));
+            float disc = smoothstep(0.5, 0.38, d);
+            gl_FragColor = vec4(mix(uColor, uHot, vHeat), disc * uDim * vShow * (0.82 + 0.18 * vHeat));
           }`,
       }),
     );
     this.crowd.frustumCulled = false;
     this.crowd.renderOrder = 2;
     this.world.add(this.crowd);
-  }
 
-  private buildRing(detail: RingDetail, site: Site, index: number) {
-    const formation = buildFormation(detail, TURNS[index % TURNS.length]);
-    const group = new THREE.Group();
-    group.position.set(site.x, site.y, 0);
-    const ring: RingVis = {
-      id: detail.id,
-      site,
-      // A formation in the lower half of the world carries its name tag underneath.
-      tagBelow: index > 0 && site.y > (FALLBACK_SITES[0].y + 100),
-      formation,
-      group,
-      nodes: new Map(),
-      edges: new Map(),
-      arcs: [],
-      disc: new THREE.Mesh(this.circle, flatMaterial(COLORS.stageDeep, 0)),
-      links: [],
-      materials: [],
-      alerted: false,
-      state: { dim: 1 },
-    };
-    ring.disc.scale.setScalar(site.r + 12);
-    ring.disc.renderOrder = 0;
-    group.add(ring.disc);
-    ring.materials.push(ring.disc.material);
+    this.worker = new Worker(new URL("./layout.worker.ts", import.meta.url));
+    this.worker.onmessage = (event: MessageEvent<LayoutFrame>) => this.place(event.data.positions);
 
-    const big = site.r > 180;
-    for (let k = 1; k <= formation.layers; k++) {
-      const arc: ArcVis = {
-        mesh: new THREE.Mesh(new THREE.BufferGeometry(), flatMaterial(COLORS.turmeric, 0.85)),
-        radius: (site.r * k) / formation.layers,
-        start: gateStart(k),
-        spin: (k % 2 ? 1 : -1) * 0.035,
-        state: { p: 0 },
-      };
-      arc.mesh.renderOrder = 3;
-      arc.mesh.visible = false;
-      group.add(arc.mesh);
-      ring.arcs.push(arc);
-      ring.materials.push(arc.mesh.material);
-    }
-
-    for (const n of formation.nodes) {
-      const p = nodePoint(n, formation.layers, site.r);
-      const r = n.type === "account" ? (big ? 8 : 6.500) + n.risk * (big ? 7 : 4.500) : big ? 12 : 10;
-      const mesh = new THREE.Mesh(n.type === "account" ? this.circle : this.diamond, flatMaterial(COLORS.stone, 1));
-      mesh.position.set(p.x, p.y, 0);
-      if (n.type === "cash") mesh.rotation.z = Math.PI / 4;
-      mesh.scale.setScalar(0.0001);
-      mesh.visible = false;
-      mesh.renderOrder = 6;
-      group.add(mesh);
-      const node: NodeVis = { id: n.id, kind: n.type, role: n.role, risk: n.risk, x: p.x, y: p.y, r, mesh, seen: false };
-      ring.nodes.set(n.id, node);
-      ring.materials.push(mesh.material);
-      if (n.type !== "cash") this.nodeRing.set(n.id, ring);
-    }
-
-    const peak = Math.max(...formation.flows.map((f) => f.amount), 1);
-    for (const f of formation.flows) {
-      const from = ring.nodes.get(f.from);
-      const to = ring.nodes.get(f.to);
-      if (!from || !to) continue;
-      const dx = to.x - from.x;
-      const dy = to.y - from.y;
-      const length = Math.hypot(dx, dy);
-      const span = Math.max(4, length - from.r - to.r - 6);
-      // A shaft and an arrowhead at the receiver, so direction still reads
-      // when the replay is paused and no money is moving.
-      const material = flatMaterial(COLORS.stone, 0);
-      const width = 1.4 + 4.6 * Math.sqrt(f.amount / peak);
-      const head = Math.max(big ? 7 : 5, width * 1.5);
-      const ux = dx / length;
-      const uy = dy / length;
-      const startAt = from.r + 3;
-      const shaft = Math.max(2, span - head);
-      const mesh = new THREE.Mesh(this.plane, material);
-      mesh.position.set(from.x + ux * (startAt + shaft / 2), from.y + uy * (startAt + shaft / 2), 0);
-      mesh.rotation.z = Math.atan2(dy, dx);
-      mesh.scale.set(shaft, width, 1);
-      mesh.renderOrder = 5;
-      const tip = new THREE.Mesh(this.triangle, material);
-      tip.position.set(from.x + ux * (startAt + shaft + head * 0.5), from.y + uy * (startAt + shaft + head * 0.5), 0);
-      tip.rotation.z = mesh.rotation.z;
-      tip.scale.setScalar(head);
-      tip.renderOrder = 5;
-      group.add(mesh, tip);
-      ring.edges.set(`${f.from}>${f.to}`, { from, to, material, seen: false });
-      ring.materials.push(material);
-    }
-
-    for (const [a, b] of formation.links) {
-      const na = ring.nodes.get(a);
-      const nb = ring.nodes.get(b);
-      if (!na || !nb) continue;
-      const geometry = new THREE.BufferGeometry().setFromPoints([
-        new THREE.Vector3(na.x, na.y, 0),
-        new THREE.Vector3(nb.x, nb.y, 0),
-      ]);
-      const material = new THREE.LineDashedMaterial({
-        color: COLORS.stone,
-        dashSize: 5,
-        gapSize: 5,
-        transparent: true,
-        opacity: 0,
-        depthTest: false,
-      });
-      material.userData.o = 0;
-      const line = new THREE.Line(geometry, material);
-      line.computeLineDistances();
-      line.renderOrder = 4;
-      group.add(line);
-      ring.links.push(line);
-      ring.materials.push(material);
-    }
-
-    this.world.add(group);
-    this.rings.set(detail.id, ring);
+    this.frame = requestAnimationFrame(this.loop);
   }
 
   resize(width: number, height: number) {
@@ -411,25 +267,44 @@ export class FormationScene {
     this.camera.updateProjectionMatrix();
     const before = this.size;
     this.size = { w: width, h: height };
-    if (this.following) this.fit(false);
-    else {
-      // Keep the same world point in the middle of the stage.
-      this.view.x += (width - before.w) / 2;
-      this.view.y += (height - before.h) / 2;
-      this.fitScale = this.scaleToFit();
-      this.cameraDirty = true;
-    }
+    // Keep the same world point in the middle of the stage.
+    this.view.x += (width - before.w) / 2;
+    this.view.y += (height - before.h) / 2;
+    this.cameraDirty = true;
   }
 
   // ---- camera ------------------------------------------------------------
 
-  private scaleToFit() {
+  /** The camera that shows the whole graph. */
+  private fitTarget() {
     const b = this.bounds;
-    return Math.min(this.size.w / (b.x1 - b.x0), this.size.h / (b.y1 - b.y0)) * 0.96;
+    // Room is left at the top for a ring's tag and the Graph / Map switch.
+    const scale = Math.min((this.size.w - FIT_SIDE * 2) / (b.x1 - b.x0), (this.size.h - FIT_TOP - FIT_SIDE) / (b.y1 - b.y0));
+    return {
+      scale,
+      x: this.size.w / 2 - ((b.x0 + b.x1) / 2) * scale,
+      y: (this.size.h + FIT_TOP - FIT_SIDE) / 2 - ((b.y0 + b.y1) / 2) * scale,
+    };
   }
 
-  private moveTo(scale: number, cx: number, cy: number, animate: boolean) {
-    const target = { scale, x: this.size.w / 2 - cx * scale, y: this.size.h / 2 - cy * scale };
+  /** Bring everything into view, and keep it in view as the graph grows. */
+  fit(animate = true) {
+    gsap.killTweensOf(this.view);
+    this.following = true;
+    if (!animate || this.reducedMotion) {
+      Object.assign(this.view, this.fitTarget());
+      this.fitScale = this.view.scale;
+      this.cameraDirty = true;
+    }
+  }
+
+  /** Frame one formation. */
+  flyTo(ringId: string, animate = true) {
+    const ring = this.rings.get(ringId);
+    if (!ring) return;
+    const scale = Math.min(this.size.w / (ring.site.hw * 2 + 160), this.size.h / (ring.site.hh * 2 + 200));
+    const target = { scale, x: this.size.w / 2 - ring.site.x * scale, y: this.size.h / 2 - ring.site.y * scale };
+    this.following = false;
     gsap.killTweensOf(this.view);
     if (!animate || this.reducedMotion) {
       Object.assign(this.view, target);
@@ -446,24 +321,6 @@ export class FormationScene {
         },
       }),
     );
-  }
-
-  /** Bring every account and formation into view. */
-  fit(animate = true) {
-    const b = this.bounds;
-    this.fitScale = this.scaleToFit();
-    this.following = true;
-    this.moveTo(this.fitScale, (b.x0 + b.x1) / 2, (b.y0 + b.y1) / 2, animate);
-  }
-
-  /** Frame one formation. */
-  flyTo(ringId: string, animate = true) {
-    const ring = this.rings.get(ringId);
-    if (!ring) return;
-    const span = (ring.site.r + 70) * 2;
-    const scale = Math.min(this.size.w / span, this.size.h / span, this.fitScale * ZOOM_IN_LIMIT);
-    this.following = false;
-    this.moveTo(scale, ring.site.x, ring.site.y, animate);
   }
 
   /** Zoom by `factor` keeping the world point under stage pixel (px, py) still. */
@@ -496,102 +353,65 @@ export class FormationScene {
     this.cameraDirty = true;
   }
 
-  private applyCamera() {
-    const v = this.view;
-    this.world.scale.setScalar(v.scale);
-    this.world.position.set(v.x, v.y, 0);
-    if (this.crowd) {
-      const px = Math.min(POINT_MAX_PX, Math.max(POINT_MIN_PX, POINT_RADIUS * 2 * v.scale));
-      this.crowd.material.uniforms.uSize.value = px * this.renderer.getPixelRatio();
-    }
-  }
-
   // ---- data --------------------------------------------------------------
 
   addTxn(txn: Txn, instant = false) {
+    const quiet = instant || this.reducedMotion;
+    if (instant) this.pendingSettle = true;
+    if (txn.to === CASH) this.cashedOut.add(txn.from);
+
+    // Money moving inside a formation travels along its drawn path.
     const ring = this.nodeRing.get(txn.from);
     const edge = ring?.edges.get(`${txn.from}>${txn.to}`);
     if (ring && edge) {
-      this.reveal(edge.from, instant);
-      this.reveal(edge.to, instant);
+      this.reveal(edge.from, quiet);
+      this.reveal(edge.to, quiet);
       if (!edge.seen) {
         edge.seen = true;
-        this.fade(edge.material, ring.alerted ? 0.62 : 0.45, instant ? 0 : 0.5);
+        this.fade(edge.material, 0.62, quiet ? 0 : 0.5);
       }
-      if (!instant && !this.reducedMotion) this.sendMoney(ring, edge, txn.amount);
+      if (!quiet) this.sendMoney(ring, edge, txn.amount);
       return;
     }
 
-    // An ordinary transfer: both accounts join the picture, and the first time
-    // a pair pays each other a line is drawn between them and stays.
-    const a = this.wake(txn.from);
-    const b = txn.to === "CASH" ? -1 : this.wake(txn.to);
-    if (a < 0 || b < 0 || a === b || this.linkCount >= MAX_LINKS) return;
-    const key = a < b ? a * 100000 + b : b * 100000 + a;
+    // Otherwise both accounts join the graph, and the first time a pair pays
+    // each other a line is kept between them. Cash and salary are not accounts.
+    const a = isPseudoAccount(txn.from) ? null : this.node(txn.from, quiet);
+    const b = isPseudoAccount(txn.to) ? null : this.node(txn.to, quiet);
+    if (a === null || b === null || a === b || this.linkCount >= MAX_LINKS) return;
+    const key = a < b ? `${a},${b}` : `${b},${a}`;
     if (this.linkSeen.has(key)) return;
     this.linkSeen.add(key);
     const i = this.linkCount++;
-    this.linkPos.set(
-      [this.crowdPos[a * 3], this.crowdPos[a * 3 + 1], 0, this.crowdPos[b * 3], this.crowdPos[b * 3 + 1], 0],
-      i * 6,
-    );
-    const settled = instant || this.reducedMotion;
-    this.paintLink(i, settled ? 0 : 1);
-    if (!settled) this.fresh.push({ index: i, life: 1 });
-    this.links.geometry.setDrawRange(0, this.linkCount * 2);
-    this.links.geometry.attributes.position.needsUpdate = true;
+    this.linkEnds[i * 2] = a;
+    this.linkEnds[i * 2 + 1] = b;
+    this.pendingLinks.push(a, b);
+    for (const end of [a, b]) {
+      const degree = ++this.crowdDegree[end];
+      // Area grows with the number of counterparties, so a hub stands out without swamping its neighbours.
+      if (!this.crowdGone[end]) this.crowdSize[end] = POINT_RADIUS * 2 * Math.sqrt(1 + 0.3 * (degree - 1));
+    }
+    this.paintLink(i, quiet ? 0 : 1);
+    if (!quiet) this.fresh.push({ index: i, life: 1 });
     this.links.geometry.attributes.color.needsUpdate = true;
+    this.crowd.geometry.attributes.aSize.needsUpdate = true;
   }
 
-  fireAlert(ringId: string, instant = false) {
-    const ring = this.rings.get(ringId);
-    if (!ring || ring.alerted) return;
-    ring.alerted = true;
-    const quick = instant || this.reducedMotion;
-
-    // Go to the ring that was just caught, unless the person is steering.
-    if (!instant && performance.now() - this.lastHandled > 4000) this.flyTo(ringId);
-
-    this.fade(ring.disc.material, 0.5, quick ? 0 : 0.9);
-
-    // The layers close from the rim inwards.
-    const count = ring.arcs.length;
-    ring.arcs.forEach((arc, i) => {
-      arc.mesh.visible = true;
-      if (quick) {
-        arc.state.p = 1;
-        this.drawArc(arc);
-        return;
-      }
-      this.track(
-        gsap.to(arc.state, {
-          p: 1,
-          duration: 1.1,
-          delay: 0.5 + (count - 1 - i) * 0.14,
-          ease: "expo.out",
-          onUpdate: () => this.drawArc(arc),
-        }),
-      );
-    });
-
-    // Every member is now known, so each takes its place and its role colour.
-    let order = 0;
-    for (const node of ring.nodes.values()) {
-      this.reveal(node, quick);
-      if (node.role === "member") node.mesh.geometry = this.hollow;
-      const color = new THREE.Color(
-        node.kind === "account" && node.role ? ROLES[node.role].color : node.kind === "cash" ? COLORS.turmeric : COLORS.stone,
-      );
-      if (quick) node.mesh.material.color.copy(color);
-      else {
-        this.track(
-          gsap.to(node.mesh.material.color, { r: color.r, g: color.g, b: color.b, duration: 0.5, delay: 0.7 + order * 0.05 }),
-        );
-      }
-      order++;
+  /**
+   * A ring has been detected. Its formation is drawn as soon as the layout has
+   * a place for every one of its accounts, which is at most a frame or two away.
+   */
+  addRing(detail: RingDetail, instant = false) {
+    if (this.rings.has(detail.id) || this.waiting.some((w) => w.detail.id === detail.id)) return;
+    if (instant) this.pendingSettle = true;
+    for (const n of detail.nodes) {
+      if (n.type === "account" || n.type === "victim") this.node(n.id, true);
     }
-    for (const edge of ring.edges.values()) if (edge.seen) this.fade(edge.material, 0.62, quick ? 0 : 0.4);
-    for (const link of ring.links) this.fade(link.material, 0.5, quick ? 0 : 0.8, quick ? 0 : 1);
+    this.waiting.push({ detail, instant });
+  }
+
+  hasRing(id: string) {
+    return this.rings.has(id) || this.waiting.some((w) => w.detail.id === id);
   }
 
   setFocus(ringId: string | null) {
@@ -607,42 +427,282 @@ export class FormationScene {
   reset() {
     this.tweens.forEach((t) => t.kill());
     this.tweens.clear();
-    for (const ring of this.rings.values()) {
-      ring.alerted = false;
-      ring.state.dim = 1;
-      ring.disc.material.userData.o = 0;
-      for (const arc of ring.arcs) {
-        arc.state.p = 0;
-        arc.mesh.visible = false;
-      }
-      for (const node of ring.nodes.values()) {
-        node.seen = false;
-        node.mesh.visible = false;
-        node.mesh.scale.setScalar(0.0001);
-        node.mesh.material.color.set(COLORS.stone);
-        if (node.kind === "account") node.mesh.geometry = this.circle;
-      }
-      for (const edge of ring.edges.values()) {
-        edge.seen = false;
-        edge.material.userData.o = 0;
-      }
-      for (const link of ring.links) link.material.userData.o = 0;
-      // Money still in flight belongs to the run that just ended.
-      for (const child of [...ring.group.children]) {
-        if (child.userData.money) ring.group.remove(child);
-      }
-    }
-    this.crowdAlpha.fill(0);
+    for (const ring of this.rings.values()) this.world.remove(ring.group);
+    this.rings.clear();
+    this.nodeRing.clear();
+    this.waiting = [];
+    this.cashedOut.clear();
+    this.post({ type: "reset" });
+
+    this.crowdIndex.clear();
+    this.crowdIds = [];
     this.crowdHeat.fill(0);
-    if (this.crowd) this.crowd.geometry.attributes.aAlpha.needsUpdate = true;
-    this.crowdState.dim = 1;
+    this.crowdDegree.fill(0);
+    this.crowdGone.fill(0);
+    this.placed = 0;
+    this.sentCount = 0;
+    this.pendingLinks = [];
+    this.pendingSettle = false;
     this.linkCount = 0;
     this.linkSeen.clear();
+    this.linkGone.fill(0);
     this.fresh.length = 0;
+    this.crowd.geometry.setDrawRange(0, 0);
     this.links.geometry.setDrawRange(0, 0);
+    this.bounds = { x0: -EMPTY_VIEW, y0: -EMPTY_VIEW, x1: EMPTY_VIEW, y1: EMPTY_VIEW };
+
+    this.crowdState.dim = 1;
     this.focus = null;
     this.lastHandled = -Infinity;
     this.fit(false);
+  }
+
+  // ---- forming a ring ----------------------------------------------------
+
+  /**
+   * Where a new ring's panel goes: beside, above or below the crowd and clear
+   * of any panel already there, wherever leaves the whole graph largest on the
+   * stage. Opening it in the middle would crush the ordinary accounts.
+   */
+  private siteFor(formation: Formation): Site {
+    const hw = (formation.width * RING_SCALE_X) / 2 + PANEL_PAD;
+    const hh = (formation.height * RING_SCALE_Y) / 2 + PANEL_PAD;
+
+    // How far the crowd reaches from the middle (the layout pulls it toward the origin).
+    let reach = 0;
+    for (let i = 0; i < this.placed; i++) {
+      if (!this.crowdGone[i]) reach = Math.max(reach, Math.hypot(this.crowdPos[i * 3], this.crowdPos[i * 3 + 1]));
+    }
+    const sites = [...this.rings.values()].map((r) => r.site);
+    const clear = (cx: number, cy: number) =>
+      sites.every(
+        (o) => Math.abs(cx - o.x) >= hw + o.hw + PANEL_GAP || Math.abs(cy - o.y) >= hh + o.hh + PANEL_GAP + TAG_ROOM,
+      );
+    /** The zoom at which everything would fit with the panel at (cx, cy). */
+    const fitWith = (cx: number, cy: number) => {
+      let x0 = -reach;
+      let x1 = reach;
+      let y0 = -reach;
+      let y1 = reach;
+      for (const o of [...sites, { x: cx, y: cy, hw, hh }]) {
+        x0 = Math.min(x0, o.x - o.hw);
+        x1 = Math.max(x1, o.x + o.hw);
+        y0 = Math.min(y0, o.y - o.hh);
+        y1 = Math.max(y1, o.y + o.hh);
+      }
+      return Math.min((this.size.w - FIT_SIDE * 2) / (x1 - x0), (this.size.h - FIT_TOP - FIT_SIDE) / (y1 - y0));
+    };
+
+    let best: Site | null = null;
+    let bestScore = -Infinity;
+    const beside = reach + PANEL_GAP * 0.6 + hw;
+    const above = reach + PANEL_GAP * 0.6 + hh + TAG_ROOM;
+    for (let out = 0; out < 3 && !best; out++) {
+      for (let step = 0; step < 50; step++) {
+        const slide = (step % 2 ? -1 : 1) * Math.ceil(step / 2) * 40;
+        const far = out * 2;
+        for (const [cx, cy] of [
+          [-(beside + far * hw), slide],
+          [beside + far * hw, slide],
+          [slide, -(above + far * hh)],
+          [slide, above + far * hh],
+        ]) {
+          if (!clear(cx, cy)) continue;
+          // Among equally roomy places, the one nearest the middle of its side.
+          const score = fitWith(cx, cy) * (1 - Math.abs(slide) * 0.0002);
+          if (score > bestScore) {
+            bestScore = score;
+            best = { x: cx, y: cy, hw, hh };
+          }
+        }
+      }
+    }
+    return best ?? { x: (reach + hw) * 4, y: 0, hw, hh };
+  }
+
+  /** A rectangle with rounded corners, centred on the origin. */
+  private roundedRect(hw: number, hh: number, radius: number) {
+    const path = new THREE.Shape();
+    path.moveTo(-hw + radius, -hh);
+    path.lineTo(hw - radius, -hh);
+    path.quadraticCurveTo(hw, -hh, hw, -hh + radius);
+    path.lineTo(hw, hh - radius);
+    path.quadraticCurveTo(hw, hh, hw - radius, hh);
+    path.lineTo(-hw + radius, hh);
+    path.quadraticCurveTo(-hw, hh, -hw, hh - radius);
+    path.lineTo(-hw, -hh + radius);
+    path.quadraticCurveTo(-hw, -hh, -hw + radius, -hh);
+    return path;
+  }
+
+  private formRing(detail: RingDetail, instant: boolean) {
+    const quick = instant || this.reducedMotion;
+    const formation = buildFormation(detail);
+    const site = this.siteFor(formation);
+    const group = new THREE.Group();
+    group.position.set(site.x, site.y, 0);
+    const ring: RingVis = {
+      id: detail.id,
+      site,
+      formation,
+      group,
+      nodes: new Map(),
+      edges: new Map(),
+      links: [],
+      materials: [],
+      state: { dim: this.focus && this.focus !== detail.id ? 0.16 : 1 },
+    };
+
+    // The panel: a darker ground with a turmeric outline.
+    const outline = this.roundedRect(site.hw, site.hh, 16);
+    outline.holes.push(this.roundedRect(site.hw - 2.2, site.hh - 2.2, 14));
+    const ground = new THREE.Mesh(new THREE.ShapeGeometry(this.roundedRect(site.hw, site.hh, 16), 8), flatMaterial(COLORS.stageDeep, 0));
+    const border = new THREE.Mesh(new THREE.ShapeGeometry(outline, 8), flatMaterial(COLORS.turmeric, 0));
+    ground.renderOrder = 3;
+    border.renderOrder = 3;
+    group.add(ground, border);
+    ring.materials.push(ground.material, border.material);
+    this.fade(ground.material, 0.82, quick ? 0 : 0.7);
+    this.fade(border.material, 0.9, quick ? 0 : 0.7, quick ? 0 : 0.5);
+
+    // Each account leaves the crowd and walks to its place, taking its role colour.
+    const pins: number[] = [];
+    const inRing = new Set<number>();
+    formation.nodes.forEach((n, order) => {
+      const p = { x: n.x * RING_SCALE_X, y: n.y * RING_SCALE_Y };
+      const r = n.type === "account" ? 8 + n.risk * 4 : 10;
+      const color = n.type === "account" && n.role ? ROLES[n.role].color : n.type === "cash" ? COLORS.turmeric : COLORS.stone;
+      const shape = n.type !== "account" ? this.diamond : n.role === "member" ? this.hollow : this.circle;
+      const mesh = new THREE.Mesh(shape, flatMaterial(quick ? color : COLORS.crowd, 1));
+      if (n.type === "cash") mesh.rotation.z = Math.PI / 4;
+      mesh.renderOrder = 6;
+      group.add(mesh);
+      const node: NodeVis = { id: n.id, kind: n.type, role: n.role, risk: n.risk, x: p.x, y: p.y, r, mesh, seen: true };
+      ring.nodes.set(n.id, node);
+      ring.materials.push(mesh.material);
+
+      const i = n.type === "cash" ? undefined : this.crowdIndex.get(n.id);
+      if (i === undefined) {
+        // Cash withdrawn has no place in the crowd: it appears at the end of the flow.
+        mesh.position.set(p.x, p.y, 0);
+        mesh.material.color.set(color);
+        if (quick) mesh.scale.setScalar(r);
+        else {
+          mesh.scale.setScalar(0.0001);
+          this.track(gsap.to(mesh.scale, { x: r, y: r, duration: 0.6, delay: 1, ease: "back.out(2.2)" }));
+        }
+        return;
+      }
+      this.nodeRing.set(n.id, ring);
+      inRing.add(i);
+      pins.push(i, site.x + p.x, site.y + p.y);
+      this.crowdGone[i] = 1;
+      this.crowdSize[i] = 0;
+      if (quick) {
+        mesh.position.set(p.x, p.y, 0);
+        mesh.scale.setScalar(r);
+        return;
+      }
+      const target = new THREE.Color(color);
+      mesh.position.set(this.crowdPos[i * 3] - site.x, this.crowdPos[i * 3 + 1] - site.y, 0);
+      mesh.scale.setScalar(Math.max(4, this.crowdSize[i] / 2));
+      this.track(gsap.to(mesh.position, { x: p.x, y: p.y, duration: 0.9, ease: "power3.inOut" }));
+      this.track(gsap.to(mesh.scale, { x: r, y: r, duration: 0.9, ease: "power3.inOut" }));
+      this.track(
+        gsap.to(mesh.material.color, { r: target.r, g: target.g, b: target.b, duration: 0.5, delay: 0.9 + order * 0.05 }),
+      );
+    });
+    this.crowd.geometry.attributes.aSize.needsUpdate = true;
+
+    // Links between two of its accounts are now drawn as part of the formation.
+    for (let l = 0; l < this.linkCount; l++) {
+      if (inRing.has(this.linkEnds[l * 2]) && inRing.has(this.linkEnds[l * 2 + 1])) this.linkGone[l] = 1;
+    }
+
+    const peak = Math.max(...formation.flows.map((f) => f.amount), 1);
+    for (const f of formation.flows) {
+      const from = ring.nodes.get(f.from);
+      const to = ring.nodes.get(f.to);
+      if (!from || !to) continue;
+      const dx = to.x - from.x;
+      const dy = to.y - from.y;
+      const length = Math.hypot(dx, dy) || 1;
+      const span = Math.max(4, length - from.r - to.r - 6);
+      // A shaft and an arrowhead at the receiver, so direction still reads
+      // when the replay is paused and no money is moving.
+      const material = flatMaterial(COLORS.stone, 0);
+      const width = 1.2 + 3.2 * Math.sqrt(f.amount / peak);
+      const head = Math.max(6, width * 1.5);
+      const ux = dx / length;
+      const uy = dy / length;
+      const startAt = from.r + 3;
+      const shaft = Math.max(2, span - head);
+      const mesh = new THREE.Mesh(this.plane, material);
+      mesh.position.set(from.x + ux * (startAt + shaft / 2), from.y + uy * (startAt + shaft / 2), 0);
+      mesh.rotation.z = Math.atan2(dy, dx);
+      mesh.scale.set(shaft, width, 1);
+      mesh.renderOrder = 5;
+      const tip = new THREE.Mesh(this.triangle, material);
+      tip.position.set(from.x + ux * (startAt + shaft + head * 0.5), from.y + uy * (startAt + shaft + head * 0.5), 0);
+      tip.rotation.z = mesh.rotation.z;
+      tip.scale.setScalar(head);
+      tip.renderOrder = 5;
+      group.add(mesh, tip);
+
+      // A path is shown once money has actually moved along it.
+      const a = this.crowdIndex.get(f.from);
+      const b = this.crowdIndex.get(f.to);
+      const used =
+        f.to === CASH
+          ? this.cashedOut.has(f.from)
+          : a !== undefined && b !== undefined && this.linkSeen.has(a < b ? `${a},${b}` : `${b},${a}`);
+      ring.edges.set(`${f.from}>${f.to}`, { from, to, material, seen: used });
+      ring.materials.push(material);
+      if (used) this.fade(material, 0.62, quick ? 0 : 0.5, quick ? 0 : 0.9);
+    }
+
+    for (const [a, b] of formation.links) {
+      const na = ring.nodes.get(a);
+      const nb = ring.nodes.get(b);
+      if (!na || !nb) continue;
+      const geometry = new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(na.x, na.y, 0),
+        new THREE.Vector3(nb.x, nb.y, 0),
+      ]);
+      const material = new THREE.LineDashedMaterial({
+        color: COLORS.stone,
+        dashSize: 5,
+        gapSize: 5,
+        transparent: true,
+        opacity: 0,
+        depthTest: false,
+      });
+      material.userData.o = 0;
+      const line = new THREE.Line(geometry, material);
+      line.computeLineDistances();
+      line.renderOrder = 4;
+      group.add(line);
+      ring.links.push(line);
+      ring.materials.push(material);
+      this.fade(material, 0.5, quick ? 0 : 0.8, quick ? 0 : 1.2);
+    }
+
+    this.world.add(group);
+    this.rings.set(detail.id, ring);
+    this.post({ type: "ring", site, pins });
+
+    // Go to the ring that was just caught, then pull back out to the whole
+    // graph, unless the person is steering.
+    if (!instant && performance.now() - this.lastHandled > 4000) {
+      this.flyTo(detail.id);
+      const flownAt = performance.now();
+      this.track(
+        gsap.delayedCall(4.5, () => {
+          if (this.lastHandled < flownAt && !this.following) this.fit();
+        }) as unknown as gsap.core.Tween,
+      );
+    }
+    this.cameraDirty = true;
   }
 
   // ---- read-outs for the HTML overlay -----------------------------------
@@ -658,20 +718,16 @@ export class FormationScene {
         ringId: ring.id,
         x: centre.x,
         y: centre.y,
-        r: ring.site.r * this.view.scale,
-        tagBelow: ring.tagBelow,
+        r: ring.site.hh * this.view.scale,
         // The victim and the cash point are named once there is room to read
         // the names; the legend and the tooltips name them at any zoom.
         specials:
-          ring.site.r * this.view.scale < 150
+          ring.site.hw * this.view.scale < 150
             ? []
             : [...ring.nodes.values()]
                 .filter((n) => n.kind !== "account")
                 .map((n) => {
-                  // The victim's label goes on the side away from the source it
-                  // paid; the cash label goes on the outer side of the rim.
-                  const source = ring.formation.nodes.find((f) => f.layer === 1);
-                  const above = n.kind === "victim" ? Math.sin(source?.angle ?? 0) > 0 : n.y < 0;
+                  const above = false;
                   const at = this.toStage(ring.site.x + n.x, ring.site.y + n.y + (above ? -1 : 1) * (n.r + 4));
                   return { id: n.id, label: n.kind === "victim" ? "Victim" : "Cash withdrawn", above, x: at.x, y: at.y };
                 }),
@@ -685,7 +741,6 @@ export class FormationScene {
     const y = (py - this.view.y) / this.view.scale;
     for (const ring of this.rings.values()) {
       for (const n of ring.nodes.values()) {
-        if (!n.seen) continue;
         if (Math.hypot(x - ring.site.x - n.x, y - ring.site.y - n.y) <= n.r + 5) {
           const at = this.toStage(ring.site.x + n.x, ring.site.y + n.y - n.r);
           return {
@@ -695,17 +750,17 @@ export class FormationScene {
             risk: n.kind === "account" ? n.risk : undefined,
             x: at.x,
             y: at.y,
-            alerted: ring.alerted,
+            alerted: true,
           };
         }
       }
     }
     // Ordinary accounts: the nearest one within a few pixels of the pointer.
-    const reach = 7 / this.view.scale;
+    const reach = 8 / this.view.scale;
     let best = -1;
     let bestGap = reach;
-    for (let i = 0; i < this.crowdIds.length; i++) {
-      if (!this.crowdAlpha[i]) continue;
+    for (let i = 0; i < this.placed; i++) {
+      if (this.crowdGone[i]) continue;
       const dx = this.crowdPos[i * 3] - x;
       if (dx > reach || dx < -reach) continue;
       const gap = Math.hypot(dx, this.crowdPos[i * 3 + 1] - y);
@@ -716,11 +771,12 @@ export class FormationScene {
     }
     if (best < 0) return null;
     const at = this.toStage(this.crowdPos[best * 3], this.crowdPos[best * 3 + 1] - POINT_RADIUS);
-    return { id: this.crowdIds[best], kind: "other", x: at.x, y: at.y, alerted: false };
+    return { id: this.crowdIds[best], kind: "other", partners: this.crowdDegree[best], x: at.x, y: at.y, alerted: false };
   }
 
   dispose() {
     cancelAnimationFrame(this.frame);
+    this.worker.terminate();
     this.tweens.forEach((t) => t.kill());
     gsap.killTweensOf(this.view);
     this.scene.traverse((o) => {
@@ -734,6 +790,10 @@ export class FormationScene {
   }
 
   // ---- internals ---------------------------------------------------------
+
+  private post(message: LayoutMessage) {
+    this.worker.postMessage(message);
+  }
 
   private track(tween: gsap.core.Tween) {
     this.tweens.add(tween);
@@ -751,8 +811,7 @@ export class FormationScene {
   private reveal(node: NodeVis, instant: boolean) {
     if (node.seen) return;
     node.seen = true;
-    node.mesh.visible = true;
-    if (instant || this.reducedMotion) {
+    if (instant) {
       node.mesh.scale.setScalar(node.r);
       return;
     }
@@ -760,9 +819,8 @@ export class FormationScene {
   }
 
   private sendMoney(ring: RingVis, edge: EdgeVis, amount: number) {
-    const size = 3 + Math.min(4, Math.sqrt(amount / 60000));
+    const size = 2.5 + Math.min(3, Math.sqrt(amount / 60000));
     const dot = new THREE.Mesh(this.circle, this.moneyMaterial);
-    dot.userData.money = true;
     dot.scale.setScalar(size);
     dot.position.set(edge.from.x, edge.from.y, 0);
     dot.renderOrder = 7;
@@ -788,33 +846,91 @@ export class FormationScene {
     );
   }
 
-  private drawArc(arc: ArcVis) {
-    arc.mesh.geometry.dispose();
-    const sweep = Math.max(0.001, arc.state.p * (TAU - GATE));
-    arc.mesh.geometry = new THREE.RingGeometry(arc.radius - LAYER_HALF, arc.radius + LAYER_HALF, 120, 1, arc.start, sweep);
+  /** The layout's number for an account, adding the account the first time it is seen. */
+  private node(account: string, quiet: boolean): number | null {
+    let i = this.crowdIndex.get(account);
+    if (i === undefined) {
+      if (this.crowdIds.length >= MAX_NODES) return null;
+      i = this.crowdIds.length;
+      this.crowdIndex.set(account, i);
+      this.crowdIds.push(account);
+      this.crowdSize[i] = POINT_RADIUS * 2;
+    }
+    if (!quiet && !this.crowdGone[i]) this.crowdHeat[i] = 1;
+    return i;
   }
 
-  /** Shows an ordinary account and brightens it; returns its index, or -1 if it is not an ordinary account. */
-  private wake(account: string) {
-    const ring = this.nodeRing.get(account);
-    if (ring) {
-      this.reveal(ring.nodes.get(account)!, false);
-      return -1;
+  /** New positions from the layout worker. */
+  private place(positions: Float32Array) {
+    const count = Math.min(positions.length / 2, this.crowdIds.length);
+    const b = { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity };
+    for (let i = 0; i < count; i++) {
+      const x = positions[i * 2];
+      const y = positions[i * 2 + 1];
+      this.crowdPos[i * 3] = x;
+      this.crowdPos[i * 3 + 1] = y;
+      if (x < b.x0) b.x0 = x;
+      if (x > b.x1) b.x1 = x;
+      if (y < b.y0) b.y0 = y;
+      if (y > b.y1) b.y1 = y;
     }
-    const i = this.crowdIndex.get(account);
-    if (i === undefined || !this.crowd) return -1;
-    if (!this.crowdAlpha[i]) {
-      this.crowdAlpha[i] = 1;
-      this.crowd.geometry.attributes.aAlpha.needsUpdate = true;
+    this.placed = count;
+
+    // Any ring whose accounts all have a place now can take its formation.
+    if (this.waiting.length) {
+      const ready = (w: (typeof this.waiting)[number]) =>
+        w.detail.nodes.every(
+          (n) => (n.type !== "account" && n.type !== "victim") || (this.crowdIndex.get(n.id) ?? Infinity) < count,
+        );
+      const now = this.waiting.filter(ready);
+      this.waiting = this.waiting.filter((w) => !ready(w));
+      for (const w of now) this.formRing(w.detail, w.instant);
     }
-    this.crowdHeat[i] = 1;
-    return i;
+
+    for (const ring of this.rings.values()) {
+      const s = ring.site;
+      b.x0 = Math.min(b.x0, s.x - s.hw);
+      b.y0 = Math.min(b.y0, s.y - s.hh);
+      b.x1 = Math.max(b.x1, s.x + s.hw);
+      b.y1 = Math.max(b.y1, s.y + s.hh);
+    }
+    // A small graph is not blown up to fill the stage.
+    this.bounds = {
+      x0: Math.min(b.x0, -EMPTY_VIEW),
+      y0: Math.min(b.y0, -EMPTY_VIEW),
+      x1: Math.max(b.x1, EMPTY_VIEW),
+      y1: Math.max(b.y1, EMPTY_VIEW),
+    };
+    this.crowd.geometry.setDrawRange(0, count);
+    this.crowd.geometry.attributes.position.needsUpdate = true;
+
+    // A link is drawn once both of its accounts have a place.
+    let drawn = 0;
+    for (let i = 0; i < this.linkCount; i++) {
+      const a = this.linkEnds[i * 2];
+      const c = this.linkEnds[i * 2 + 1];
+      if (a >= count || c >= count) break;
+      const o = i * 6;
+      this.linkPos[o] = this.crowdPos[a * 3];
+      this.linkPos[o + 1] = this.crowdPos[a * 3 + 1];
+      this.linkPos[o + 3] = this.crowdPos[c * 3];
+      this.linkPos[o + 4] = this.crowdPos[c * 3 + 1];
+      const length = Math.hypot(this.linkPos[o + 3] - this.linkPos[o], this.linkPos[o + 4] - this.linkPos[o + 1]);
+      this.linkReach[i] = this.linkGone[i] ? 0 : Math.min(1, Math.max(0.1, 70 / (length || 1)));
+      this.linkColor[i * 8 + 3] = this.linkColor[i * 8 + 7] = this.linkReach[i];
+      drawn = i + 1;
+    }
+    // Links that are still lit from arriving keep their brightness.
+    for (const f of this.fresh) this.paintLink(f.index, f.life);
+    this.links.geometry.setDrawRange(0, drawn * 2);
+    this.links.geometry.attributes.position.needsUpdate = true;
+    this.links.geometry.attributes.color.needsUpdate = true;
   }
 
   /** Colours link `i`: `life` 1 is a link that has just appeared, 0 one at rest. */
   private paintLink(i: number, life: number) {
     const o = i * 8;
-    const alpha = LINK_REST + (0.9 - LINK_REST) * life;
+    const alpha = this.linkGone[i] ? 0 : this.linkReach[i] + 1.4 * life;
     for (const v of [o, o + 4]) {
       this.linkColor[v] = 0.85 + 0.15 * life;
       this.linkColor[v + 1] = 0.66 + 0.3 * life;
@@ -828,18 +944,44 @@ export class FormationScene {
     const dt = Math.min(0.1, (time - this.lastTime) / 1000 || 0);
     this.lastTime = time;
 
-    if (this.cameraDirty) {
-      this.cameraDirty = false;
-      this.applyCamera();
-      this.onCamera();
+    // Hand the layout whatever arrived since the last frame, in one message.
+    if (this.crowdIds.length > this.sentCount || this.pendingLinks.length) {
+      this.post({ type: "add", count: this.crowdIds.length, links: this.pendingLinks, settle: this.pendingSettle });
+      this.sentCount = this.crowdIds.length;
+      this.pendingLinks = [];
+      this.pendingSettle = false;
     }
 
-    if (this.crowd) {
-      const heat = this.crowdHeat;
-      for (let i = 0; i < heat.length; i++) if (heat[i] > 0) heat[i] = Math.max(0, heat[i] - dt * 1.6);
-      this.crowd.geometry.attributes.aHeat.needsUpdate = true;
-      this.crowd.material.uniforms.uDim.value = this.crowdState.dim;
+    // While following, the camera eases toward the view that shows everything.
+    const fit = this.fitTarget();
+    this.fitScale = fit.scale;
+    if (this.following) {
+      const ease = this.reducedMotion ? 1 : Math.min(1, dt * 4);
+      const v = this.view;
+      if (Math.abs(fit.scale - v.scale) > 1e-5 || Math.abs(fit.x - v.x) > 0.05 || Math.abs(fit.y - v.y) > 0.05) {
+        v.scale += (fit.scale - v.scale) * ease;
+        v.x += (fit.x - v.x) * ease;
+        v.y += (fit.y - v.y) * ease;
+        this.cameraDirty = true;
+      }
     }
+
+    if (this.cameraDirty) {
+      this.cameraDirty = false;
+      this.world.scale.setScalar(this.view.scale);
+      this.world.position.set(this.view.x, this.view.y, 0);
+      this.onCamera();
+    }
+    const ratio = this.renderer.getPixelRatio();
+    const uniforms = this.crowd.material.uniforms;
+    uniforms.uScale.value = this.view.scale * ratio;
+    uniforms.uMin.value = POINT_MIN_PX * ratio;
+    uniforms.uMax.value = POINT_MAX_PX * ratio;
+    uniforms.uDim.value = this.crowdState.dim;
+
+    const heat = this.crowdHeat;
+    for (let i = 0; i < this.placed; i++) if (heat[i] > 0) heat[i] = Math.max(0, heat[i] - dt * 1.6);
+    this.crowd.geometry.attributes.aHeat.needsUpdate = true;
 
     if (this.fresh.length) {
       for (const f of this.fresh) {
@@ -849,13 +991,13 @@ export class FormationScene {
       this.fresh = this.fresh.filter((f) => f.life > 0);
       this.links.geometry.attributes.color.needsUpdate = true;
     }
-    this.links.material.opacity = this.crowdState.dim;
+    // Links are quieter with everything in view and firmer once zoomed in.
+    const zoom = this.view.scale / this.fitScale;
+    const near = Math.min(1, Math.max(0, (zoom - 1.2) / 2));
+    this.links.material.opacity = this.crowdState.dim * (LINK_FAR + (LINK_NEAR - LINK_FAR) * near);
 
     for (const ring of this.rings.values()) {
       for (const m of ring.materials) m.opacity = (m.userData.o as number) * ring.state.dim;
-      if (ring.alerted && !this.reducedMotion) {
-        for (const arc of ring.arcs) arc.mesh.rotation.z += arc.spin * dt;
-      }
     }
     for (const t of this.tweens) if (!t.isActive() && t.progress() === 1) this.tweens.delete(t);
 

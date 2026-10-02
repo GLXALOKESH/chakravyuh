@@ -16,7 +16,7 @@ export function GraphLegend() {
   return (
     <ul
       aria-label="Graph legend"
-      className="flex flex-wrap items-center gap-x-5 gap-y-1.5 border-t border-stage-line px-5 py-2.5 text-base font-medium text-on-stage"
+      className="flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t border-stage-line px-5 py-2.5 text-base font-medium text-on-stage"
     >
       {ROLE_ORDER.map((role) => (
         <Mark key={role} label={ROLES[role].label}>
@@ -41,10 +41,10 @@ export function GraphLegend() {
       <Mark label="Shared device or phone">
         <path d="M0 7h20" stroke="#f3ecdd" strokeWidth="1.500" strokeDasharray="4 3" />
       </Mark>
-      <Mark label="Other accounts and their transfers">
-        <path d="M4 4.500 16 9.500" stroke="#d9a9a4" strokeOpacity="0.6" strokeWidth="1.200" />
-        <circle cx="4" cy="4.500" r="2.200" fill="#d9a9a4" />
-        <circle cx="16" cy="9.500" r="2.200" fill="#d9a9a4" />
+      <Mark label="Other accounts, larger with more dealings">
+        <path d="M4 9.500 15 5" stroke="#d9a9a4" strokeOpacity="0.6" strokeWidth="1.200" />
+        <circle cx="4" cy="9.500" r="2" fill="#d9a9a4" />
+        <circle cx="15" cy="5" r="3.800" fill="#d9a9a4" />
       </Mark>
     </ul>
   );
