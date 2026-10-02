@@ -49,6 +49,9 @@ function haversineKm(a, b) {
   return 2 * R * Math.asin(Math.sqrt(s));
 }
 
+/** Accounts the generator treats as external inflows, not as real accounts. */
+const SYSTEM_ACCOUNTS = new Set(['CASH', 'SALARY']);
+
 export function buildFixtures({ seed = FIXTURE_SEED } = {}) {
   const rnd = mulberry32(seed);
   const pick = (list) => list[Math.floor(rnd() * list.length)];
@@ -383,7 +386,42 @@ export function buildFixtures({ seed = FIXTURE_SEED } = {}) {
     }
   }
 
+  /**
+   * Repairs overdrafts on the timeline the rest of the system actually replays.
+   *
+   * Ring transactions are built first and background ones after, so the running
+   * ledger used while generating is not in timestamp order and a background
+   * debit can be recorded against a balance that a ts-ordered replay does not
+   * have. This walks the timeline in order and repairs any overdraft: a debit is
+   * clamped to what is genuinely available, or dropped when nothing is.
+   *
+   * Only background transactions are touched. Ring accounts never take part in
+   * background traffic, so their ledger is already correct in ts order and the
+   * taint conservation maths is untouched.
+   */
+  function repairOverdrafts() {
+    const running = new Map(accounts.map((a) => [a._id, a.opening_balance]));
+    for (const id of SYSTEM_ACCOUNTS) running.set(id, 0);
+
+    const kept = [];
+    for (const txn of transactions) {
+      const available = running.get(txn.from) ?? 0;
+      if (!SYSTEM_ACCOUNTS.has(txn.from) && available < txn.amount) {
+        if (available < 1) continue; // nothing left to send, so drop the transfer
+        txn.amount = Math.floor(available);
+      }
+      running.set(txn.from, (running.get(txn.from) ?? 0) - txn.amount);
+      running.set(txn.to, (running.get(txn.to) ?? 0) + txn.amount);
+      kept.push(txn);
+    }
+    transactions.length = 0;
+    transactions.push(...kept);
+  }
+
+  // Order first, then repair: the pass has to walk the real timeline, not the
+  // order in which transactions happened to be generated.
   transactions.sort((a, b) => Date.parse(a.ts) - Date.parse(b.ts) || a._id.localeCompare(b._id));
+  repairOverdrafts();
 
   // ---------------------------------------------------------------- features
   // Stand-ins for pipeline.py output. Values are plausible rather than trained;
@@ -442,8 +480,15 @@ export function buildFixtures({ seed = FIXTURE_SEED } = {}) {
     [R2[0]]: ['source', 'Receives from outside the ring, earliest active relay'],
     [R2[R2.length - 1]]: ['cash-out', '71% of its outflow goes to ATM cash-out'],
     [R3_COORD]: ['coordinator', 'Shares identifiers with 9 ring members but carries 2.1% of ring volume'],
+    // R3[0] is the account the cluster's external inflow lands on, so it is the
+    // source by TRD section 7.5 rule one rather than a mule.
+    [R3[0]]: ['source', 'Receives the cluster inflow from outside the ring and passes it on within 3 min'],
+    // R3[8] is the account the cluster's ATM withdrawals come from.
+    [R3[8]]: ['cash-out', '68% of its outflow goes to ATM cash-out'],
   };
-  for (const id of [...MULES, ...R2.slice(1, -1), ...R3.slice(0, 8)]) {
+  // Everything that receives from a member and forwards without retaining funds.
+  // R3[0] is excluded because it is the source above.
+  for (const id of [...MULES, ...R2.slice(1, -1), ...R3.slice(1, 8)]) {
     roles[id] = ['mule', 'Receives from a source, forwards within 6 min, pass-through above 0.8'];
   }
 

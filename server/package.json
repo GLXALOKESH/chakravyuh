@@ -13,7 +13,7 @@
     "migrate": "node src/db/migrate.js",
     "seed": "node src/seed.js",
     "seed:fixtures": "SEED_FIXTURES=1 node src/seed.js",
-    "test": "node --test test/",
+    "test": "PGLITE_DIR=:memory: node --test test/*.test.js",
     "test:watch": "node --test --watch test/"
   },
   "dependencies": {
@@ -24,6 +24,7 @@
     "socket.io": "^4.8.4"
   },
   "devDependencies": {
-    "@electric-sql/pglite": "^0.3.16"
+    "@electric-sql/pglite": "^0.3.16",
+    "socket.io-client": "^4.8.4"
   }
 }
