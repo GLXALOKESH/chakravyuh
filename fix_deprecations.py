@@ -1,6 +1,0 @@
-content = open('app.py', 'r', encoding='utf-8').read()
-count = content.count('use_container_width')
-fixed = content.replace('use_container_width=True', "width='stretch'")
-fixed = fixed.replace('use_container_width=False', "width='content'")
-open('app.py', 'w', encoding='utf-8').write(fixed)
-print(f'Fixed {count} occurrences of use_container_width')
