@@ -44,18 +44,34 @@ sed -E 's|(mongodb(\+srv)?://)([^:/@]+):([^@]+)@|\1\3:***@|' .env
 cat .env
 ```
 
+## Scope: server only
+
+**Work only in `server/`. Never modify `ml/` or `client/`.** Another person owns
+the Python pipeline and another owns the frontend. Do not edit, refactor,
+reformat, "fix", delete or commit anything in either directory — even when a
+problem there looks obviously wrong and even when it blocks the server.
+
+When a problem is found on the other side:
+
+1. **Report it to the user in your reply.** Do not act on it.
+2. Say which file, what the mismatch is, and which side the server expects.
+3. Let them decide. They own the conversation with the other member.
+
+This is not a soft preference. Editing another member's work to "help" causes
+merge conflicts in work they have already pushed, and it hides decisions that
+are theirs to make.
+
 ## Repo layout
 
 ```
-server/   Member 1. Express + TypeScript + Mongoose 9 on MongoDB.
-ml/       Member 3. Python pipeline. Currently EMPTY.
-client/   Member 2. Frontend.
-docs/     Integration docs for all three.
+server/   Member 1, OURS. Express + TypeScript + Mongoose 9 on MongoDB.
+ml/       Member 3. Python pipeline. NOT OURS.
+client/   Member 2. Frontend. NOT OURS.
+docs/     Integration docs. Ours to write when a contract needs stating.
 ```
 
-`ml/` and `client/` are owned by other members. Do not write into them without
-being asked — `server/src/mocks/` and `server/data/demo/` exist so those teams
-are not blocked while their side is empty.
+Read-only across the boundary: reading `ml/` to understand what the server is
+called with is fine and often necessary. Writing to it is not.
 
 ## Docs
 
@@ -93,3 +109,21 @@ Against Atlas a seed takes ~40s versus <1s locally, which is why
 Current state: 103 checks, 8 files, nothing skipped. The suite catching zero
 tests is a bug — if a run reports 0 or a suspiciously low count, investigate
 rather than accepting it.
+
+## Two known blockers between the server and the pipeline
+
+Recorded 3 Oct 2026 so they are not rediscovered. **Both are on the ML side and
+neither is ours to fix** — report them, do not act on them.
+
+1. **`amount_paise` vs `amount`.** `ml/data/demo/transactions.json` uses
+   `amount_paise`; `server/src/models/transaction.model.ts` requires `amount`.
+   Every transaction is rejected. TRD §6 says rupees, `docs/BACKEND_INTERFACE.md`
+   says paise — needs a decision, not a guess.
+2. **Data directory mismatch.** `ml/config.py` writes to `<repo>/ml/data`, the
+   server reads `<repo>/data`. So `pnpm run seed` finds nothing and silently
+   falls back to `src/fixtures/`.
+
+That fallback is what hides blocker 1. If `pnpm run seed` prints
+`from src/fixtures`, the pipeline output is not being read.
+
+See `docs/BACKEND_STATUS.md` § Not done.

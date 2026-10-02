@@ -6,13 +6,103 @@ This is the ML side end to end: the pipeline order, what each script produces,
 how the output reaches the dashboard, and what the server does and does not do
 with it.
 
-**Current state: `ml/` is empty. None of this exists yet.** This document is the
-specification to build against. It is derived from TRD §7 and from the server
-code as it actually is, not from what either of us hopes it will be.
+> **Current state, 3 Oct 2026: the pipeline is built.** `ml/` holds 14 modules
+> and about 5,100 lines — `generate.py`, `features.py`, `models.py`, `rings.py`,
+> `taint.py`, `freeze.py`, `detector.py`, `loop.py`, `adversary.py`, `service.py`
+> and more — plus 7 test files. This document was written when `ml/` was empty,
+> so §§1–5 describe the intended design; §0 below records what actually landed
+> and the two places it does not line up with the server.
+
+## 0. What exists, and the two things to fix
+
+### Built
+
+| Module | Role |
+| --- | --- |
+| `generate.py` | Synthetic accounts, identifiers, transactions |
+| `features.py` | Per-account feature vectors (TRD §7.2) |
+| `models.py` | V1 and V2 risk models |
+| `rings.py` | Ring discovery and roles |
+| `taint.py` | Taint tracing (TRD §7.6) |
+| `freeze.py` | Freeze optimiser (TRD §7.7) |
+| `detector.py` | Detection logic |
+| `loop.py`, `adversary.py` | Adversarial loop and demo judging |
+| `export.py` | Writes the JSON the server reads |
+| `service.py` | FastAPI/HTTP service |
+
+Outputs are present and populated:
+
+```
+ml/data/demo/            accounts.json  identifiers.json  transactions.json
+                          ground_truth.json
+ml/data/demo/outputs/    rings.json  alerts.json  metrics.json  recruits.json
+ml/data/{train,test}/    profiles exist
+```
+
+Tests: `ml/tests/` holds 7 files — `test_generate.py`, `test_features.py`
+(via `test_rings.py`), `test_taint.py`, `test_freeze.py`, `test_rings.py`,
+`test_loop.py`, `test_adversary.py`, `test_contingencies.py`.
+
+### Blocker 1: `amount_paise` is not `amount`
+
+The generated transactions use `amount_paise`:
+
+```
+ml/data/demo/transactions.json
+  keys: _id, from, to, amount_paise, ts, channel, location, is_fraud
+```
+
+The server schema requires `amount` and will reject every transaction. Values
+are genuinely paise — `19114400` is ₹191,144 — and
+`docs/BACKEND_INTERFACE.md` line 174 mandates paise.
+
+TRD §6 specifies rupees (`"amount": 48000`). This is a field rename plus a
+100× disagreement about units, and it needs a decision rather than a fix: if
+paise wins, the frontend divides by 100 and every `pct_stopped` figure in the
+demo shifts accordingly.
+
+Everything else in the generated data already matches TRD §6 — `_id`, `ts`,
+`channel`, `location`, `is_fraud`, and channels correctly limited to
+`UPI | IMPS | NEFT | ATM`. Accounts carry `holder`, `bank`, `home`, `opened_at`,
+`opening_balance`, `features`, `risk_v1`, `risk_v2`, `signals`, `ring_id`,
+`role`, `role_reason`. Only the amount field diverges.
+
+### Blocker 2: the two sides read different directories
+
+`ml/config.py` sets `DATA_DIR` to `<repo>/ml/data`. The server resolves
+`dataDir` to `<repo>/data` and reads `<repo>/data/<profile>/`.
+
+`<repo>/data/demo/` currently contains only `.gitkeep`, so **`npm run seed`
+cannot see the pipeline output** and falls back to `src/fixtures/`. The
+dashboard looks correct because the fixture dataset satisfies the same
+contract — which is precisely why this is easy to miss.
+
+The fallback is doing more harm than good now: it hides blocker 1 entirely.
+
+### Blocker 3 (minor): `recruits.json` is empty
+
+Two bytes. The recruiter is optional per `ml/README.md`, so this is consistent
+rather than broken. `GET /api/rings/:id/recruits` returns an empty array.
+
+### `service.py` route names line up
+
+```
+GET  /health          ✓
+POST /taint           ✓
+POST /mincut          ✓
+POST /pipeline/run    ✓
+POST /ouroboros/run   (extra, harmless)
+```
+
+But the service has never been started against the server, so request and
+response shapes are still unverified in both directions.
+
+---
 
 Read alongside:
 
 - `ML_INTEGRATION.md` — exact file formats, byte for byte
+- `BACKEND_INTERFACE.md` — the pipeline side's own contract document
 - `HOW_DATA_FLOWS.md` — what the server does after you write the files
 - `COMMUNICATION.md` §4 — the live endpoints
 
@@ -337,17 +427,22 @@ want it built for development, say so — it is roughly 30 lines.
 
 ## 8. Build order
 
-If you are picking this up from scratch, this order gets a visible result fastest
-and validates the handoff early rather than at the end.
+**This section is retained for reference only — steps 1 through 7 are done.**
+See §0 for what actually landed.
+
+The order below got a visible result fastest and validated the handoff early
+rather than at the end. If any part needs revisiting, the sequence still holds:
 
 **Step 1 — generator + fixtures (do this first).** Nothing downstream can be
 tested without data. Output must satisfy the §5 invariants: every account has
 `home`, every ATM txn has `location`, cash-out is `to: "CASH"`, account E shares
 a device with a ring member and has no ring transactions.
 
-**Step 2 — wire the handoff and verify.** Run `npm run seed` and confirm the
+**Step 2 — wire the handoff and verify.** Run `pnpm run seed` and confirm the
 counts print and `from data/demo` appears. Do this before writing any model, so
 you know the plumbing works before there is anything to plumb.
+
+> This is the step that is currently failing silently — see §0, blocker 2.
 
 **Step 3 — features + models (F2, F3).** Train on `train`, report on `test`,
 score `demo`. Emit `risk_v1`, `risk_v2`, `signals[]` into `accounts.json`. Get
@@ -398,15 +493,21 @@ unlabelled — it is the negative case the recruitment predictor is scored again
 
 ## 10. Open questions
 
-1. **`default_taint` structure.** TRD §6 shows `{}`. The cached freeze path
+1. **Paise or rupees?** The highest-priority question in this document. TRD §6
+   says rupees; `docs/BACKEND_INTERFACE.md` and the generated data say paise.
+   Whichever wins, one side has to change, and the frontend display depends on
+   the answer. See §0, blocker 1.
+2. **Which data directory is canonical?** `ml/data/<profile>/` or
+   `<repo>/data/<profile>/`? See §0, blocker 2.
+3. **`default_taint` structure.** TRD §6 shows `{}`. The cached freeze path
    recomputes `secured` and `pct_stopped` from per-account taint, so this needs
    `{ account_id: taint }` or similar. What shape are you producing?
-2. **The 3 second budget.** Brute force over combinations is exponential in `k`.
+4. **The 3 second budget.** Brute force over combinations is exponential in `k`.
    Can it hold, or do you want the timeout raised knowingly?
-3. **Pattern D recall.** Both fixture metric rows are `null`. Is a pattern-D
+5. **Pattern D recall.** Both fixture metric rows are `null`. Is a pattern-D
    detector coming?
-4. **`geo_spread_km`.** Map is P2 per TRD §11. Populate now or leave null?
-5. **V2 versus V1.** The demo narrative is that identity linking catches what
+6. **`geo_spread_km`.** Map is P2 per TRD §11. Populate now or leave null?
+7. **V2 versus V1.** The demo narrative is that identity linking catches what
    transaction flow misses. If your numbers do not show that, better to know now.
 
 Anything in here you disagree with, say so and I will change the server. Cheaper
