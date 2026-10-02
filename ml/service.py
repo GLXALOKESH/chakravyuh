@@ -94,51 +94,70 @@ if FASTAPI_AVAILABLE:
             from taint import trace
             accounts, txns, rings = _load_data("demo")
             transactions = req.transactions or txns
-            
-            # Find ring
-            ring = next((r for r in rings if r.get("_id") == req.ring_id or r.get("ring_id") == req.ring_id), None)
-            ring_members = set(ring["member_ids"]) if ring else {a["_id"] for a in accounts}
 
-            # Opening balances
+            # Normalise: ensure each txn has amount_paise for the trace function
+            normalised_txns = []
+            for t in transactions:
+                nt = dict(t)
+                if "amount_paise" not in nt:
+                    # amount may be in rupees already; convert to paise for trace
+                    nt["amount_paise"] = int(nt.get("amount", 0)) * 100
+                normalised_txns.append(nt)
+
+            # Find ring
+            ring = next((r for r in rings
+                         if r.get("_id") == req.ring_id
+                         or r.get("ring_id") == req.ring_id), None)
+            ring_members = (set(ring["member_ids"]) if ring
+                            else {a["_id"] for a in accounts})
+
+            # Opening balances in paise
             if req.opening_balances:
                 open_bal = req.opening_balances
             else:
-                open_bal = {a["_id"]: a["opening_balance"] for a in accounts}
+                open_bal = {a["_id"]: a["opening_balance"] * 100
+                            if a["opening_balance"] < 1_000_000
+                            else a["opening_balance"]
+                            for a in accounts}
 
             # Victim txn id
             victim_txn = req.victim_txn_id
             if not victim_txn and ring and ring.get("victim_txn_ids"):
                 victim_txn = ring["victim_txn_ids"][0]
             if not victim_txn:
-                # Find first fraud txn
-                for t in transactions:
+                for t in normalised_txns:
                     if t.get("is_fraud") and t["to"] in ring_members:
                         victim_txn = t["_id"]
                         break
 
-            bal, taint_map, flows, victim_amt = trace(transactions, open_bal, victim_txn, req.as_of)
+            bal, taint_map, flows, victim_amt = trace(
+                normalised_txns, open_bal, victim_txn, req.as_of)
 
-            # Build TaintPayload response shape matching TRD §8
+            # Build TaintPayload — convert paise -> rupees for wire format
+            def p2r(v):
+                return max(0, int(v) // 100) if int(v) > 10_000 else int(v)
+
             account_rows = []
             for aid in ring_members:
                 t_val = taint_map.get(aid, 0)
-                b_val = bal.get(aid, 0)
+                b_val = max(bal.get(aid, 0), 0)
                 account_rows.append({
-                    "id": aid,
-                    "balance": b_val,
-                    "tainted": t_val,
-                    "lien": min(t_val, max(b_val, 0)),
+                    "id":      aid,
+                    "balance": p2r(b_val),
+                    "tainted": p2r(t_val),
+                    "lien":    p2r(min(t_val, max(b_val, 0))),
                 })
 
             lost_to_cash = taint_map.get("CASH", 0)
-            links = [{"source": u, "target": v, "value": val} for (u, v), val in flows.items() if val > 0]
+            links = [{"source": u, "target": v, "value": p2r(val)}
+                     for (u, v), val in flows.items() if val > 0]
 
             return {
-                "victim_amount": victim_amt,
-                "as_of": req.as_of,
-                "accounts": account_rows,
-                "lost_to_cash": lost_to_cash,
-                "links": links,
+                "victim_amount": p2r(victim_amt),
+                "as_of":         req.as_of,
+                "accounts":      account_rows,
+                "lost_to_cash":  p2r(lost_to_cash),
+                "links":         links,
             }
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
@@ -148,12 +167,33 @@ if FASTAPI_AVAILABLE:
         try:
             from freeze import recommend_freeze
             accounts, txns, rings = _load_data("demo")
-            ring = req.ring or next((r for r in rings if r.get("_id") == req.ring_id or r.get("ring_id") == req.ring_id), None)
+            ring = req.ring or next(
+                (r for r in rings
+                 if r.get("_id") == req.ring_id or r.get("ring_id") == req.ring_id),
+                None)
             if not ring:
-                raise HTTPException(status_code=404, detail=f"Ring {req.ring_id} not found")
+                raise HTTPException(status_code=404,
+                                    detail=f"Ring {req.ring_id} not found")
 
-            transactions = req.transactions or txns
+            raw_txns = req.transactions or txns
             acc_list = req.accounts or accounts
+
+            # Ensure transactions have amount_paise for the taint/freeze engine
+            norm_txns = []
+            for t in raw_txns:
+                nt = dict(t)
+                if "amount_paise" not in nt:
+                    nt["amount_paise"] = int(nt.get("amount", 0)) * 100
+                norm_txns.append(nt)
+
+            # Opening balances in paise
+            norm_accounts = []
+            for a in acc_list:
+                na = dict(a)
+                bal = na.get("opening_balance", 0)
+                if bal < 1_000_000:
+                    na["opening_balance"] = bal * 100
+                norm_accounts.append(na)
 
             victim_txn = req.victim_txn_id
             if not victim_txn and ring.get("victim_txn_ids"):
@@ -161,14 +201,24 @@ if FASTAPI_AVAILABLE:
 
             rec = recommend_freeze(
                 ring=ring,
-                transactions=transactions,
-                accounts=acc_list,
+                transactions=norm_txns,
+                accounts=norm_accounts,
                 victim_txn_id=victim_txn,
                 k=req.k,
                 exclude=req.exclude,
                 as_of=req.as_of,
             )
-            return rec
+
+            # Convert paise amounts to rupees in the response
+            def p2r(v):
+                return max(0, int(v) // 100) if int(v) > 10_000 else int(v)
+
+            return {
+                "freeze":         rec.get("freeze", []),
+                "at_risk_before": p2r(rec.get("at_risk_before", 0)),
+                "secured":        p2r(rec.get("secured", 0)),
+                "pct_stopped":    rec.get("pct_stopped", 0.0),
+            }
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
 

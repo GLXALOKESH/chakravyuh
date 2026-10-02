@@ -34,13 +34,13 @@ from pathlib import Path
 PROFILE_CONFIG = {
     "demo": {
         "seed":          42,
-        "n_accounts":    600,
-        "n_normal_txns": 5000,
-        "days":          7,
-        "n_rings":       3,          # patterns A, B, C  (one each)
-        "include_d":     False,
-        "start_date":    "2026-09-25T00:00:00Z",
-        "account_e":     True,       # recruitment candidate
+        "n_accounts":    900,            # ↑ from 600  — wider normal population
+        "n_normal_txns": 8000,           # ↑ from 5000 — more realistic traffic density
+        "days":          14,             # ↑ from 7    — two-week window for richer patterns
+        "n_rings":       5,              # ↑ from 3    — patterns A, B, C + 2 more (A2, B2)
+        "include_d":     True,           # now ON — pattern D (cross-border hop) included
+        "start_date":    "2026-09-20T00:00:00Z",
+        "account_e":     True,           # recruitment candidate
     },
     "train": {
         "seed":          1337,
@@ -67,6 +67,7 @@ PROFILE_CONFIG = {
 # ─────────────────────────────────────────────────────────────────
 # 2.  STATIC TABLES
 # ─────────────────────────────────────────────────────────────────
+
 
 BANKS = [
     "State Bank", "HDFC Bank", "ICICI Bank", "Axis Bank", "PNB",
