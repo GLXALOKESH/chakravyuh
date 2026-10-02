@@ -1,0 +1,43 @@
+{
+  "name": "chakravyuh-server",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Chakravyuh fraud-ring API: Express, TypeScript, Mongoose on MongoDB",
+  "main": "dist/bin/server.js",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "tsx watch src/bin/server.ts",
+    "start": "tsx src/bin/server.ts",
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "db:indexes": "tsx src/bin/indexes.ts",
+    "seed": "tsx src/bin/seed.ts",
+    "seed:fixtures": "SEED_FIXTURES=1 tsx src/bin/seed.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "clean": "rm -rf dist .tsbuildinfo"
+  },
+  "dependencies": {
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.15.1",
+    "dotenv": "^16.6.1",
+    "express": "^4.22.3",
+    "mongoose": "^9.10.3",
+    "pdfkit": "^0.15.2",
+    "reflect-metadata": "^0.2.2",
+    "socket.io": "^4.8.4"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.25",
+    "@types/node": "^26.6.4",
+    "@types/pdfkit": "^0.17.6",
+    "mongodb-memory-server": "^11.3.0",
+    "tsx": "^4.23.15",
+    "typescript": "^6.0.3",
+    "vitest": "^5.0.3"
+
+  }
+}
