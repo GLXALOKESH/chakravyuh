@@ -1,22 +1,14 @@
 {
   "name": "chakravyuh-server",
-<<<<<<< HEAD
   "version": "1.0.0",
   "private": true,
   "type": "module",
   "description": "Chakravyuh fraud-ring API: Express, TypeScript, Mongoose on MongoDB",
   "main": "dist/bin/server.js",
-=======
-  "version": "0.1.0",
-  "private": true,
-  "type": "module",
-  "description": "Chakravyuh Express API, Socket.IO replay and evidence pack",
->>>>>>> 7af34b4 (feat(server): scaffold Express API foundation on PostgreSQL)
   "engines": {
     "node": ">=20"
   },
   "scripts": {
-<<<<<<< HEAD
     "dev": "tsx watch src/bin/server.ts",
     "start": "tsx src/bin/server.ts",
     "build": "tsc -p tsconfig.build.json",
@@ -46,24 +38,6 @@
     "tsx": "^4.23.15",
     "typescript": "^6.0.3",
     "vitest": "^5.0.3"
-=======
-    "dev": "node --watch src/index.js",
-    "start": "node src/index.js",
-    "migrate": "node src/db/migrate.js",
-    "seed": "node src/seed.js",
-    "seed:fixtures": "SEED_FIXTURES=1 node src/seed.js",
-    "test": "node --test test/",
-    "test:watch": "node --test --watch test/"
-  },
-  "dependencies": {
-    "dotenv": "^16.6.1",
-    "express": "^4.22.3",
-    "pdfkit": "^0.15.2",
-    "pg": "^8.23.1",
-    "socket.io": "^4.8.4"
-  },
-  "devDependencies": {
-    "@electric-sql/pglite": "^0.3.16"
->>>>>>> 7af34b4 (feat(server): scaffold Express API foundation on PostgreSQL)
+
   }
 }
