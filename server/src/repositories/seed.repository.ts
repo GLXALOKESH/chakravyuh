@@ -1,22 +1,31 @@
 /**
- * Seeding support: clearing the domain tables and recording what was loaded.
+ * Seeding support: clearing the domain collections and recording what was
+ * loaded.
  *
- * Truncate rather than delete, because the tables are small and the point of
- * the truncate is to guarantee no stale row survives, not to keep the old ones.
+ * Delete every document rather than dropping the collections, so the indexes
+ * declared on the schemas survive a reseed. Dropping them would leave the
+ * database unindexed until the next createIndexes, and the replay query over
+ * five thousand transactions is the one thing the demo cannot afford to be slow.
  */
-import { prisma } from '../configs/prisma.js';
-import { Prisma } from './prisma/client.js';
+import { SeedMeta, SEED_META_ID, ALL_MODELS } from '../models/index.js';
 import type { Writer } from '../interfaces/repository.interface.js';
 
-/**
- * Order matters only in that the whole statement is CASCADE, so this is a
- * single statement regardless. SeedMeta is included so a re-seed also clears the
- * record of the previous one.
- */
-export const DOMAIN_TABLES = ['seed_meta', 'metrics', 'recruits', 'alerts', 'transactions', 'identifiers', 'accounts', 'rings'];
+/** Collection names, in the order truncateAll clears them. See models/index.ts. */
+export const DOMAIN_COLLECTIONS = ALL_MODELS.map((model) => model.collection.collectionName);
 
+/**
+ * Empties every domain collection inside the caller's transaction.
+ *
+ * SeedMeta is included so a re-seed also clears the record of the previous one.
+ * Because this runs inside the seeder's transaction, a later failure rolls the
+ * deletes back too and the previous dataset survives intact.
+ */
 export const truncateAll = async (tx: Writer): Promise<void> => {
-  await tx.$executeRawUnsafe(`TRUNCATE ${DOMAIN_TABLES.join(', ')} RESTART IDENTITY CASCADE;`);
+  for (const model of ALL_MODELS) {
+    // deleteMany({}) on a collection that does not exist yet creates nothing and
+    // matches nothing, which is what a first seed wants.
+    await model.collection.deleteMany({}, { session: tx });
+  }
 };
 
 export interface SeedRecord {
@@ -27,15 +36,22 @@ export interface SeedRecord {
   counts?: Record<string, number>;
 }
 
+/**
+ * Records the last seed.
+ *
+ * Written outside the seeder's transaction, after it commits: this is the line
+ * that says "the data currently in the database is this", and it must not
+ * survive a load that rolled back.
+ */
 export const setLastSeed = async (value: SeedRecord, tx?: Writer): Promise<void> => {
-  await (tx ?? prisma()).seedMeta.upsert({
-    where: { key: 'last_seed' },
-    create: { key: 'last_seed', value: value as unknown as Prisma.InputJsonValue },
-    update: { value: value as unknown as Prisma.InputJsonValue },
-  });
+  await SeedMeta.findOneAndUpdate(
+    { _id: SEED_META_ID },
+    { $set: { value } },
+    { upsert: true, returnDocument: 'after', session: tx },
+  ).exec();
 };
 
 export const getLastSeed = async (): Promise<SeedRecord | null> => {
-  const row = await prisma().seedMeta.findUnique({ where: { key: 'last_seed' } });
+  const row = await SeedMeta.findById(SEED_META_ID).lean().exec();
   return (row?.value as SeedRecord | null) ?? null;
 };

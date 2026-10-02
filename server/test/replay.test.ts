@@ -12,7 +12,7 @@
 import { afterAll, describe, expect, it } from 'vitest';
 import { createApp } from '../src/app.js';
 import { ReplayEngine, REPLAY_EVENTS } from '../src/services/replay.service.js';
-import { freshDb, hasDatabase, shutdown, startServer } from './helpers.js';
+import { freshDb, shutdown, startServer } from './helpers.js';
 import type { AlertWithRing, ReplayState, Transaction } from '../src/interfaces/domain.interface.js';
 
 interface Recorded {
@@ -243,9 +243,10 @@ describe('replay over REST', () => {
   });
 });
 
-// The real script, loaded from the database. Skipped until a connection string
-// exists, because Prisma has no in-process substitute.
-describe.skipIf(!hasDatabase())('replay against the seeded script', () => {
+// The real script, loaded from the database. This is the file that catches a
+// load which reads the script without installing it: the engine would report a
+// transaction count at startup and then refuse to start.
+describe('replay against the seeded script', () => {
   afterAll(shutdown);
 
   it('loads the full transaction script and every alert', async () => {

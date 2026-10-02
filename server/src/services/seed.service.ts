@@ -2,8 +2,8 @@
  * Seeds the database from data/<profile>/ (TRD section 9).
  *
  * Reads the generator's output and the pipeline's outputs, clears the domain
- * tables and inserts everything inside one transaction, so a failure part way
- * through leaves the previous data intact. Running it twice is a no-op in
+ * collections and inserts everything inside one transaction, so a failure part
+ * way through leaves the previous data intact. Running it twice is a no-op in
  * effect: the counts come out the same.
  *
  * Expected input, matching TRD sections 5 and 6:
@@ -22,7 +22,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { config } from '../configs/env.js';
-import { prisma } from '../configs/prisma.js';
+import { ensureIndexes, withTransaction } from '../configs/mongoose.js';
 import * as accounts from '../repositories/accounts.repository.js';
 import * as alerts from '../repositories/alerts.repository.js';
 import * as identifiers from '../repositories/identifiers.repository.js';
@@ -151,10 +151,15 @@ export const seed = async (profile: string = config.seedProfile, options: SeedOp
     source = 'src/fixtures (dev generator)';
   }
 
-  // Rings first: accounts.ringId, alerts.ringId and recruits.ringId all
-  // reference them. Everything happens in one transaction, so a failure part
-  // way through leaves the previous data intact.
-  await prisma().$transaction(async (tx) => {
+  // Indexes before the write rather than after: a fresh database has none, and
+  // a bulk insert into an unindexed collection leaves a window where every
+  // query does a collection scan.
+  await ensureIndexes();
+
+  // Rings first: accounts.ring_id, alerts.ring_id and recruits.ring_id all
+  // point at them. Everything happens in one transaction, so a failure part way
+  // through leaves the previous data intact.
+  await withTransaction(async (tx) => {
     await truncateAll(tx);
     await rings.insertMany(data!.rings, tx);
     await accounts.insertMany(data!.accounts, tx);

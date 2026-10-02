@@ -95,9 +95,17 @@ export class ReplayEngine {
     this.speed = this.defaultSpeed;
   }
 
-  /** Loads the replay script from the database. */
+  /**
+   * Loads the replay script from the database and installs it.
+   *
+   * Reading the script is not enough: start() refuses to run without a queue,
+   * so a load that did not install would leave the engine looking loaded (the
+   * banner prints these counts) and then throw the moment a presenter pressed
+   * play. Both halves belong here.
+   */
   async load(): Promise<{ transactions: number; alerts: number }> {
     const script = await this.loadScript();
+    this.setScript(script);
     return { transactions: script.transactions.length, alerts: script.alerts.length };
   }
 

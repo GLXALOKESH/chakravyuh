@@ -1,89 +1,75 @@
 /**
  * Accounts (TRD section 6).
  *
- * Column names keep the snake_case of the document (risk_v1, ring_id,
- * role_reason) so the dashboard team codes one set of names, with the single
- * documented change that the document store's `_id` is exposed as `id`.
+ * Field names keep the snake_case of the document (risk_v1, ring_id,
+ * role_reason), so the dashboard team codes one set of names and the stored
+ * document is the API response with `_id` renamed to `id`.
  */
-import { prisma } from '../configs/prisma.js';
-import { Prisma } from './prisma/client.js';
-import { INSERT_BATCH_SIZE } from '../constants/index.js';
-import { chunk } from '../utilities/serialize.util.js';
-import { toAccount } from '../mappers/row.mapper.js';
+import { Account } from '../models/index.js';
+import { toAccount, type AccountRow } from '../mappers/row.mapper.js';
+import { insertBatches } from './bulk.repository.js';
 import type { AccountWrite, Writer } from '../interfaces/repository.interface.js';
-import type { Account } from '../interfaces/domain.interface.js';
+import type { Account as AccountDomain } from '../interfaces/domain.interface.js';
 
-const writer = (tx?: Writer) => tx ?? prisma();
-
-export const getById = async (id: string): Promise<Account | null> => {
-  const row = await prisma().account.findUnique({ where: { id } });
-  return row ? toAccount(row) : null;
+export const getById = async (id: string): Promise<AccountDomain | null> => {
+  const row = await Account.findById(id).lean().exec();
+  return row ? toAccount(row as unknown as AccountRow) : null;
 };
 
 /**
  * Fetches many accounts at once, preserving the caller's order.
  *
- * Ring member order is meaningful for the demo, and a relational lookup by id
- * has no inherent order, so the ordering is applied here rather than asked of
- * the database.
+ * Ring member order is meaningful for the demo, and a lookup by id has no
+ * inherent order, so the ordering is applied here rather than asked of the
+ * database.
  */
-export const listByIds = async (ids: string[]): Promise<Account[]> => {
+export const listByIds = async (ids: string[]): Promise<AccountDomain[]> => {
   if (!ids.length) return [];
-  const rows = await prisma().account.findMany({ where: { id: { in: ids } } });
-  const byId = new Map(rows.map((r) => [r.id, toAccount(r)]));
-  return ids.map((id) => byId.get(id)).filter((a): a is Account => Boolean(a));
+  const rows = await Account.find({ _id: { $in: ids } }).lean().exec();
+  const byId = new Map((rows as unknown as AccountRow[]).map((r) => [r._id, toAccount(r)]));
+  return ids.map((id) => byId.get(id)).filter((a): a is AccountDomain => Boolean(a));
 };
 
-export const listByRing = async (ringId: string): Promise<Account[]> => {
-  const rows = await prisma().account.findMany({ where: { ringId }, orderBy: { id: 'asc' } });
-  return rows.map(toAccount);
+export const listByRing = async (ringId: string): Promise<AccountDomain[]> => {
+  const rows = await Account.find({ ring_id: ringId }).sort({ _id: 1 }).lean().exec();
+  return (rows as unknown as AccountRow[]).map(toAccount);
 };
 
 /** Node projection for the ring graph (TRD section 8). */
 export const graphNodesForRing = async (ringId: string) => {
-  const rows = await prisma().account.findMany({
-    where: { ringId },
-    orderBy: { id: 'asc' },
-    select: { id: true, role: true, riskV2: true },
-  });
-  return rows.map((r) => ({ id: r.id, role: r.role, risk_v2: r.riskV2 }));
+  const rows = await Account.find({ ring_id: ringId })
+    .select('_id role risk_v2')
+    .sort({ _id: 1 })
+    .lean()
+    .exec();
+  return (rows as { _id: string; role: string | null; risk_v2: number | null }[]).map((r) => ({
+    id: r._id,
+    role: r.role,
+    risk_v2: r.risk_v2,
+  }));
 };
 
-export const count = async (): Promise<number> => prisma().account.count();
+export const count = async (): Promise<number> => Account.countDocuments({}).exec();
 
-/**
- * Bulk insert, used by the seeder.
- *
- * createMany rather than a loop of upserts: the seeder truncates first, so
- * there is nothing to merge, and one statement per thousand rows keeps the
- * statement under Postgres's 65535 bind-parameter ceiling.
- *
- * `skipDuplicates` makes a re-run a no-op rather than an error, which is what
- * TRD section 9 asks for.
- */
+/** Bulk insert, used by the seeder. See insertBatches for the batch semantics. */
 export const insertMany = async (rows: AccountWrite[], tx?: Writer): Promise<void> => {
-  const db = writer(tx);
-  for (const batch of chunk(rows, INSERT_BATCH_SIZE)) {
-    if (!batch.length) continue;
-    await db.account.createMany({
-      skipDuplicates: true,
-      data: batch.map((a) => ({
-        id: a.id,
-        holder: a.holder,
-        bank: a.bank,
-        // DbNull is SQL NULL. Plain null on a Json column is ambiguous between
-        // SQL NULL and JSON null, and home is nullable, so it is explicit.
-        home: a.home === null || a.home === undefined ? Prisma.DbNull : (a.home as Prisma.InputJsonValue),
-        openedAt: a.opened_at ? new Date(a.opened_at) : null,
-        openingBalance: a.opening_balance,
-        features: (a.features ?? {}) as Prisma.InputJsonValue,
-        riskV1: a.risk_v1,
-        riskV2: a.risk_v2,
-        signals: (a.signals ?? []) as Prisma.InputJsonValue,
-        ringId: a.ring_id,
-        role: a.role,
-        roleReason: a.role_reason,
-      })),
-    });
-  }
+  await insertBatches(
+    Account,
+    rows.map((a) => ({
+      _id: a.id,
+      holder: a.holder,
+      bank: a.bank,
+      home: (a.home ?? null) as AccountRow['home'],
+      opened_at: a.opened_at ? new Date(a.opened_at) : null,
+      opening_balance: a.opening_balance,
+      features: a.features ?? {},
+      risk_v1: a.risk_v1,
+      risk_v2: a.risk_v2,
+      signals: (a.signals ?? []) as AccountRow['signals'],
+      ring_id: a.ring_id,
+      role: a.role,
+      role_reason: a.role_reason,
+    })),
+    tx,
+  );
 };

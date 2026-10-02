@@ -7,32 +7,32 @@
  * rather than doubling them, and a failure part way through rolls back.
  */
 import { afterAll, describe, expect, it } from 'vitest';
-import { prisma } from '../src/configs/prisma.js';
+import { withTransaction } from '../src/configs/mongoose.js';
+import { Account, Alert, Identifier, Metric, Ring, Transaction } from '../src/models/index.js';
 import { loadProfile, seed } from '../src/services/seed.service.js';
 import { getLastSeed, truncateAll } from '../src/repositories/seed.repository.js';
 import { buildFixtures } from '../src/fixtures/generator.js';
 import * as transactions from '../src/repositories/transactions.repository.js';
-import { freshDb, hasDatabase, shutdown } from './helpers.js';
+import { freshDb, shutdown } from './helpers.js';
 
 afterAll(async () => {
-  if (hasDatabase()) await shutdown();
+  await shutdown();
 });
 
-/** Row counts, read straight from Prisma rather than through a repository. */
+/** Document counts, read straight from the models rather than a repository. */
 const count = async (): Promise<Record<string, number>> => {
-  const db = prisma();
   const [account, transaction, ring, alert, identifier, metric] = await Promise.all([
-    db.account.count(),
-    db.transaction.count(),
-    db.ring.count(),
-    db.alert.count(),
-    db.identifier.count(),
-    db.metric.count(),
+    Account.countDocuments({}).exec(),
+    Transaction.countDocuments({}).exec(),
+    Ring.countDocuments({}).exec(),
+    Alert.countDocuments({}).exec(),
+    Identifier.countDocuments({}).exec(),
+    Metric.countDocuments({}).exec(),
   ]);
   return { account, transaction, ring, alert, identifier, metric };
 };
 
-describe.skipIf(!hasDatabase())('seeding', () => {
+describe('seeding', () => {
   it('seeding again does not duplicate rows', async () => {
     const first = await freshDb();
     const second = await seed('demo', { forceFixtures: true });
@@ -82,13 +82,14 @@ describe.skipIf(!hasDatabase())('seeding', () => {
 
   it('the cash-out sentinel is stored, not expanded into a fake account', async () => {
     await seed('demo', { forceFixtures: true });
-    // transactions have no relation on from_account/to_account, so CASH is a
-    // legal counterparty. If a foreign key had been added, this would have
-    // failed at seed time instead.
-    const cashouts = await prisma().transaction.count({ where: { toAccount: 'CASH' } });
+    // MongoDB has no foreign keys, so CASH is a legal counterparty without an
+    // account document of its own. In a relational schema this would have
+    // needed either a fake account row, which would then appear in account
+    // listings, or a nullable column and a special case in every query.
+    const cashouts = await Transaction.countDocuments({ to: 'CASH' }).exec();
     expect(cashouts).toBeGreaterThan(0);
-    const cashAccount = await prisma().account.findUnique({ where: { id: 'CASH' } });
-    expect(cashAccount, 'CASH must not be a row in accounts').toBeNull();
+    const cashAccount = await Account.findById('CASH').lean().exec();
+    expect(cashAccount, 'CASH must not be a document in accounts').toBeNull();
   });
 
   it('a failed load leaves the previous data intact', async () => {
@@ -96,37 +97,47 @@ describe.skipIf(!hasDatabase())('seeding', () => {
     const accountsBefore = (await count()).account;
     const txnsBefore = (await count()).transaction;
 
-    // An unknown channel violates the enum, so the whole transaction must roll
-    // back rather than truncating and then half-loading.
+    // An unknown channel breaks the schema's enum, so the whole transaction must
+    // roll back rather than clearing and then half-loading.
     const broken = buildFixtures();
     broken.transactions[0] = { ...broken.transactions[0]!, channel: 'CARRIER_PIGEON' };
 
     await expect(
-      prisma().$transaction(async (tx) => {
+      withTransaction(async (tx) => {
         await truncateAll(tx);
         await transactions.insertMany(broken.transactions, tx);
       }),
     ).rejects.toThrow();
 
-    expect((await count()).account, 'truncate should have rolled back').toBe(accountsBefore);
-    expect((await count()).transaction, 'partial insert should have rolled back').toBe(txnsBefore);
+    expect((await count()).account, 'the clear should have rolled back').toBe(accountsBefore);
+    expect((await count()).transaction, 'the partial insert should have rolled back').toBe(txnsBefore);
   });
 
-  it('jsonb columns round-trip through the database', async () => {
+  it('subdocuments round-trip as structures, not strings', async () => {
     await seed('demo', { forceFixtures: true });
-    const ring = await prisma().ring.findUnique({ where: { id: 'RING01' } });
-    // Prisma returns Json columns already parsed, so a string here would mean the
-    // value was written as a JSON string rather than an object.
+    const ring = await Ring.findById('RING01').lean().exec();
+    // A string here would mean the value was written as a JSON string rather
+    // than as an embedded document.
     expect(typeof ring!.edges).toBe('object');
     expect(Array.isArray(ring!.edges)).toBe(true);
-    expect(Array.isArray(ring!.memberIds)).toBe(true);
-    expect(typeof ring!.defaultTaint).toBe('object');
+    expect(Array.isArray(ring!.member_ids)).toBe(true);
+    expect(typeof ring!.default_taint).toBe('object');
   });
 
-  it('timestamptz columns round-trip as Dates', async () => {
+  it('dates round-trip as Dates, not strings', async () => {
     await seed('demo', { forceFixtures: true });
-    const txn = await prisma().transaction.findUnique({ where: { id: 'TXN003975' } });
+    const txn = await Transaction.findById('TXN003975').lean().exec();
     expect(txn!.ts).toBeInstanceOf(Date);
     expect(Number.isNaN(txn!.ts.getTime())).toBe(false);
+  });
+
+  it('the schema rejects a channel outside the four of TRD section 6', async () => {
+    await seed('demo', { forceFixtures: true });
+    // The enum the relational schema enforced in the database now lives on the
+    // Mongoose schema, so an unknown channel still fails at write time rather
+    // than being stored and reaching the dashboard.
+    const broken = buildFixtures();
+    broken.transactions[0] = { ...broken.transactions[0]!, channel: 'CARRIER_PIGEON' };
+    await expect(transactions.insertMany(broken.transactions)).rejects.toThrow(/CARRIER_PIGEON/);
   });
 });

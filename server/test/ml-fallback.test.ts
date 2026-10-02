@@ -13,7 +13,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { config } from '../src/configs/env.js';
 import { freeze, health, taint } from '../src/services/ml.service.js';
 import { buildFixtures } from '../src/fixtures/generator.js';
-import { freshDb, hasDatabase, shutdown, startServer, type TestClient } from './helpers.js';
+import { freshDb, shutdown, startServer, type TestClient } from './helpers.js';
 import { createApp } from '../src/app.js';
 import type { FreezePayload, TaintPayload } from '../src/interfaces/domain.interface.js';
 
@@ -71,7 +71,7 @@ describe('ML client fallback', () => {
 
 // The routes, not just the client. Needs the seeded ring, so it waits for a
 // database.
-describe.skipIf(!hasDatabase())('ML fallback through the routes', () => {
+describe('ML fallback through the routes', () => {
   let api: TestClient;
 
   beforeAll(async () => {

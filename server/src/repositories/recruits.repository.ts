@@ -6,37 +6,44 @@
  * has no collection for this, so `recruits` is an addition the API needs. The
  * pipeline writes it; this route only ever reads.
  */
-import { prisma } from '../configs/prisma.js';
-import { Prisma } from './prisma/client.js';
+import { Recruit } from '../models/index.js';
 import { toRecruit } from '../mappers/api.mapper.js';
+import { recruitId } from '../models/recruit.model.js';
+import { insertBatches } from './bulk.repository.js';
 import type { Writer } from '../interfaces/repository.interface.js';
-import type { Recruit } from '../interfaces/domain.interface.js';
-
-const writer = (tx?: Writer) => tx ?? prisma();
+import type { Recruit as RecruitDomain } from '../interfaces/domain.interface.js';
 
 /** Descending by probability so the dashboard renders the list as-is. */
-export const listForRing = async (ringId: string): Promise<Recruit[]> => {
-  const rows = await prisma().recruit.findMany({
-    where: { ringId },
-    orderBy: [{ probability: 'desc' }, { accountId: 'asc' }],
-  });
-  return rows.map(toRecruit);
+export const listForRing = async (ringId: string): Promise<RecruitDomain[]> => {
+  const rows = await Recruit.find({ ring_id: ringId })
+    .select('_id account_id probability reasons')
+    .sort({ probability: -1, account_id: 1 })
+    .lean()
+    .exec();
+  return rows.map((r) =>
+    toRecruit({
+      account_id: r.account_id,
+      probability: r.probability,
+      reasons: r.reasons ?? [],
+    }),
+  );
 };
 
 export const insertMany = async (
   entries: { ring_id: string; recruits: { id: string; probability: number; reasons: string[] }[] }[],
   tx?: Writer,
 ): Promise<void> => {
-  const db = writer(tx);
   // The generator writes either `recruits` or `candidates` for the same idea.
   const rows = entries.flatMap((entry) =>
     (entry.recruits ?? []).map((r) => ({
-      ringId: entry.ring_id,
-      accountId: r.id,
+      // Ring and account share one _id, which is the composite key this would
+      // have been in a relational schema and what makes the insert idempotent.
+      _id: recruitId(entry.ring_id, r.id),
+      ring_id: entry.ring_id,
+      account_id: r.id,
       probability: r.probability ?? 0,
-      reasons: (r.reasons ?? []) as Prisma.InputJsonValue,
+      reasons: r.reasons ?? [],
     })),
   );
-  if (!rows.length) return;
-  await db.recruit.createMany({ skipDuplicates: true, data: rows });
+  await insertBatches(Recruit, rows, tx);
 };

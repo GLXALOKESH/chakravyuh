@@ -9,13 +9,13 @@ export default defineConfig({
     testTimeout: 60_000,
     hookTimeout: 60_000,
     include: ['test/**/*.test.ts'],
-    // Runs once, before any worker: creates the test schema.
+    // Runs once, before any worker: connects and creates the indexes.
     globalSetup: ['test/global-setup.ts'],
-    // Per-worker, before any import: redirects DATABASE_URL at the test schema.
+    // Per-worker, before any import: redirects MONGO_URL at the test database.
     setupFiles: ['test/setup.ts'],
-    // Each file gets its own process, which matters because the Prisma client is
-    // a per-process singleton. Files also run one at a time, because the
-    // database-backed ones truncate the same shared test schema.
+    // Each file gets its own process, which matters because the Mongoose
+    // connection is a per-process singleton. Files also run one at a time,
+    // because the database-backed ones clear the same shared test database.
     pool: 'forks',
     fileParallelism: false,
     reporters: 'default',

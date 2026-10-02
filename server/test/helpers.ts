@@ -1,21 +1,17 @@
 /**
  * Shared test helpers.
  *
- * The suite runs without a database by default: the pure files (generator
- * invariants, replay engine, mock contract, ML fallback, evidence PDF) always
- * run, and the two database-backed files skip themselves unless a connection
- * string is configured. That way `npm test` is useful both before and after
- * the string arrives, rather than failing for a reason that has nothing to do
- * with the code.
+ * Every file here has a database behind it. global-setup.ts points the suite at
+ * MONGO_URL when one is configured and otherwise starts its own mongod, so
+ * nothing in the suite skips itself: a repository that queries a field name the
+ * schema does not have typechecks perfectly and then returns nothing, and only a
+ * real server catches that.
  */
 import http from 'node:http';
 import { once } from 'node:events';
 import type { Express } from 'express';
-import { prisma } from '../src/configs/prisma.js';
+import { disconnect } from '../src/configs/mongoose.js';
 import { seed } from '../src/services/seed.service.js';
-import { hasTestDatabase } from './db-url.js';
-
-export { hasTestDatabase as hasDatabase };
 
 export interface SeedSummary {
   source: string;
@@ -23,14 +19,14 @@ export interface SeedSummary {
   counts: Record<string, number>;
 }
 
-/** Migrates (already done by global setup) and seeds, then returns the summary. */
+/** Indexed (by global setup) and seeded, then returns the summary. */
 export const freshDb = async (profile = 'demo'): Promise<SeedSummary> => {
   const result = await seed(profile, { forceFixtures: true });
   return { source: result.source, profile: result.profile, counts: result.counts };
 };
 
 export const shutdown = async (): Promise<void> => {
-  await prisma().$disconnect().catch(() => {});
+  await disconnect().catch(() => {});
 };
 
 export interface Response<T = any> {

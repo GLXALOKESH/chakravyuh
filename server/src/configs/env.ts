@@ -1,9 +1,7 @@
 /**
  * Environment configuration for the Chakravyuh API.
  *
- * Defaults follow TRD section 9. The one deliberate rename from the document is
- * MONGO_URL -> DATABASE_URL, because the team chose PostgreSQL over MongoDB.
- * See README "Deviations from the TRD".
+ * Defaults follow TRD section 9 exactly, MONGO_URL included.
  *
  * Read once at import time. Everything that needs configuration takes it from
  * here rather than touching process.env, so a typo in an env var name is a
@@ -33,7 +31,12 @@ const int = (value: string | undefined, fallback: number): number => {
 export interface AppConfig {
   readonly port: number;
   readonly nodeEnv: string;
-  readonly databaseUrl: string;
+  /** MONGO_URL, TRD section 9. */
+  readonly mongoUrl: string;
+  /** Whether MONGO_URL came from the environment rather than from the default. */
+  readonly mongoUrlExplicit: boolean;
+  /** How long to wait for MongoDB to pick a server before giving up. */
+  readonly dbConnectTimeoutMs: number;
   readonly mlUrl: string;
   readonly mlTimeoutMs: number;
   readonly useMocks: boolean;
@@ -45,15 +48,24 @@ export interface AppConfig {
   readonly replayTickMs: number;
 }
 
+/** The MONGO_URL default from the configuration table in TRD section 9. */
+const TRD_DEFAULT_MONGO_URL = 'mongodb://localhost:27017/chakravyuh';
+
+const explicitMongoUrl = process.env.MONGO_URL?.trim() || null;
+
 export const config: AppConfig = {
   port: int(process.env.PORT, 4000),
   nodeEnv: process.env.NODE_ENV ?? 'development',
 
-  /**
-   * PostgreSQL connection string, used both by the Prisma client at runtime and
-   * by the Prisma CLI through prisma.config.ts.
-   */
-  databaseUrl: process.env.DATABASE_URL ?? '',
+  // TRD section 9 gives mongodb://localhost:27017/chakravyuh as the default. It
+  // is applied here but not treated as configured: a default that nothing has
+  // pointed at is not a database, and bin/server.ts and the test suite both need
+  // to tell "the default local mongod is not running" apart from "no database
+  // was ever chosen".
+  mongoUrl: explicitMongoUrl ?? TRD_DEFAULT_MONGO_URL,
+  mongoUrlExplicit: explicitMongoUrl !== null,
+
+  dbConnectTimeoutMs: int(process.env.DB_CONNECT_TIMEOUT_MS, 10_000),
 
   mlUrl: process.env.ML_URL ?? 'http://localhost:8000',
   mlTimeoutMs: int(process.env.ML_TIMEOUT_MS, 3000),
@@ -73,14 +85,15 @@ export const config: AppConfig = {
 export const isProduction = (): boolean => config.nodeEnv === 'production';
 
 /**
- * True when a real database is configured.
+ * True when a real database has been pointed at.
  *
- * .env ships a placeholder connection string so `prisma generate` works before a
- * database exists, so "set" is not the same as "usable": a placeholder is
- * reported as no database, which is what the startup banner and the test suite
- * both want to know.
+ * Requires MONGO_URL to have been set explicitly, because the TRD default is
+ * always present in config.mongoUrl and must not read as a choice. A placeholder
+ * is also reported as no database: .env.example ships one so the project is
+ * runnable on a fresh clone, and the startup banner and the test suite both want
+ * "nothing configured" rather than a connection refused on 127.0.0.1.
  */
 export const hasDatabase = (): boolean => {
-  if (!config.databaseUrl) return false;
-  return !/placeholder|changeme|<.*>|YOUR_|xxx/i.test(config.databaseUrl);
+  if (!config.mongoUrlExplicit) return false;
+  return !/placeholder|changeme|<.*>|YOUR_|xxx/i.test(config.mongoUrl);
 };

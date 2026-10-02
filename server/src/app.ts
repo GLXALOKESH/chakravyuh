@@ -6,7 +6,7 @@
  */
 import express, { type Express } from 'express';
 import { config } from './configs/env.js';
-import { describeDatabase } from './configs/prisma.js';
+import { describeDatabase } from './configs/mongoose.js';
 import { JSON_BODY_LIMIT } from './constants/index.js';
 import { errorHandler, notFoundHandler } from './middlewares/error.middleware.js';
 import { ReplayEngine } from './services/replay.service.js';

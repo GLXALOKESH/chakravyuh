@@ -1,11 +1,10 @@
 /**
  * Repository contracts.
  *
- * Controllers depend on these, not on Prisma, so the persistence layer can be
+ * Controllers depend on these, not on Mongoose, so the persistence layer can be
  * swapped or faked without a controller changing. Each method is named for the
- * question the API asks rather than for the table it reads.
+ * question the API asks rather than for the collection it reads.
  */
-import type { Prisma } from '../repositories/prisma/client.js';
 import type {
   Account,
   Alert,
@@ -18,19 +17,17 @@ import type {
   RingSummary,
   Transaction,
 } from './domain.interface.js';
+import type { ClientSession } from 'mongoose';
 
-/** Any Prisma client or interactive-transaction handle. */
-export type Db = PrismaClientLike;
-
-export interface PrismaClientLike {
-  $transaction<T>(fn: (tx: Prisma.TransactionClient) => Promise<T>): Promise<T>;
-  $disconnect(): Promise<void>;
-  $queryRawUnsafe<T = unknown>(sql: string, ...values: unknown[]): Promise<T>;
-  $executeRawUnsafe(sql: string, ...values: unknown[]): Promise<number>;
-}
-
-/** A write in progress. The seeder passes one of these to every repository. */
-export type Writer = Prisma.TransactionClient;
+/**
+ * A write in progress: a MongoDB session belonging to an open transaction.
+ *
+ * The seeder opens one with withTransaction and passes it to every repository,
+ * so the whole load commits or rolls back together. A repository called without
+ * one runs on the shared connection outside any transaction, which is what every
+ * read path wants.
+ */
+export type Writer = ClientSession;
 
 export interface AccountRepository {
   getById(id: string): Promise<Account | null>;

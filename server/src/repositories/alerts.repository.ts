@@ -1,44 +1,62 @@
 /** Alerts (TRD section 6) and the alert list projection of TRD section 8. */
-import { prisma } from '../configs/prisma.js';
+import { Alert, Ring } from '../models/index.js';
 import { iso } from '../utilities/serialize.util.js';
+import { insertBatches } from './bulk.repository.js';
+import type { AlertRow } from '../mappers/row.mapper.js';
 import type { Writer } from '../interfaces/repository.interface.js';
 import type { AlertWithRing } from '../interfaces/domain.interface.js';
 
-const writer = (tx?: Writer) => tx ?? prisma();
+interface AlertJoinRow extends AlertRow {
+  ring_id?: string | null;
+}
 
-const shape = (row: {
-  id: string;
-  ringId: string | null;
-  firedAt: Date;
-  reason: string | null;
-  ring: { risk: number | null; volume: number | null; memberIds: string[] } | null;
-}): AlertWithRing => ({
-  id: row.id,
-  ring_id: row.ringId,
-  fired_at: iso(row.firedAt),
-  risk: row.ring?.risk ?? null,
-  members: (row.ring?.memberIds ?? []).length,
-  volume: row.ring?.volume ?? null,
-  reason: row.reason,
-});
-
-const WITH_RING = {
-  ring: { select: { risk: true, volume: true, memberIds: true } },
-} as const;
+interface RingSummaryRow {
+  _id: string;
+  risk: number | null;
+  volume: number | null;
+  member_ids?: string[] | null;
+}
 
 /**
- * TRD section 8 GET /alerts.
+ * Attaches risk, member count and volume from each alert's ring.
  *
- * Risk, member count and volume are joined from the ring so the dashboard can
- * render the alert list without N follow-up calls. The ring is left-joined
- * because an alert can outlive the ring it points at.
+ * Two queries and a lookup in memory, rather than a populate or a $lookup. The
+ * number of alerts is three in the demo profile and forty-odd in the train
+ * profile, so the second query is a handful of indexed lookups, and doing it
+ * here keeps the join visible instead of hiding it behind a framework option.
+ *
+ * The ring is left-joined in effect: an alert can outlive the ring it points at,
+ * and that case yields a null risk rather than dropping the alert.
  */
-export const listWithRingSummary = async (): Promise<AlertWithRing[]> => {
-  const rows = await prisma().alert.findMany({
-    include: WITH_RING,
-    orderBy: [{ firedAt: 'desc' }, { id: 'asc' }],
+const joinRings = async (rows: AlertJoinRow[]): Promise<AlertWithRing[]> => {
+  const ringIds = [...new Set(rows.map((r) => r.ring_id).filter((id): id is string => Boolean(id)))];
+  const rings = ringIds.length
+    ? await Ring.find({ _id: { $in: ringIds } })
+        .select('_id risk volume member_ids')
+        .lean()
+        .exec()
+    : [];
+
+  const byId = new Map((rings as unknown as RingSummaryRow[]).map((r) => [r._id, r]));
+
+  return rows.map((row) => {
+    const ring = row.ring_id ? byId.get(row.ring_id) : undefined;
+    return {
+      id: row._id,
+      ring_id: row.ring_id ?? null,
+      fired_at: iso(row.fired_at),
+      risk: ring?.risk ?? null,
+      members: (ring?.member_ids ?? []).length,
+      volume: ring?.volume ?? null,
+      reason: row.reason ?? null,
+    };
   });
-  return rows.map(shape);
+};
+
+/** TRD section 8 GET /alerts, newest first. */
+export const listWithRingSummary = async (): Promise<AlertWithRing[]> => {
+  const rows = await Alert.find().sort({ fired_at: -1, _id: 1 }).lean().exec();
+  return joinRings(rows as unknown as AlertJoinRow[]);
 };
 
 /**
@@ -48,28 +66,24 @@ export const listWithRingSummary = async (): Promise<AlertWithRing[]> => {
  * ascending regardless of how the alert list is displayed.
  */
 export const listWithRingByFiredAt = async (): Promise<AlertWithRing[]> => {
-  const rows = await prisma().alert.findMany({
-    include: WITH_RING,
-    orderBy: [{ firedAt: 'asc' }, { id: 'asc' }],
-  });
-  return rows.map(shape);
+  const rows = await Alert.find().sort({ fired_at: 1, _id: 1 }).lean().exec();
+  return joinRings(rows as unknown as AlertJoinRow[]);
 };
 
-export const count = async (): Promise<number> => prisma().alert.count();
+export const count = async (): Promise<number> => Alert.countDocuments({}).exec();
 
 export const insertMany = async (
   rows: { id: string; ring_id: string | null; fired_at: string; reason: string | null }[],
   tx?: Writer,
 ): Promise<void> => {
-  const db = writer(tx);
-  if (!rows.length) return;
-  await db.alert.createMany({
-    skipDuplicates: true,
-    data: rows.map((a) => ({
-      id: a.id,
-      ringId: a.ring_id,
-      firedAt: new Date(a.fired_at),
+  await insertBatches(
+    Alert,
+    rows.map((a) => ({
+      _id: a.id,
+      ring_id: a.ring_id,
+      fired_at: new Date(a.fired_at),
       reason: a.reason,
     })),
-  });
+    tx,
+  );
 };

@@ -4,27 +4,27 @@
  * "Every endpoint returns the shapes in section 8, with mocks and with real
  * data." This file covers the real half; mocks.contract.test.ts covers the other.
  *
- * Skipped until DATABASE_URL is configured, because Prisma has no in-process
- * substitute. Run `npm test` after setting it and this file executes as-is.
+ * Runs against a real MongoDB. global-setup.ts supplies MONGO_URL when one is
+ * configured and otherwise starts its own mongod, so this file always executes
+ * rather than skipping.
  */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createApp } from '../src/app.js';
-import { freshDb, hasDatabase, hasKeys, isNumber, ISO_SECONDS, shutdown, startServer, type TestClient } from './helpers.js';
+import { freshDb, hasKeys, isNumber, ISO_SECONDS, shutdown, startServer, type TestClient } from './helpers.js';
 
 let api: TestClient;
 
 beforeAll(async () => {
-  if (!hasDatabase()) return;
   await freshDb();
   api = await startServer(createApp());
 });
 
 afterAll(async () => {
   await api?.stop();
-  if (hasDatabase()) await shutdown();
+  await shutdown();
 });
 
-describe.skipIf(!hasDatabase())('API contract, real data', () => {
+describe('API contract, real data', () => {
   it('GET /api/alerts returns the section 8 alert shape', async () => {
     const { status, body } = await api.get('/api/alerts');
     expect(status).toBe(200);
@@ -263,7 +263,11 @@ describe.skipIf(!hasDatabase())('API contract, real data', () => {
     expect(status).toBe(200);
     expect(body.ok).toBe(true);
     hasKeys(body, ['ok', 'database', 'mocks', 'ml_url', 'replay'], 'health');
-    expect(body.database.driver).toContain('postgresql');
+    expect(body.database.driver).toContain('mongodb');
+    // Atlas is reported distinctly from a local mongod, because they need
+    // different setup notes when a connection fails.
+    expect(body.database.host).toBeTruthy();
+    expect(body.database.database).toBeTruthy();
   });
 
   it('POST /rings/:id/evidence returns a downloadable PDF', async () => {

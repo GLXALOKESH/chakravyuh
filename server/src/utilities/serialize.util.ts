@@ -1,5 +1,5 @@
 /**
- * Small shared helpers. Nothing here knows about Express, Prisma or HTTP, so
+ * Small shared helpers. Nothing here knows about Express, Mongoose or HTTP, so
  * these can be imported from a repository, a service or a test.
  */
 
@@ -7,10 +7,10 @@
  * Timestamps go out as YYYY-MM-DDTHH:MM:SSZ, matching the contract examples in
  * TRD section 8.
  *
- * Prisma returns timestamptz as a JS Date, whose default toJSON adds
- * milliseconds, so the milliseconds are trimmed in one place rather than in
- * every mapper. Anything unparseable becomes null rather than the string
- * "Invalid Date", which would break the contract's format check.
+ * A BSON date comes back as a JS Date, whose default toJSON adds milliseconds,
+ * so the milliseconds are trimmed in one place rather than in every mapper.
+ * Anything unparseable becomes null rather than the string "Invalid Date", which
+ * would break the contract's format check.
  */
 export const iso = (value: Date | string | number | null | undefined): string | null => {
   if (value === null || value === undefined) return null;
@@ -22,9 +22,9 @@ export const iso = (value: Date | string | number | null | undefined): string | 
 export const isoList = (list: readonly (Date | string | null)[]): (string | null)[] => list.map(iso);
 
 /**
- * Prisma's Json columns are typed as JsonValue, which is wider than the shapes
- * we store. This is the one place that narrowing is allowed, and it fails loudly
- * rather than silently yielding an empty object.
+ * Subdocuments stored as Mixed come back as whatever shape was written, which is
+ * wider than the contract types. This is the one place that narrowing is allowed,
+ * and it fails loudly rather than silently yielding an empty object.
  */
 export const asRecord = <T>(value: unknown, fallback: T): T => {
   if (value === null || value === undefined) return fallback;
@@ -59,9 +59,8 @@ export const round3 = (value: number): number => Number(value.toFixed(3));
 /**
  * Splits an array into fixed-size batches.
  *
- * Postgres allows 65535 bind parameters per statement, and createMany inlines
- * one parameter per column per row, so a bulk insert of several thousand rows
- * has to be split.
+ * MongoDB caps a single command at 16MB of BSON, so a bulk insert of several
+ * thousand documents has to be split into batches that comfortably fit.
  */
 export const chunk = <T>(items: readonly T[], size: number): T[][] => {
   const out: T[][] = [];

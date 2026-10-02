@@ -109,8 +109,8 @@ export const toAccountDetail = (
 });
 
 /** GET /rings/:id/recruits. */
-export const toRecruit = (row: { accountId: string; probability: number; reasons: unknown }): Recruit => ({
-  id: row.accountId,
+export const toRecruit = (row: { account_id: string; probability: number; reasons: unknown }): Recruit => ({
+  id: row.account_id,
   probability: row.probability ?? 0,
   reasons: Array.isArray(row.reasons) ? (row.reasons as string[]) : [],
 });

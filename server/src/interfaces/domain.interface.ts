@@ -6,7 +6,7 @@
  * store's `_id` is exposed as `id` everywhere.
  *
  * These are the shapes repositories return and controllers hand to mappers. They
- * are deliberately free of Prisma types, so a repository can change its query
+ * are deliberately free of Mongoose types, so a repository can change its query
  * strategy without touching a controller.
  */
 import type { AccountRole, IdentifierTypeValue } from '../constants/index.js';

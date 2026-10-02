@@ -1,47 +1,32 @@
 /**
  * Transactions (TRD section 6).
  *
- * `from` and `to` are SQL keywords, so they are stored as from_account and
- * to_account and mapped back on the way out.
+ * `from` and `to` are the contract's own names. They are SQL keywords, which is
+ * why the previous relational schema had to call them from_account and to_account
+ * and map them back on every read; MongoDB has no such restriction, so the
+ * document is stored exactly as TRD section 6 shows it.
  *
  * is_fraud is ground truth and is absent from every read projection in this
- * file: TRD section 6 states it is never sent to the dashboard, and the
- * Transaction domain type has no field for it, so the mapper cannot leak it.
+ * file: TRD section 6 states it is never sent to the dashboard, the domain
+ * Transaction type has no field for it, and every query below names its columns
+ * rather than reading the document whole.
  */
-import { prisma } from '../configs/prisma.js';
-import { Prisma } from './prisma/client.js';
-import { CASH_ACCOUNT_ID, INSERT_BATCH_SIZE } from '../constants/index.js';
-import { chunk } from '../utilities/serialize.util.js';
-import { toReplayTxn, toTransaction } from '../mappers/row.mapper.js';
+import { CASH_ACCOUNT_ID } from '../constants/index.js';
+import { Transaction } from '../models/index.js';
+import { toReplayTxn, toTransaction, type TransactionRow } from '../mappers/row.mapper.js';
+import { insertBatches } from './bulk.repository.js';
 import type { TransactionWrite, Writer } from '../interfaces/repository.interface.js';
-import type { ReplayTxn, Transaction } from '../interfaces/domain.interface.js';
-
-const writer = (tx?: Writer) => tx ?? prisma();
+import type { Transaction as Txn } from '../interfaces/domain.interface.js';
 
 /** Everything a read is allowed to return. is_fraud is not on this list. */
-const PUBLIC = {
-  id: true,
-  fromAccount: true,
-  toAccount: true,
-  amount: true,
-  ts: true,
-  channel: true,
-  location: true,
-} as const;
+const PUBLIC = '_id from to amount ts channel location';
 
 /** The `txn` socket payload of TRD section 8, and nothing more. */
-const REPLAY_COLUMNS = {
-  id: true,
-  fromAccount: true,
-  toAccount: true,
-  amount: true,
-  ts: true,
-  channel: true,
-} as const;
+const REPLAY_COLUMNS = '_id from to amount ts channel';
 
-export const getById = async (id: string): Promise<Transaction | null> => {
-  const row = await prisma().transaction.findUnique({ where: { id }, select: PUBLIC });
-  return row ? toTransaction(row) : null;
+export const getById = async (id: string): Promise<Txn | null> => {
+  const row = await Transaction.findById(id).select(PUBLIC).lean().exec();
+  return row ? toTransaction(row as unknown as TransactionRow) : null;
 };
 
 /**
@@ -50,90 +35,91 @@ export const getById = async (id: string): Promise<Transaction | null> => {
  * Two things are deliberate here. The projection is the six columns TRD section
  * 8 puts in the `txn` socket event, so the replay query does not read `location`
  * for five thousand rows it will never place on a map. And the order is part of
- * the contract: ts, then id as a tiebreak, because two transactions can share a
+ * the contract: ts, then _id as a tiebreak, because two transactions can share a
  * timestamp and the replay must still be deterministic.
  */
 export const listOrdered = async (
   options: { asOf?: Date | null; fromId?: string | null; limit?: number | null } = {},
-): Promise<ReplayTxn[]> => {
+): Promise<ReturnType<typeof toReplayTxn>[]> => {
   const { asOf = null, fromId = null, limit = null } = options;
-  const where: Prisma.TransactionWhereInput = {};
-  if (asOf) where.ts = { lte: asOf };
+  const filter: Record<string, unknown> = {};
+
+  if (asOf) filter.ts = { $lte: asOf };
   if (fromId) {
     // "Everything after this transaction" means strictly later than its own
     // timestamp. An unknown id simply contributes no cursor rather than
     // returning nothing, so a stale checkpoint cannot silently stall a caller.
-    const anchor = await prisma().transaction.findUnique({ where: { id: fromId }, select: { ts: true } });
+    const anchor = await Transaction.findById(fromId).select('ts').lean().exec();
     if (anchor) {
-      where.AND = where.ts ? [{ ts: { lte: asOf as Date } }, { ts: { gt: anchor.ts } }] : [{ ts: { gt: anchor.ts } }];
-      delete where.ts;
+      const after = { ts: { $gt: anchor.ts } };
+      filter.ts = asOf ? { $and: [{ ts: { $lte: asOf } }, after] } : after;
     }
   }
-  const rows = await prisma().transaction.findMany({
-    where,
-    select: REPLAY_COLUMNS,
-    orderBy: [{ ts: 'asc' }, { id: 'asc' }],
-    ...(limit ? { take: limit } : {}),
-  });
-  return rows.map(toReplayTxn);
+
+  const query = Transaction.find(filter).select(REPLAY_COLUMNS).sort({ ts: 1, _id: 1 });
+  if (limit) query.limit(limit);
+  const rows = await query.lean().exec();
+  return (rows as unknown as TransactionRow[]).map(toReplayTxn);
 };
 
 /**
  * Cash-out withdrawals by ring members, for the map tab.
  *
  * The member list is passed in rather than looked up, because a cash-out is a
- * transfer to the CASH sentinel, which is not a row in accounts and so cannot
- * be reached through a relation.
+ * transfer to the CASH sentinel, which is not an accounts document and so cannot
+ * be reached through a reference.
  *
- * Rows without a location are filtered out here instead of in the query: Prisma's
- * Json null is a distinct sentinel from SQL NULL, and the ATM location column
- * is only meaningful when it is a real object. The volume here is small enough
- * that the extra rows in memory do not matter.
+ * Rows without a location are filtered out here instead of in the query. In
+ * MongoDB `location: { $ne: null }` also excludes missing fields, and it cannot
+ * express "has a usable city", which is the actual requirement. The volume here
+ * is small enough that the extra rows in memory do not matter.
  */
-export const cashoutsForRing = async (memberIds: string[]): Promise<Transaction[]> => {
+export const cashoutsForRing = async (memberIds: string[]): Promise<Txn[]> => {
   if (!memberIds.length) return [];
-  const rows = await prisma().transaction.findMany({
-    where: { channel: 'ATM', fromAccount: { in: memberIds } },
-    select: PUBLIC,
-    orderBy: [{ ts: 'asc' }, { id: 'asc' }],
-  });
-  return rows.filter((r) => r.location !== null && typeof r.location === 'object').map(toTransaction);
+  const rows = await Transaction.find({ channel: 'ATM', from: { $in: memberIds } })
+    .select(PUBLIC)
+    .sort({ ts: 1, _id: 1 })
+    .lean()
+    .exec();
+  const located = (rows as unknown as TransactionRow[]).filter(
+    (r) => r.location !== null && typeof r.location === 'object',
+  );
+  return located.map(toTransaction);
 };
 
 /** Most recent activity touching an account, for the entity panel. */
-export const recentForAccount = async (accountId: string, limit = 10): Promise<Transaction[]> => {
-  const rows = await prisma().transaction.findMany({
-    where: { OR: [{ fromAccount: accountId }, { toAccount: accountId }] },
-    select: PUBLIC,
-    orderBy: [{ ts: 'desc' }, { id: 'desc' }],
-    take: limit,
-  });
-  return rows.map(toTransaction);
+export const recentForAccount = async (accountId: string, limit = 10): Promise<Txn[]> => {
+  const rows = await Transaction.find({ $or: [{ from: accountId }, { to: accountId }] })
+    .select(PUBLIC)
+    .sort({ ts: -1, _id: -1 })
+    .limit(limit)
+    .lean()
+    .exec();
+  return (rows as unknown as TransactionRow[]).map(toTransaction);
 };
 
-export const count = async (): Promise<number> => prisma().transaction.count();
+// countDocuments rather than estimatedDocumentCount: the seed reports these
+// counts and the tests assert them, so an estimate that may lag a write is not
+// good enough.
+export const count = async (): Promise<number> => Transaction.countDocuments({}).exec();
 
 /** True when any transaction is a cash-out, used by the fixture invariants. */
 export const isCashAccount = (id: string): boolean => id === CASH_ACCOUNT_ID;
 
 export const insertMany = async (rows: TransactionWrite[], tx?: Writer): Promise<void> => {
-  const db = writer(tx);
-  for (const batch of chunk(rows, INSERT_BATCH_SIZE)) {
-    if (!batch.length) continue;
-    await db.transaction.createMany({
-      skipDuplicates: true,
-      data: batch.map((t) => ({
-        id: t.id,
-        fromAccount: t.from,
-        toAccount: t.to,
-        amount: t.amount,
-        ts: new Date(t.ts),
-        channel: t.channel as Prisma.TransactionCreateManyInput['channel'],
-        location:
-          t.location === null || t.location === undefined ? Prisma.DbNull : (t.location as Prisma.InputJsonValue),
-        // Ground truth. Written here, never read back out through a projection.
-        isFraud: Boolean(t.is_fraud),
-      })),
-    });
-  }
+  await insertBatches(
+    Transaction,
+    rows.map((t) => ({
+      _id: t.id,
+      from: t.from,
+      to: t.to,
+      amount: t.amount,
+      ts: new Date(t.ts),
+      channel: t.channel,
+      location: (t.location ?? null) as TransactionRow['location'],
+      // Ground truth. Written here, never read back out through a projection.
+      is_fraud: Boolean(t.is_fraud),
+    })),
+    tx,
+  );
 };

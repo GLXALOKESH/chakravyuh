@@ -7,7 +7,7 @@ import http from 'node:http';
 import 'reflect-metadata';
 import { Server as SocketServer } from 'socket.io';
 import { config, hasDatabase } from '../configs/env.js';
-import { describeDatabase, disconnect } from '../configs/prisma.js';
+import { connect, describeDatabase, disconnect } from '../configs/mongoose.js';
 import { createApp } from '../app.js';
 import { ReplayEngine, REPLAY_EVENTS } from '../services/replay.service.js';
 
@@ -48,18 +48,22 @@ io.on('connection', (socket) => {
 const main = async (): Promise<void> => {
   // Mock mode must work with no database at all: TRD section 15 has the whole
   // frontend built against fixed payloads for hours 2 to 10, and requiring a
-  // live PostgreSQL then would defeat the point of having mocks.
+  // live MongoDB then would defeat the point of having mocks.
   let script = { transactions: 0, alerts: 0 };
   if (config.useMocks) {
     console.log('mock mode: no database connection will be opened');
   } else if (!hasDatabase()) {
-    // Fail here with the actionable message rather than as a Prisma stack trace
+    // Fail here with the actionable message rather than as a driver stack trace
     // from three frames down.
     throw new Error(
-      'DATABASE_URL is not set. Either put a real connection string in server/.env, ' +
+      'MONGO_URL is not set. Either put a real connection string in server/.env, ' +
         'or start with USE_MOCKS=true to serve the contract fixtures (TRD section 15).',
     );
   } else {
+    // Connect before anything else so a bad connection string is reported now
+    // rather than on the first request during a demo.
+    await connect();
+
     // Load the replay script up front so a presenter pressing play never waits
     // on a five-thousand row query.
     script = await engine.load();

@@ -24,9 +24,11 @@ export const CHANNELS = ['UPI', 'IMPS', 'NEFT', 'ATM'] as const;
 /**
  * The account id a cash-out is paid to.
  *
- * It is a sentinel, not a row in accounts: no foreign key on transactions
- * from_account/to_account exists precisely so cash-out can be recorded without
- * inventing a fake account that would then show up in account listings.
+ * It is a sentinel, not a document in accounts. That is only workable because
+ * MongoDB has no foreign keys, so a transaction can name a counterparty that has
+ * no account of its own. In a relational schema this would need either a fake
+ * account row that then showed up in account listings, or a nullable column and
+ * a special case in every query.
  */
 export const CASH_ACCOUNT_ID = 'CASH';
 
@@ -59,5 +61,11 @@ export const MAX_GRAPH_PNG_BYTES = 4 * 1024 * 1024;
 /** JSON body limit, raised because TRD section 9 sends cy.png() in the body. */
 export const JSON_BODY_LIMIT = '6mb';
 
-/** Prisma's Postgres parameter cap is 65535 per statement, so inserts are batched. */
+/**
+ * Documents per insertMany command.
+ *
+ * Batching keeps each command well inside MongoDB's 16MB BSON limit for a
+ * six-thousand-document seed, and keeps one validation failure from rejecting a
+ * single enormous batch.
+ */
 export const INSERT_BATCH_SIZE = 1000;
