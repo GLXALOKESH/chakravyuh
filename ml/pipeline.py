@@ -255,7 +255,7 @@ def run_pipeline(profile: str, geo: bool = False, train_profile: str = "train",
                 if col in scored_df.columns
             }
             # Generate signals for flagged accounts
-            if scored_df.at[aid, "risk_v2"] >= 50 or scored_df.at[aid, "prob_v2"] >= 0.50:
+            if scored_df.at[aid, "risk_v2"] >= 0.50 or scored_df.at[aid, "prob_v2"] >= 0.50:
                 acc["signals"] = get_signals(aid, scored_df, v2_model, geo=geo)
 
     # Build alerts (one per ring) per TRD section 6 & ML_INTEGRATION.md section 3.6
