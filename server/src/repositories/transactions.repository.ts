@@ -103,6 +103,41 @@ export const recentForAccount = async (accountId: string, limit = 10): Promise<T
 // good enough.
 export const count = async (): Promise<number> => Transaction.countDocuments({}).exec();
 
+/**
+ * A page of transactions, oldest first, for GET /api/transactions.
+ *
+ * The dashboard asked not to receive the whole ledger at once: the pipeline
+ * writes several thousand rows and the frontend only ever renders a slice. This
+ * is offset pagination rather than a cursor because the frontend pages a list a
+ * human is scrolling, and needs a real page number to render "page 3 of 40".
+ *
+ * Sort is `{ ts: 1, _id: 1 }`, matching listOrdered, so a page boundary cannot
+ * show the same transaction twice or skip one when several share a timestamp.
+ * That tiebreak is why this cannot simply sort on `ts`.
+ */
+export const listPage = async (
+  page = 1,
+  limit = 50,
+): Promise<{ rows: Txn[]; total: number; page: number; pages: number }> => {
+  const [total, rows] = await Promise.all([
+    Transaction.countDocuments({}).exec(),
+    Transaction.find({})
+      .select(PUBLIC)
+      .sort({ ts: 1, _id: 1 })
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .lean()
+      .exec(),
+  ]);
+
+  return {
+    rows: (rows as unknown as TransactionRow[]).map(toTransaction),
+    total,
+    page,
+    pages: Math.ceil(total / limit),
+  };
+};
+
 /** True when any transaction is a cash-out, used by the fixture invariants. */
 export const isCashAccount = (id: string): boolean => id === CASH_ACCOUNT_ID;
 
