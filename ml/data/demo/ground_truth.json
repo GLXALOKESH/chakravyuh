@@ -1,0 +1,83 @@
+[
+  {
+    "ring_id": "RING01",
+    "pattern": "A",
+    "member_ids": [
+      "ACC0700",
+      "ACC0701",
+      "ACC0702",
+      "ACC0703",
+      "ACC0704",
+      "ACC0705",
+      "ACC0706",
+      "ACC0707",
+      "ACC0708"
+    ],
+    "victim_txn_id": "TXN001977",
+    "victim_amount_paise": 95524200,
+    "victim_account_id": "VICTIM_RING01",
+    "roles": {
+      "ACC0700": "source",
+      "ACC0701": "mule",
+      "ACC0702": "mule",
+      "ACC0703": "mule",
+      "ACC0704": "mule",
+      "ACC0705": "mule",
+      "ACC0706": "mule",
+      "ACC0707": "mule",
+      "ACC0708": "cashout"
+    }
+  },
+  {
+    "ring_id": "RING02",
+    "pattern": "B",
+    "member_ids": [
+      "ACC0730",
+      "ACC0731",
+      "ACC0732",
+      "ACC0733",
+      "ACC0734"
+    ],
+    "victim_txn_id": "TXN001936",
+    "victim_amount_paise": 64500900,
+    "victim_account_id": "VICTIM_RING02",
+    "roles": {
+      "ACC0730": "source",
+      "ACC0731": "relay",
+      "ACC0732": "relay",
+      "ACC0733": "relay",
+      "ACC0734": "cashout"
+    }
+  },
+  {
+    "ring_id": "RING03",
+    "pattern": "C",
+    "member_ids": [
+      "ACC0760",
+      "ACC0761",
+      "ACC0762",
+      "ACC0763",
+      "ACC0764",
+      "ACC0765",
+      "ACC0766",
+      "ACC0767",
+      "ACC0768",
+      "ACC0769"
+    ],
+    "victim_txn_id": "TXN003675",
+    "victim_amount_paise": 4664200,
+    "victim_account_id": "VICTIM_RING03",
+    "roles": {
+      "ACC0760": "coordinator",
+      "ACC0761": "mule",
+      "ACC0762": "mule",
+      "ACC0763": "mule",
+      "ACC0764": "mule",
+      "ACC0765": "mule",
+      "ACC0766": "mule",
+      "ACC0767": "mule",
+      "ACC0768": "mule",
+      "ACC0769": "cashout"
+    }
+  }
+]
