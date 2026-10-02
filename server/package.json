@@ -1,0 +1,29 @@
+{
+  "name": "chakravyuh-server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Chakravyuh Express API, Socket.IO replay and evidence pack",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "node --watch src/index.js",
+    "start": "node src/index.js",
+    "migrate": "node src/db/migrate.js",
+    "seed": "node src/seed.js",
+    "seed:fixtures": "SEED_FIXTURES=1 node src/seed.js",
+    "test": "node --test test/",
+    "test:watch": "node --test --watch test/"
+  },
+  "dependencies": {
+    "dotenv": "^16.6.1",
+    "express": "^4.22.3",
+    "pdfkit": "^0.15.2",
+    "pg": "^8.23.1",
+    "socket.io": "^4.8.4"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.3.16"
+  }
+}

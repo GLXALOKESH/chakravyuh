@@ -1,0 +1,16 @@
+node_modules/
+.env
+.env.*
+!.env.example
+*.log
+npm-debug.log*
+.DS_Store
+coverage/
+
+# In-process Postgres used when DATABASE_URL is unset (see server/.env.example)
+server/.pglite/
+
+# Generated ML data (TRD section 4: "generated, git-ignored").
+# Only the directory placeholder is tracked.
+data/*
+!data/.gitkeep
