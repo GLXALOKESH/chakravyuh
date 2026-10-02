@@ -1015,18 +1015,22 @@ def generate_profile(profile: str):
     else:
         print("  OK: No negative balances.")
 
-    # 9. Write output
-    out = Path("data") / profile
-    out.mkdir(parents=True, exist_ok=True)
+    # 9. Write output (both in ml/data and repo root data/)
+    out_dirs = [
+        Path(__file__).resolve().parent / "data" / profile,
+        Path(__file__).resolve().parent.parent / "data" / profile,
+    ]
 
-    with open(out / "accounts.json",    "w", encoding="utf-8") as f:
-        json.dump(all_accs,  f, indent=2, ensure_ascii=False)
-    with open(out / "identifiers.json", "w", encoding="utf-8") as f:
-        json.dump(id_list,   f, indent=2, ensure_ascii=False)
-    with open(out / "transactions.json","w", encoding="utf-8") as f:
-        json.dump(all_txns,  f, indent=2, ensure_ascii=False)
-    with open(out / "ground_truth.json","w", encoding="utf-8") as f:
-        json.dump(all_gt,    f, indent=2, ensure_ascii=False)
+    for out in out_dirs:
+        out.mkdir(parents=True, exist_ok=True)
+        with open(out / "accounts.json",    "w", encoding="utf-8") as f:
+            json.dump(all_accs,  f, indent=2, ensure_ascii=False)
+        with open(out / "identifiers.json", "w", encoding="utf-8") as f:
+            json.dump(id_list,   f, indent=2, ensure_ascii=False)
+        with open(out / "transactions.json","w", encoding="utf-8") as f:
+            json.dump(all_txns,  f, indent=2, ensure_ascii=False)
+        with open(out / "ground_truth.json","w", encoding="utf-8") as f:
+            json.dump(all_gt,    f, indent=2, ensure_ascii=False)
 
     fraud_ids  = {m for gt in all_gt for m in gt["member_ids"]}
     fraud_txns = sum(1 for t in all_txns if t.get("is_fraud"))

@@ -228,12 +228,14 @@ def discover_rings(accounts, transactions, identifiers, scored_df,
                 victim_txn_ids.append(t["_id"])
 
         rings.append({
+            "_id": ring_id,
             "ring_id": ring_id,
             "member_ids": member_ids,
             "edges": ring_edges,
             "identity_links": ring_id_links,
             "volume": ring_volume,
             "risk": round(mean_risk, 4),
+            "geo_spread_km": 0,
             "victim_txn_ids": victim_txn_ids,
             "default_taint": {},
             "default_freeze": {},
@@ -366,7 +368,7 @@ def classify_roles(ring, transactions, identifiers, scored_df):
         cash_out = outflow_to_cash.get(aid, 0)
         if total_out > 0 and cash_out / total_out >= 0.5:
             roles[aid] = {
-                "role": "cashout",
+                "role": "cash-out",
                 "role_reason": f"{cash_out / total_out:.0%} of outflow goes to ATM cash-out",
             }
             assigned.add(aid)
