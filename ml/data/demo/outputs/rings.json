@@ -1,6 +1,168 @@
 [
   {
+    "_id": "RING01",
     "ring_id": "RING01",
+    "member_ids": [
+      "ACC0730",
+      "ACC0731",
+      "ACC0732",
+      "ACC0733",
+      "ACC0734"
+    ],
+    "edges": [
+      {
+        "from": "ACC0730",
+        "to": "ACC0731",
+        "amount": 62533400,
+        "count": 1
+      },
+      {
+        "from": "ACC0731",
+        "to": "ACC0732",
+        "amount": 57646900,
+        "count": 1
+      },
+      {
+        "from": "ACC0732",
+        "to": "ACC0733",
+        "amount": 54455700,
+        "count": 1
+      },
+      {
+        "from": "ACC0733",
+        "to": "ACC0734",
+        "amount": 50338300,
+        "count": 1
+      }
+    ],
+    "identity_links": [
+      {
+        "identifier": "DEV1680",
+        "type": "device",
+        "account_ids": [
+          "ACC0730",
+          "ACC0731",
+          "ACC0732",
+          "ACC0733",
+          "ACC0734"
+        ]
+      },
+      {
+        "identifier": "PHN1680",
+        "type": "phone",
+        "account_ids": [
+          "ACC0730",
+          "ACC0731",
+          "ACC0732",
+          "ACC0733",
+          "ACC0734"
+        ]
+      }
+    ],
+    "volume": 224974300,
+    "risk": 0.9999,
+    "geo_spread_km": 0,
+    "victim_txn_ids": [
+      "TXN001936"
+    ],
+    "default_taint": {
+      "victim_amount": 64500900,
+      "victim_txn_id": "TXN001936",
+      "accounts": [
+        {
+          "id": "ACC0730",
+          "balance": 2019400,
+          "tainted": 2017777,
+          "lien": 2017777
+        },
+        {
+          "id": "ACC0731",
+          "balance": 5348200,
+          "tainted": 5304734,
+          "lien": 5304734
+        },
+        {
+          "id": "ACC0732",
+          "balance": 3645200,
+          "tainted": 3587323,
+          "lien": 3587323
+        },
+        {
+          "id": "ACC0733",
+          "balance": 4609300,
+          "tainted": 4495507,
+          "lien": 4495507
+        },
+        {
+          "id": "ACC0734",
+          "balance": 1899900,
+          "tainted": 1843766,
+          "lien": 1843766
+        }
+      ],
+      "lost_to_cash": 47251793,
+      "links": [
+        {
+          "source": "ACC0730",
+          "target": "ACC0731",
+          "value": 62483123
+        },
+        {
+          "source": "ACC0731",
+          "target": "ACC0732",
+          "value": 57178389
+        },
+        {
+          "source": "ACC0732",
+          "target": "ACC0733",
+          "value": 53591066
+        },
+        {
+          "source": "ACC0733",
+          "target": "ACC0734",
+          "value": 49095559
+        },
+        {
+          "source": "ACC0734",
+          "target": "CASH",
+          "value": 47251793
+        }
+      ]
+    },
+    "default_freeze": {
+      "freeze": [
+        "ACC0734"
+      ],
+      "at_risk_before": 17249107,
+      "secured": 17249107,
+      "pct_stopped": 1.0
+    },
+    "roles": {
+      "ACC0730": {
+        "role": "source",
+        "role_reason": "Receives majority of inflow from outside the ring and is the earliest active member"
+      },
+      "ACC0734": {
+        "role": "cash-out",
+        "role_reason": "100% of outflow goes to ATM cash-out"
+      },
+      "ACC0731": {
+        "role": "mule",
+        "role_reason": "Receives from source, forwards 92%, holds only 7 min"
+      },
+      "ACC0732": {
+        "role": "relay",
+        "role_reason": "Both senders and receivers are ring members"
+      },
+      "ACC0733": {
+        "role": "relay",
+        "role_reason": "Both senders and receivers are ring members"
+      }
+    }
+  },
+  {
+    "_id": "RING02",
+    "ring_id": "RING02",
     "member_ids": [
       "ACC0760",
       "ACC0761",
@@ -144,6 +306,7 @@
     ],
     "volume": 22321700,
     "risk": 0.9998,
+    "geo_spread_km": 0,
     "victim_txn_ids": [
       "TXN003675"
     ],
@@ -326,7 +489,7 @@
         "role_reason": "Receives majority of inflow from outside the ring and is the earliest active member"
       },
       "ACC0769": {
-        "role": "cashout",
+        "role": "cash-out",
         "role_reason": "100% of outflow goes to ATM cash-out"
       },
       "ACC0765": {
@@ -348,165 +511,7 @@
     }
   },
   {
-    "ring_id": "RING02",
-    "member_ids": [
-      "ACC0730",
-      "ACC0731",
-      "ACC0732",
-      "ACC0733",
-      "ACC0734"
-    ],
-    "edges": [
-      {
-        "from": "ACC0730",
-        "to": "ACC0731",
-        "amount": 62533400,
-        "count": 1
-      },
-      {
-        "from": "ACC0731",
-        "to": "ACC0732",
-        "amount": 57646900,
-        "count": 1
-      },
-      {
-        "from": "ACC0732",
-        "to": "ACC0733",
-        "amount": 54455700,
-        "count": 1
-      },
-      {
-        "from": "ACC0733",
-        "to": "ACC0734",
-        "amount": 50338300,
-        "count": 1
-      }
-    ],
-    "identity_links": [
-      {
-        "identifier": "DEV1680",
-        "type": "device",
-        "account_ids": [
-          "ACC0730",
-          "ACC0731",
-          "ACC0732",
-          "ACC0733",
-          "ACC0734"
-        ]
-      },
-      {
-        "identifier": "PHN1680",
-        "type": "phone",
-        "account_ids": [
-          "ACC0730",
-          "ACC0731",
-          "ACC0732",
-          "ACC0733",
-          "ACC0734"
-        ]
-      }
-    ],
-    "volume": 224974300,
-    "risk": 0.9999,
-    "victim_txn_ids": [
-      "TXN001936"
-    ],
-    "default_taint": {
-      "victim_amount": 64500900,
-      "victim_txn_id": "TXN001936",
-      "accounts": [
-        {
-          "id": "ACC0730",
-          "balance": 2019400,
-          "tainted": 2017777,
-          "lien": 2017777
-        },
-        {
-          "id": "ACC0731",
-          "balance": 5348200,
-          "tainted": 5304734,
-          "lien": 5304734
-        },
-        {
-          "id": "ACC0732",
-          "balance": 3645200,
-          "tainted": 3587323,
-          "lien": 3587323
-        },
-        {
-          "id": "ACC0733",
-          "balance": 4609300,
-          "tainted": 4495507,
-          "lien": 4495507
-        },
-        {
-          "id": "ACC0734",
-          "balance": 1899900,
-          "tainted": 1843766,
-          "lien": 1843766
-        }
-      ],
-      "lost_to_cash": 47251793,
-      "links": [
-        {
-          "source": "ACC0730",
-          "target": "ACC0731",
-          "value": 62483123
-        },
-        {
-          "source": "ACC0731",
-          "target": "ACC0732",
-          "value": 57178389
-        },
-        {
-          "source": "ACC0732",
-          "target": "ACC0733",
-          "value": 53591066
-        },
-        {
-          "source": "ACC0733",
-          "target": "ACC0734",
-          "value": 49095559
-        },
-        {
-          "source": "ACC0734",
-          "target": "CASH",
-          "value": 47251793
-        }
-      ]
-    },
-    "default_freeze": {
-      "freeze": [
-        "ACC0734"
-      ],
-      "at_risk_before": 17249107,
-      "secured": 17249107,
-      "pct_stopped": 1.0
-    },
-    "roles": {
-      "ACC0730": {
-        "role": "source",
-        "role_reason": "Receives majority of inflow from outside the ring and is the earliest active member"
-      },
-      "ACC0734": {
-        "role": "cashout",
-        "role_reason": "100% of outflow goes to ATM cash-out"
-      },
-      "ACC0731": {
-        "role": "mule",
-        "role_reason": "Receives from source, forwards 92%, holds only 7 min"
-      },
-      "ACC0732": {
-        "role": "relay",
-        "role_reason": "Both senders and receivers are ring members"
-      },
-      "ACC0733": {
-        "role": "relay",
-        "role_reason": "Both senders and receivers are ring members"
-      }
-    }
-  },
-  {
+    "_id": "RING03",
     "ring_id": "RING03",
     "member_ids": [
       "ACC0700",
@@ -629,6 +634,7 @@
     ],
     "volume": 186831600,
     "risk": 0.9991,
+    "geo_spread_km": 0,
     "victim_txn_ids": [
       "TXN001977"
     ],
@@ -796,7 +802,7 @@
         "role_reason": "Receives majority of inflow from outside the ring and is the earliest active member"
       },
       "ACC0708": {
-        "role": "cashout",
+        "role": "cash-out",
         "role_reason": "100% of outflow goes to ATM cash-out"
       },
       "ACC0703": {

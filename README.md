@@ -10,8 +10,8 @@ recruit, and the freeze order.
 - `PRD.md` — the product
 - `TRD.md` — the technical requirements
 - `server/` — Express API, Socket.IO replay, evidence pack
-- `ml/` — data generator and model pipeline *(not built yet)*
-- `client/` — dashboard *(not built yet)*
+- `ml/` — data generator and model pipeline
+- `client/` — dashboard
 - `data/` — generated data, git-ignored
 
 All data is synthetic. Rings are planted by the team and every number in the
@@ -24,11 +24,11 @@ product is labelled as such.
 | F6 | API and storage | done, on TypeScript and Mongoose |
 | F11 | Live replay over Socket.IO | done |
 | F12 | Evidence pack PDF | done |
-| F1 | Data generator | not started, `ml/` is empty |
-| F2-F5 | Features, graph building, model, clustering | not started |
-| F7 | Frontend skeleton | not started, `client/` is empty |
-| F8-F10 | Taint tracing, freeze optimiser, recruit prediction | service-side contracts done, the Python implementations are not started |
-| F13-F18 | Map, what-if, live pulse, health, scan, quickstart | not started |
+| F1 | Data generator | done, `ml/generate.py` |
+| F2-F5 | Features, graph building, model, clustering | done, `ml/features.py`, `ml/models.py`, `ml/rings.py` |
+| F7 | Frontend skeleton | in progress |
+| F8-F10 | Taint tracing, freeze optimiser, recruit prediction | done, `ml/taint.py`, `ml/freeze.py` |
+| F13-F18 | Map, what-if, live pulse, health, scan, quickstart | in progress |
 
 The server is deliberately built against contract-shaped mocks and a fixture
 dataset so the dashboard and the Python service can be built in parallel without
@@ -107,9 +107,3 @@ Tracked in `server/README.md` under "Deviations from TRD". The short version:
 Atlas instead of a local mongod, one added `recruits` collection, Express 4
 pinned, and `accounts.role` stored as a string rather than an enum because
 `cash-out` is not a legal identifier.
-
-
-
-
-
-

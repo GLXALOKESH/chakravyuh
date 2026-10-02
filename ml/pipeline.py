@@ -239,23 +239,26 @@ def run_pipeline(profile: str, geo: bool = False, train_profile: str = "train",
     print(f"\n  [12/12] Writing output files...")
     out_dir = profile_dir / "outputs"
     out_dir.mkdir(parents=True, exist_ok=True)
+    root_profile_dir = DATA_DIR / profile
+    root_out_dir = root_profile_dir / "outputs"
+    root_out_dir.mkdir(parents=True, exist_ok=True)
 
     # Enrich accounts with scores and signals
     for acc in accounts:
         aid = acc["_id"]
         if aid in scored_df.index:
-            acc["risk_v1"] = int(scored_df.at[aid, "risk_v1"])
-            acc["risk_v2"] = int(scored_df.at[aid, "risk_v2"])
+            acc["risk_v1"] = round(float(scored_df.at[aid, "prob_v1"]), 4)
+            acc["risk_v2"] = round(float(scored_df.at[aid, "prob_v2"]), 4)
             acc["features"] = {
                 col: round(float(scored_df.at[aid, col]), 4)
                 for col in V1_FEATURES
                 if col in scored_df.columns
             }
             # Generate signals for flagged accounts
-            if scored_df.at[aid, "risk_v2"] >= 50:
+            if scored_df.at[aid, "risk_v2"] >= 50 or scored_df.at[aid, "prob_v2"] >= 0.50:
                 acc["signals"] = get_signals(aid, scored_df, v2_model, geo=geo)
 
-    # Build alerts (one per ring)
+    # Build alerts (one per ring) per TRD section 6 & ML_INTEGRATION.md section 3.6
     alerts = []
     for ring in rings:
         # fired_at = time of the ring's 3rd member-to-member transfer
@@ -270,9 +273,6 @@ def run_pipeline(profile: str, geo: bool = False, train_profile: str = "train",
             "_id": f"ALT{ring['ring_id'][-2:]}",
             "ring_id": ring["ring_id"],
             "fired_at": fired_at,
-            "risk": ring["risk"],
-            "members": len(ring["member_ids"]),
-            "volume": ring["volume"],
             "reason": f"{len(ring['member_ids'])} linked accounts forwarding within minutes",
         })
 
@@ -295,7 +295,7 @@ def run_pipeline(profile: str, geo: bool = False, train_profile: str = "train",
         "note": "Synthetic data, rings planted by the team",
     }
 
-    # Save everything
+    # Save to ml/data/<profile>/
     save_json(accounts,     out_dir / "accounts.json")
     save_json(transactions, out_dir / "transactions.json")
     save_json(identifiers,  out_dir / "identifiers.json")
@@ -303,6 +303,16 @@ def run_pipeline(profile: str, geo: bool = False, train_profile: str = "train",
     save_json(alerts,       out_dir / "alerts.json")
     save_json(metrics_doc,  out_dir / "metrics.json")
     save_json(all_recruits, out_dir / "recruits.json")
+
+    # Also save to root data/<profile>/ for direct Express server consumption
+    save_json(accounts,     root_profile_dir / "accounts.json")
+    save_json(transactions, root_profile_dir / "transactions.json")
+    save_json(identifiers,  root_profile_dir / "identifiers.json")
+    save_json(ground_truth, root_profile_dir / "ground_truth.json")
+    save_json(rings,        root_out_dir / "rings.json")
+    save_json(alerts,       root_out_dir / "alerts.json")
+    save_json(metrics_doc,  root_out_dir / "metrics.json")
+    save_json(all_recruits, root_out_dir / "recruits.json")
 
     elapsed = time.time() - t0
     print(f"\n{'='*60}")

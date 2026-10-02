@@ -1,7 +1,7 @@
 // Connects the API and the socket to the store. It lives outside React so the
 // replay keeps its state when the presenter opens a ring and comes back.
 
-import { getAlerts, getMetrics, getReplayWindow, getRing } from "./api";
+import { getAccounts, getAlerts, getMetrics, getReplayWindow, getRing } from "./api";
 import { BASE_SPEED } from "./constants";
 import { socket } from "./socket";
 import { useDashboard } from "./store";
@@ -68,7 +68,12 @@ function wireSocket() {
 }
 
 async function load() {
-  const [alerts, metrics, win] = await Promise.all([getAlerts(), getMetrics(), getReplayWindow()]);
+  const [alerts, metrics, win, accounts] = await Promise.all([
+    getAlerts(),
+    getMetrics(),
+    getReplayWindow(),
+    getAccounts(),
+  ]);
   // Ring layouts are needed before their alerts fire, so every account can
   // hold one fixed place on the stage for the whole replay.
   const rings = await Promise.all(alerts.map((a) => getRing(a.ring_id)));
@@ -83,6 +88,7 @@ async function load() {
     ready: true,
     error: null,
     metrics,
+    accounts,
     rings: Object.fromEntries(rings.map((r) => [r.id, r])),
     window: { start, end: Date.parse(win.end) },
     clock: start,
@@ -109,6 +115,19 @@ export function play() {
   if (!ready) return;
   socket.emit("replay:start", { speed: speed * BASE_SPEED });
   useDashboard.setState({ status: "playing" });
+}
+
+/** Starts the replay once the case data has loaded, unless it is already under way. */
+export function playWhenReady() {
+  const start = () => {
+    if (useDashboard.getState().status === "idle") play();
+  };
+  if (useDashboard.getState().ready) return start();
+  const stop = useDashboard.subscribe((s) => {
+    if (!s.ready) return;
+    stop();
+    start();
+  });
 }
 
 export function pause() {

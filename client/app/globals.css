@@ -106,6 +106,21 @@ html:has(.landing) {
     var(--color-stage);
 }
 
+/* The entering screen. It is hidden once its arrow has flown; if scripts
+   never run, it clears itself so the page is not left covered. */
+html[data-entered] .enter-screen {
+  display: none;
+}
+@keyframes enter-clear {
+  to {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+.enter-screen {
+  animation: enter-clear 0.5s 6s forwards;
+}
+
 /* A new alert lands lit in turmeric, then settles. */
 @keyframes alert-in {
   from {

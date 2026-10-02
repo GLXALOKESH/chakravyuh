@@ -35,6 +35,24 @@ export const ArrowIcon = (p: SVGProps<SVGSVGElement>) => (
   </Icon>
 );
 
+export const PlusIcon = (p: SVGProps<SVGSVGElement>) => (
+  <Icon fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" {...p}>
+    <path d="M12 5v14M5 12h14" />
+  </Icon>
+);
+
+export const MinusIcon = (p: SVGProps<SVGSVGElement>) => (
+  <Icon fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" {...p}>
+    <path d="M5 12h14" />
+  </Icon>
+);
+
+export const FitIcon = (p: SVGProps<SVGSVGElement>) => (
+  <Icon fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...p}>
+    <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />
+  </Icon>
+);
+
 export const FlaskIcon = (p: SVGProps<SVGSVGElement>) => (
   <Icon fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}>
     <path d="M9 3h6" />
