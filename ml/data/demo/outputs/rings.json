@@ -164,6 +164,323 @@
     "_id": "RING02",
     "ring_id": "RING02",
     "member_ids": [
+      "ACC0700",
+      "ACC0701",
+      "ACC0702",
+      "ACC0703",
+      "ACC0704",
+      "ACC0705",
+      "ACC0706",
+      "ACC0707",
+      "ACC0708",
+      "ACC0890"
+    ],
+    "edges": [
+      {
+        "from": "ACC0700",
+        "to": "ACC0701",
+        "amount": 10851600,
+        "count": 1
+      },
+      {
+        "from": "ACC0700",
+        "to": "ACC0704",
+        "amount": 12345500,
+        "count": 1
+      },
+      {
+        "from": "ACC0700",
+        "to": "ACC0702",
+        "amount": 15043300,
+        "count": 1
+      },
+      {
+        "from": "ACC0700",
+        "to": "ACC0703",
+        "amount": 16971800,
+        "count": 1
+      },
+      {
+        "from": "ACC0700",
+        "to": "ACC0706",
+        "amount": 19763500,
+        "count": 1
+      },
+      {
+        "from": "ACC0700",
+        "to": "ACC0707",
+        "amount": 9451800,
+        "count": 1
+      },
+      {
+        "from": "ACC0701",
+        "to": "ACC0708",
+        "amount": 10271000,
+        "count": 1
+      },
+      {
+        "from": "ACC0702",
+        "to": "ACC0708",
+        "amount": 14821400,
+        "count": 1
+      },
+      {
+        "from": "ACC0703",
+        "to": "ACC0708",
+        "amount": 16599300,
+        "count": 1
+      },
+      {
+        "from": "ACC0706",
+        "to": "ACC0708",
+        "amount": 18848200,
+        "count": 1
+      },
+      {
+        "from": "ACC0707",
+        "to": "ACC0708",
+        "amount": 8834500,
+        "count": 1
+      },
+      {
+        "from": "ACC0700",
+        "to": "ACC0705",
+        "amount": 11096700,
+        "count": 1
+      },
+      {
+        "from": "ACC0704",
+        "to": "ACC0708",
+        "amount": 11778500,
+        "count": 1
+      },
+      {
+        "from": "ACC0705",
+        "to": "ACC0708",
+        "amount": 10154500,
+        "count": 1
+      }
+    ],
+    "identity_links": [
+      {
+        "identifier": "DEV1600",
+        "type": "device",
+        "account_ids": [
+          "ACC0700",
+          "ACC0701",
+          "ACC0702",
+          "ACC0890"
+        ]
+      },
+      {
+        "identifier": "PHN1600",
+        "type": "phone",
+        "account_ids": [
+          "ACC0700",
+          "ACC0701",
+          "ACC0702"
+        ]
+      }
+    ],
+    "volume": 186831600,
+    "risk": 0.9991,
+    "geo_spread_km": 0,
+    "victim_txn_ids": [
+      "TXN001977"
+    ],
+    "default_taint": {
+      "victim_amount": 95524200,
+      "victim_txn_id": "TXN001977",
+      "accounts": [
+        {
+          "id": "ACC0700",
+          "balance": 430500,
+          "tainted": 428569,
+          "lien": 428569
+        },
+        {
+          "id": "ACC0701",
+          "balance": 1021700,
+          "tainted": 977387,
+          "lien": 977387
+        },
+        {
+          "id": "ACC0702",
+          "balance": 637900,
+          "tainted": 617950,
+          "lien": 617950
+        },
+        {
+          "id": "ACC0703",
+          "balance": 561800,
+          "tainted": 553111,
+          "lien": 553111
+        },
+        {
+          "id": "ACC0704",
+          "balance": 619600,
+          "tainted": 614204,
+          "lien": 614204
+        },
+        {
+          "id": "ACC0705",
+          "balance": 1436200,
+          "tainted": 1368820,
+          "lien": 1368820
+        },
+        {
+          "id": "ACC0706",
+          "balance": 1358500,
+          "tainted": 1322743,
+          "lien": 1322743
+        },
+        {
+          "id": "ACC0707",
+          "balance": 1032200,
+          "tainted": 984360,
+          "lien": 984360
+        },
+        {
+          "id": "ACC0708",
+          "balance": 14782300,
+          "tainted": 14322914,
+          "lien": 14322914
+        }
+      ],
+      "lost_to_cash": 74334142,
+      "links": [
+        {
+          "source": "ACC0700",
+          "target": "ACC0701",
+          "value": 10802914
+        },
+        {
+          "source": "ACC0700",
+          "target": "ACC0702",
+          "value": 14975808
+        },
+        {
+          "source": "ACC0700",
+          "target": "ACC0703",
+          "value": 16895656
+        },
+        {
+          "source": "ACC0700",
+          "target": "ACC0704",
+          "value": 12290112
+        },
+        {
+          "source": "ACC0700",
+          "target": "ACC0705",
+          "value": 11046915
+        },
+        {
+          "source": "ACC0700",
+          "target": "ACC0706",
+          "value": 19674831
+        },
+        {
+          "source": "ACC0700",
+          "target": "ACC0707",
+          "value": 9409395
+        },
+        {
+          "source": "ACC0701",
+          "target": "ACC0708",
+          "value": 9825527
+        },
+        {
+          "source": "ACC0702",
+          "target": "ACC0708",
+          "value": 14357858
+        },
+        {
+          "source": "ACC0703",
+          "target": "ACC0708",
+          "value": 16342545
+        },
+        {
+          "source": "ACC0704",
+          "target": "ACC0708",
+          "value": 11675908
+        },
+        {
+          "source": "ACC0705",
+          "target": "ACC0708",
+          "value": 9678095
+        },
+        {
+          "source": "ACC0706",
+          "target": "ACC0708",
+          "value": 18352088
+        },
+        {
+          "source": "ACC0707",
+          "target": "ACC0708",
+          "value": 8425035
+        },
+        {
+          "source": "ACC0708",
+          "target": "CASH",
+          "value": 74334142
+        }
+      ]
+    },
+    "default_freeze": {
+      "freeze": [
+        "ACC0708"
+      ],
+      "at_risk_before": 21190058,
+      "secured": 21190058,
+      "pct_stopped": 1.0
+    },
+    "roles": {
+      "ACC0701": {
+        "role": "coordinator",
+        "role_reason": "Shares identifiers with 5 ring members, carries only 5% of ring volume"
+      },
+      "ACC0702": {
+        "role": "coordinator",
+        "role_reason": "Shares identifiers with 5 ring members, carries only 8% of ring volume"
+      },
+      "ACC0890": {
+        "role": "coordinator",
+        "role_reason": "Shares identifiers with 3 ring members, carries only 0% of ring volume"
+      },
+      "ACC0700": {
+        "role": "source",
+        "role_reason": "Receives majority of inflow from outside the ring and is the earliest active member"
+      },
+      "ACC0708": {
+        "role": "cash-out",
+        "role_reason": "100% of outflow goes to ATM cash-out"
+      },
+      "ACC0703": {
+        "role": "mule",
+        "role_reason": "Receives from source, forwards 98%, holds only 8 min"
+      },
+      "ACC0706": {
+        "role": "mule",
+        "role_reason": "Receives from source, forwards 95%, holds only 14 min"
+      },
+      "ACC0707": {
+        "role": "mule",
+        "role_reason": "Receives from source, forwards 93%, holds only 13 min"
+      },
+      "ACC0704": {
+        "role": "relay",
+        "role_reason": "Both senders and receivers are ring members"
+      },
+      "ACC0705": {
+        "role": "relay",
+        "role_reason": "Both senders and receivers are ring members"
+      }
+    }
+  },
+  {
+    "_id": "RING03",
+    "ring_id": "RING03",
+    "member_ids": [
       "ACC0760",
       "ACC0761",
       "ACC0762",
@@ -505,323 +822,6 @@
         "role_reason": "Both senders and receivers are ring members"
       },
       "ACC0768": {
-        "role": "relay",
-        "role_reason": "Both senders and receivers are ring members"
-      }
-    }
-  },
-  {
-    "_id": "RING03",
-    "ring_id": "RING03",
-    "member_ids": [
-      "ACC0700",
-      "ACC0701",
-      "ACC0702",
-      "ACC0703",
-      "ACC0704",
-      "ACC0705",
-      "ACC0706",
-      "ACC0707",
-      "ACC0708",
-      "ACC0890"
-    ],
-    "edges": [
-      {
-        "from": "ACC0700",
-        "to": "ACC0701",
-        "amount": 10851600,
-        "count": 1
-      },
-      {
-        "from": "ACC0700",
-        "to": "ACC0704",
-        "amount": 12345500,
-        "count": 1
-      },
-      {
-        "from": "ACC0700",
-        "to": "ACC0702",
-        "amount": 15043300,
-        "count": 1
-      },
-      {
-        "from": "ACC0700",
-        "to": "ACC0703",
-        "amount": 16971800,
-        "count": 1
-      },
-      {
-        "from": "ACC0700",
-        "to": "ACC0706",
-        "amount": 19763500,
-        "count": 1
-      },
-      {
-        "from": "ACC0700",
-        "to": "ACC0707",
-        "amount": 9451800,
-        "count": 1
-      },
-      {
-        "from": "ACC0701",
-        "to": "ACC0708",
-        "amount": 10271000,
-        "count": 1
-      },
-      {
-        "from": "ACC0702",
-        "to": "ACC0708",
-        "amount": 14821400,
-        "count": 1
-      },
-      {
-        "from": "ACC0703",
-        "to": "ACC0708",
-        "amount": 16599300,
-        "count": 1
-      },
-      {
-        "from": "ACC0706",
-        "to": "ACC0708",
-        "amount": 18848200,
-        "count": 1
-      },
-      {
-        "from": "ACC0707",
-        "to": "ACC0708",
-        "amount": 8834500,
-        "count": 1
-      },
-      {
-        "from": "ACC0700",
-        "to": "ACC0705",
-        "amount": 11096700,
-        "count": 1
-      },
-      {
-        "from": "ACC0704",
-        "to": "ACC0708",
-        "amount": 11778500,
-        "count": 1
-      },
-      {
-        "from": "ACC0705",
-        "to": "ACC0708",
-        "amount": 10154500,
-        "count": 1
-      }
-    ],
-    "identity_links": [
-      {
-        "identifier": "DEV1600",
-        "type": "device",
-        "account_ids": [
-          "ACC0700",
-          "ACC0701",
-          "ACC0702",
-          "ACC0890"
-        ]
-      },
-      {
-        "identifier": "PHN1600",
-        "type": "phone",
-        "account_ids": [
-          "ACC0700",
-          "ACC0701",
-          "ACC0702"
-        ]
-      }
-    ],
-    "volume": 186831600,
-    "risk": 0.9991,
-    "geo_spread_km": 0,
-    "victim_txn_ids": [
-      "TXN001977"
-    ],
-    "default_taint": {
-      "victim_amount": 95524200,
-      "victim_txn_id": "TXN001977",
-      "accounts": [
-        {
-          "id": "ACC0700",
-          "balance": 430500,
-          "tainted": 428569,
-          "lien": 428569
-        },
-        {
-          "id": "ACC0701",
-          "balance": 1021700,
-          "tainted": 977387,
-          "lien": 977387
-        },
-        {
-          "id": "ACC0702",
-          "balance": 637900,
-          "tainted": 617950,
-          "lien": 617950
-        },
-        {
-          "id": "ACC0703",
-          "balance": 561800,
-          "tainted": 553111,
-          "lien": 553111
-        },
-        {
-          "id": "ACC0704",
-          "balance": 619600,
-          "tainted": 614204,
-          "lien": 614204
-        },
-        {
-          "id": "ACC0705",
-          "balance": 1436200,
-          "tainted": 1368820,
-          "lien": 1368820
-        },
-        {
-          "id": "ACC0706",
-          "balance": 1358500,
-          "tainted": 1322743,
-          "lien": 1322743
-        },
-        {
-          "id": "ACC0707",
-          "balance": 1032200,
-          "tainted": 984360,
-          "lien": 984360
-        },
-        {
-          "id": "ACC0708",
-          "balance": 14782300,
-          "tainted": 14322914,
-          "lien": 14322914
-        }
-      ],
-      "lost_to_cash": 74334142,
-      "links": [
-        {
-          "source": "ACC0700",
-          "target": "ACC0701",
-          "value": 10802914
-        },
-        {
-          "source": "ACC0700",
-          "target": "ACC0702",
-          "value": 14975808
-        },
-        {
-          "source": "ACC0700",
-          "target": "ACC0703",
-          "value": 16895656
-        },
-        {
-          "source": "ACC0700",
-          "target": "ACC0704",
-          "value": 12290112
-        },
-        {
-          "source": "ACC0700",
-          "target": "ACC0705",
-          "value": 11046915
-        },
-        {
-          "source": "ACC0700",
-          "target": "ACC0706",
-          "value": 19674831
-        },
-        {
-          "source": "ACC0700",
-          "target": "ACC0707",
-          "value": 9409395
-        },
-        {
-          "source": "ACC0701",
-          "target": "ACC0708",
-          "value": 9825527
-        },
-        {
-          "source": "ACC0702",
-          "target": "ACC0708",
-          "value": 14357858
-        },
-        {
-          "source": "ACC0703",
-          "target": "ACC0708",
-          "value": 16342545
-        },
-        {
-          "source": "ACC0704",
-          "target": "ACC0708",
-          "value": 11675908
-        },
-        {
-          "source": "ACC0705",
-          "target": "ACC0708",
-          "value": 9678095
-        },
-        {
-          "source": "ACC0706",
-          "target": "ACC0708",
-          "value": 18352088
-        },
-        {
-          "source": "ACC0707",
-          "target": "ACC0708",
-          "value": 8425035
-        },
-        {
-          "source": "ACC0708",
-          "target": "CASH",
-          "value": 74334142
-        }
-      ]
-    },
-    "default_freeze": {
-      "freeze": [
-        "ACC0708"
-      ],
-      "at_risk_before": 21190058,
-      "secured": 21190058,
-      "pct_stopped": 1.0
-    },
-    "roles": {
-      "ACC0701": {
-        "role": "coordinator",
-        "role_reason": "Shares identifiers with 5 ring members, carries only 5% of ring volume"
-      },
-      "ACC0702": {
-        "role": "coordinator",
-        "role_reason": "Shares identifiers with 5 ring members, carries only 8% of ring volume"
-      },
-      "ACC0890": {
-        "role": "coordinator",
-        "role_reason": "Shares identifiers with 3 ring members, carries only 0% of ring volume"
-      },
-      "ACC0700": {
-        "role": "source",
-        "role_reason": "Receives majority of inflow from outside the ring and is the earliest active member"
-      },
-      "ACC0708": {
-        "role": "cash-out",
-        "role_reason": "100% of outflow goes to ATM cash-out"
-      },
-      "ACC0703": {
-        "role": "mule",
-        "role_reason": "Receives from source, forwards 98%, holds only 8 min"
-      },
-      "ACC0706": {
-        "role": "mule",
-        "role_reason": "Receives from source, forwards 95%, holds only 14 min"
-      },
-      "ACC0707": {
-        "role": "mule",
-        "role_reason": "Receives from source, forwards 93%, holds only 13 min"
-      },
-      "ACC0704": {
-        "role": "relay",
-        "role_reason": "Both senders and receivers are ring members"
-      },
-      "ACC0705": {
         "role": "relay",
         "role_reason": "Both senders and receivers are ring members"
       }

@@ -10,6 +10,7 @@ This directory contains the synthetic data generation engine, graph feature extr
 ml/
 ├── config.py         # Global settings, paths, seeds, thresholds, hyperparameters
 ├── generate.py       # Deterministic baseline synthetic banking data generator
+├── geo.py            # Synthetic geospatial location engine & KDE heatmap generator
 ├── features.py       # Behavioral & graph topology feature extraction
 ├── models.py         # XGBoost (V1/V2) and Isolation Forest baseline models
 ├── adversary.py      # Model 1 (Red Team): Fraud mutation & evasion generator
@@ -68,4 +69,7 @@ python ml/models.py --train --predict
 
 # 3. Run the Adversarial Infinity Loop (e.g. 5 rounds)
 python ml/loop.py
+
+# 4. Generate Synthetic Geospatial Locations & Heatmaps
+python -m ml.geo --generate --profile demo --export-html ml/data/demo/heatmap_dashboard.html
 ```

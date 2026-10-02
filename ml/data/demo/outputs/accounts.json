@@ -19844,7 +19844,7 @@
         "weight": 0.006
       }
     ],
-    "ring_id": "RING03",
+    "ring_id": "RING02",
     "role": "source",
     "role_reason": "Receives majority of inflow from outside the ring and is the earliest active member"
   },
@@ -19893,7 +19893,7 @@
         "weight": 0.006
       }
     ],
-    "ring_id": "RING03",
+    "ring_id": "RING02",
     "role": "coordinator",
     "role_reason": "Shares identifiers with 5 ring members, carries only 5% of ring volume"
   },
@@ -19942,7 +19942,7 @@
         "weight": 0.006
       }
     ],
-    "ring_id": "RING03",
+    "ring_id": "RING02",
     "role": "coordinator",
     "role_reason": "Shares identifiers with 5 ring members, carries only 8% of ring volume"
   },
@@ -19991,7 +19991,7 @@
         "weight": 0.006
       }
     ],
-    "ring_id": "RING03",
+    "ring_id": "RING02",
     "role": "mule",
     "role_reason": "Receives from source, forwards 98%, holds only 8 min"
   },
@@ -20040,7 +20040,7 @@
         "weight": 0.006
       }
     ],
-    "ring_id": "RING03",
+    "ring_id": "RING02",
     "role": "relay",
     "role_reason": "Both senders and receivers are ring members"
   },
@@ -20089,7 +20089,7 @@
         "weight": 0.006
       }
     ],
-    "ring_id": "RING03",
+    "ring_id": "RING02",
     "role": "relay",
     "role_reason": "Both senders and receivers are ring members"
   },
@@ -20138,7 +20138,7 @@
         "weight": 0.006
       }
     ],
-    "ring_id": "RING03",
+    "ring_id": "RING02",
     "role": "mule",
     "role_reason": "Receives from source, forwards 95%, holds only 14 min"
   },
@@ -20187,7 +20187,7 @@
         "weight": 0.006
       }
     ],
-    "ring_id": "RING03",
+    "ring_id": "RING02",
     "role": "mule",
     "role_reason": "Receives from source, forwards 93%, holds only 13 min"
   },
@@ -20236,7 +20236,7 @@
         "weight": 0.006
       }
     ],
-    "ring_id": "RING03",
+    "ring_id": "RING02",
     "role": "cash-out",
     "role_reason": "100% of outflow goes to ATM cash-out"
   },
@@ -20530,7 +20530,7 @@
         "weight": 0.006
       }
     ],
-    "ring_id": "RING02",
+    "ring_id": "RING03",
     "role": "source",
     "role_reason": "Receives majority of inflow from outside the ring and is the earliest active member"
   },
@@ -20579,7 +20579,7 @@
         "weight": 0.006
       }
     ],
-    "ring_id": "RING02",
+    "ring_id": "RING03",
     "role": "coordinator",
     "role_reason": "Shares identifiers with 6 ring members, carries only 6% of ring volume"
   },
@@ -20628,7 +20628,7 @@
         "weight": 0.006
       }
     ],
-    "ring_id": "RING02",
+    "ring_id": "RING03",
     "role": "coordinator",
     "role_reason": "Shares identifiers with 6 ring members, carries only 4% of ring volume"
   },
@@ -20677,7 +20677,7 @@
         "weight": 0.006
       }
     ],
-    "ring_id": "RING02",
+    "ring_id": "RING03",
     "role": "coordinator",
     "role_reason": "Shares identifiers with 6 ring members, carries only 9% of ring volume"
   },
@@ -20726,7 +20726,7 @@
         "weight": 0.006
       }
     ],
-    "ring_id": "RING02",
+    "ring_id": "RING03",
     "role": "coordinator",
     "role_reason": "Shares identifiers with 6 ring members, carries only 6% of ring volume"
   },
@@ -20775,7 +20775,7 @@
         "weight": 0.006
       }
     ],
-    "ring_id": "RING02",
+    "ring_id": "RING03",
     "role": "relay",
     "role_reason": "Both senders and receivers are ring members"
   },
@@ -20824,7 +20824,7 @@
         "weight": 0.006
       }
     ],
-    "ring_id": "RING02",
+    "ring_id": "RING03",
     "role": "relay",
     "role_reason": "Both senders and receivers are ring members"
   },
@@ -20873,7 +20873,7 @@
         "weight": 0.006
       }
     ],
-    "ring_id": "RING02",
+    "ring_id": "RING03",
     "role": "relay",
     "role_reason": "Both senders and receivers are ring members"
   },
@@ -20922,7 +20922,7 @@
         "weight": 0.006
       }
     ],
-    "ring_id": "RING02",
+    "ring_id": "RING03",
     "role": "relay",
     "role_reason": "Both senders and receivers are ring members"
   },
@@ -20971,7 +20971,7 @@
         "weight": 0.006
       }
     ],
-    "ring_id": "RING02",
+    "ring_id": "RING03",
     "role": "cash-out",
     "role_reason": "100% of outflow goes to ATM cash-out"
   },
@@ -21020,7 +21020,7 @@
         "weight": 0.006
       }
     ],
-    "ring_id": "RING03",
+    "ring_id": "RING02",
     "role": "coordinator",
     "role_reason": "Shares identifiers with 3 ring members, carries only 0% of ring volume",
     "is_account_e": true
