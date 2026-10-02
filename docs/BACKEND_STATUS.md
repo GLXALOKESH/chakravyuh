@@ -6,6 +6,11 @@ This is what exists, why it is built the way it is, and what is deliberately not
 done. Read `HOW_DATA_FLOWS.md` if you need to know how to feed it;
 `ML_INTEGRATION.md` if you are writing the pipeline.
 
+> **Current state, 3 Oct 2026:** the backend and the ML pipeline are both
+> substantially built, but **they cannot talk to each other yet.** Two concrete
+> mismatches block the handoff, listed in §Not done. The Python side is not
+> empty any more — `ml/` holds 14 modules and ~5,100 lines.
+
 ---
 
 ## Status
@@ -13,9 +18,9 @@ done. Read `HOW_DATA_FLOWS.md` if you need to know how to feed it;
 Working and verified against **MongoDB Atlas** (`hackathon.gqtv7yg.mongodb.net`).
 
 ```
-npm run typecheck   clean
-npm run build       clean
-npm test            103 passed, 0 failed, 0 skipped
+pnpm typecheck   clean
+pnpm build       clean
+pnpm test        103 passed, 0 failed, 0 skipped
 ```
 
 Verified live on the cluster: all 14 endpoints return correct shapes, schema and
@@ -24,6 +29,14 @@ evidence PDF generates.
 
 Stack: Express 4, TypeScript (strict), Mongoose 9, class-validator,
 Socket.IO, ~6,750 lines across `src/` and `test/`.
+
+### The three services, as they actually stand
+
+| Area | State |
+| --- | --- |
+| Server (`server/`) | Complete. 14 endpoints, verified live against Atlas |
+| ML pipeline (`ml/`) | **Built.** 14 modules, ~5,100 lines, 7 test files |
+| Frontend (`client/`) | In progress — Next.js, graph components landed on `main` |
 
 ---
 
@@ -62,6 +75,15 @@ What that meant in practice:
 
 ### 5. Documentation
 `docs/ML_INTEGRATION.md`, `docs/HOW_DATA_FLOWS.md`, and README rewrites.
+
+### 6. Merged with the other two members' work
+`ac118cc`. `main` brought in the ML pipeline and the frontend's graph
+components. Two documentation conflicts resolved in favour of `main`, which had
+the newer content. The PostgreSQL files and `tsconfig.build.json` were not
+resurrected by the merge.
+
+The `amount_paise` naming and the data-directory split date from this merge.
+See §Not done.
 
 ---
 
@@ -236,18 +258,64 @@ looking. Found this the hard way; `mongo-url.test.ts` guards it.
 
 Called out so nobody assumes otherwise.
 
-**Never tested against real Python.** The ML service is not running, so
-`/taint` and `/freeze` have only ever taken the cached-fallback path. The live
-request and response shapes are written from TRD §3 and `docs/ML_INTEGRATION.md`
-but have not been exercised against an actual service. **This is the largest
-untested seam in the project.**
+### Two blockers between the server and the pipeline
 
-**The fixture generator has to go.** `src/fixtures/generator.ts` is not the
-data generator and should be deleted once `ml/generate.py` lands. It exists so
-the demo has something coherent before then.
+Both are on the ML side, and both were introduced by `docs/BACKEND_INTERFACE.md`,
+which specifies a different field name than TRD §6 does.
 
-**`recruits` has never been produced by the pipeline.** The endpoint reads the
-collection; nothing writes to it yet.
+**1. `amount_paise` versus `amount`.** The generated transactions carry
+`amount_paise`, not `amount`:
+
+```
+ml/data/demo/transactions.json
+  keys: _id, from, to, amount_paise, ts, channel, location, is_fraud
+```
+
+`server/src/models/transaction.model.ts` requires `amount`. Every transaction
+would be rejected, and because validation is explicit the seed fails loudly
+rather than dropping rows — so this is at least visible immediately.
+
+`docs/BACKEND_INTERFACE.md` line 174 states "All monetary values are integers
+(1 INR = 100 paise)" and the generated figures are consistent with that
+(`19114400` paise = ₹191,144). **TRD §6 says rupees**, with `"amount": 48000`
+as the worked example. So this is not a unit slip — it is a field rename plus a
+100× disagreement about what the number means.
+
+Someone has to decide which is authoritative. If paise wins, the server stores
+it and the frontend divides by 100; every `pct_stopped` and `secured` figure
+changes accordingly.
+
+**2. The data directory does not line up.** `server/src/configs/env.ts` resolves
+`dataDir` to `<repoRoot>/data`, so the seeder reads
+`/Users/shovan/Developer/chakravyuh/data/demo/`. The pipeline writes to
+`ml/data/demo/`, which is where `ml/config.py` points `DATA_DIR`.
+
+Both paths resolve to the repo root under different module systems, so they
+only coincide by accident. Right now `<repoRoot>/data/demo/` contains nothing
+but a `.gitkeep`, which means **`npm run seed` cannot see the pipeline's output
+at all** and silently falls back to `src/fixtures/`.
+
+That fallback is why this has not broken anything yet, and it is also why it is
+worth fixing before the demo — the dashboard looks fine, it is just showing
+generated fixture data rather than the real pipeline.
+
+### Also outstanding
+
+**The live Python path has still never run.** `ml/service.py` exists and defines
+`/health`, `/taint`, `/mincut`, `/pipeline/run` and `/ouroboros/run`, so the
+route names line up. But it has never been started against the server, so
+`/taint` and `/freeze` have only ever taken the cached-fallback path. The
+request and response shapes remain unverified in both directions.
+
+**`recruits.json` is empty** — two bytes. `ml/README.md` says the recruiter is
+optional, and the endpoint reads the collection regardless, so this is consistent
+rather than broken. Worth knowing before anyone reads the recruits panel.
+
+**The fixture generator is now redundant.** `src/fixtures/generator.ts` was a
+stand-in while `ml/` was empty. With 14 real modules on disk it should be
+deleted, and `SEED_FIXTURES` defaulted to `false`, so that a missing
+`data/<profile>/` is an error rather than a silent substitution. Right now the
+substitution is exactly what is masking blocker 2.
 
 **No auth, no rate limiting.** Out of scope for the hackathon.
 
