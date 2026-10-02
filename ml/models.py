@@ -45,8 +45,12 @@ try:
 except ImportError:
     SHAP_AVAILABLE = False
 
-from features import (V1_FEATURES, V2_EXTRA_FEATURES, V2_GEO_FEATURES,
-                       explain_signals, v2_features)
+try:
+    from ml.features import (V1_FEATURES, V2_EXTRA_FEATURES, V2_GEO_FEATURES,
+                           explain_signals, v2_features)
+except ImportError:
+    from features import (V1_FEATURES, V2_EXTRA_FEATURES, V2_GEO_FEATURES,
+                           explain_signals, v2_features)
 
 # ─────────────────────────────────────────────────────────────────
 # 1.  XGBOOST CONFIGURATION

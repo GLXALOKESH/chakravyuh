@@ -1,0 +1,540 @@
+[
+  {
+    "ring_id": "RING01",
+    "pattern": "A",
+    "member_ids": [
+      "ACC3100",
+      "ACC3101",
+      "ACC3102",
+      "ACC3103",
+      "ACC3104",
+      "ACC3105",
+      "ACC3106",
+      "ACC3107"
+    ],
+    "victim_txn_id": "TXN006858",
+    "victim_amount_paise": 77473000,
+    "victim_account_id": "VICTIM_RING01",
+    "roles": {
+      "ACC3100": "source",
+      "ACC3101": "mule",
+      "ACC3102": "mule",
+      "ACC3103": "mule",
+      "ACC3104": "mule",
+      "ACC3105": "mule",
+      "ACC3106": "cashout",
+      "ACC3107": "cashout"
+    }
+  },
+  {
+    "ring_id": "RING02",
+    "pattern": "B",
+    "member_ids": [
+      "ACC3130",
+      "ACC3131",
+      "ACC3132",
+      "ACC3133",
+      "ACC3134"
+    ],
+    "victim_txn_id": "TXN008563",
+    "victim_amount_paise": 48606800,
+    "victim_account_id": "VICTIM_RING02",
+    "roles": {
+      "ACC3130": "source",
+      "ACC3131": "relay",
+      "ACC3132": "relay",
+      "ACC3133": "relay",
+      "ACC3134": "cashout"
+    }
+  },
+  {
+    "ring_id": "RING03",
+    "pattern": "C",
+    "member_ids": [
+      "ACC3160",
+      "ACC3161",
+      "ACC3162",
+      "ACC3163",
+      "ACC3164",
+      "ACC3165",
+      "ACC3166",
+      "ACC3167",
+      "ACC3168",
+      "ACC3169"
+    ],
+    "victim_txn_id": "TXN006761",
+    "victim_amount_paise": 3008200,
+    "victim_account_id": "VICTIM_RING03",
+    "roles": {
+      "ACC3160": "coordinator",
+      "ACC3161": "mule",
+      "ACC3162": "mule",
+      "ACC3163": "mule",
+      "ACC3164": "mule",
+      "ACC3165": "mule",
+      "ACC3166": "mule",
+      "ACC3167": "mule",
+      "ACC3168": "mule",
+      "ACC3169": "cashout"
+    }
+  },
+  {
+    "ring_id": "RING04",
+    "pattern": "D",
+    "member_ids": [
+      "ACC3190",
+      "ACC3191",
+      "ACC3192",
+      "ACC3193",
+      "ACC3194",
+      "ACC3195",
+      "ACC3196",
+      "ACC3197",
+      "ACC3198"
+    ],
+    "victim_txn_id": "TXN006797",
+    "victim_amount_paise": 46622400,
+    "victim_account_id": "VICTIM_RING04",
+    "roles": {
+      "ACC3190": "source",
+      "ACC3191": "mule",
+      "ACC3192": "mule",
+      "ACC3193": "mule",
+      "ACC3194": "mule",
+      "ACC3195": "mule",
+      "ACC3196": "mule",
+      "ACC3197": "relay",
+      "ACC3198": "cashout"
+    }
+  },
+  {
+    "ring_id": "RING05",
+    "pattern": "A",
+    "member_ids": [
+      "ACC3220",
+      "ACC3221",
+      "ACC3222",
+      "ACC3223",
+      "ACC3224",
+      "ACC3225",
+      "ACC3226",
+      "ACC3227",
+      "ACC3228",
+      "ACC3229"
+    ],
+    "victim_txn_id": "TXN005878",
+    "victim_amount_paise": 79657000,
+    "victim_account_id": "VICTIM_RING05",
+    "roles": {
+      "ACC3220": "source",
+      "ACC3221": "mule",
+      "ACC3222": "mule",
+      "ACC3223": "mule",
+      "ACC3224": "mule",
+      "ACC3225": "mule",
+      "ACC3226": "mule",
+      "ACC3227": "mule",
+      "ACC3228": "cashout",
+      "ACC3229": "cashout"
+    }
+  },
+  {
+    "ring_id": "RING06",
+    "pattern": "B",
+    "member_ids": [
+      "ACC3250",
+      "ACC3251",
+      "ACC3252",
+      "ACC3253",
+      "ACC3254",
+      "ACC3255"
+    ],
+    "victim_txn_id": "TXN008635",
+    "victim_amount_paise": 50569800,
+    "victim_account_id": "VICTIM_RING06",
+    "roles": {
+      "ACC3250": "source",
+      "ACC3251": "relay",
+      "ACC3252": "relay",
+      "ACC3253": "relay",
+      "ACC3254": "relay",
+      "ACC3255": "cashout"
+    }
+  },
+  {
+    "ring_id": "RING07",
+    "pattern": "C",
+    "member_ids": [
+      "ACC3280",
+      "ACC3281",
+      "ACC3282",
+      "ACC3283",
+      "ACC3284",
+      "ACC3285",
+      "ACC3286",
+      "ACC3287",
+      "ACC3288",
+      "ACC3289"
+    ],
+    "victim_txn_id": "TXN005683",
+    "victim_amount_paise": 1032500,
+    "victim_account_id": "VICTIM_RING07",
+    "roles": {
+      "ACC3280": "coordinator",
+      "ACC3281": "mule",
+      "ACC3282": "mule",
+      "ACC3283": "mule",
+      "ACC3284": "mule",
+      "ACC3285": "mule",
+      "ACC3286": "mule",
+      "ACC3287": "mule",
+      "ACC3288": "mule",
+      "ACC3289": "cashout"
+    }
+  },
+  {
+    "ring_id": "RING08",
+    "pattern": "D",
+    "member_ids": [
+      "ACC3310",
+      "ACC3311",
+      "ACC3312",
+      "ACC3313",
+      "ACC3314",
+      "ACC3315",
+      "ACC3316",
+      "ACC3317"
+    ],
+    "victim_txn_id": "TXN006715",
+    "victim_amount_paise": 15096900,
+    "victim_account_id": "VICTIM_RING08",
+    "roles": {
+      "ACC3310": "source",
+      "ACC3311": "mule",
+      "ACC3312": "mule",
+      "ACC3313": "mule",
+      "ACC3314": "mule",
+      "ACC3315": "mule",
+      "ACC3316": "relay",
+      "ACC3317": "cashout"
+    }
+  },
+  {
+    "ring_id": "RING09",
+    "pattern": "A",
+    "member_ids": [
+      "ACC3340",
+      "ACC3341",
+      "ACC3342",
+      "ACC3343",
+      "ACC3344",
+      "ACC3345",
+      "ACC3346",
+      "ACC3347",
+      "ACC3348",
+      "ACC3349"
+    ],
+    "victim_txn_id": "TXN005952",
+    "victim_amount_paise": 26684300,
+    "victim_account_id": "VICTIM_RING09",
+    "roles": {
+      "ACC3340": "source",
+      "ACC3341": "mule",
+      "ACC3342": "mule",
+      "ACC3343": "mule",
+      "ACC3344": "mule",
+      "ACC3345": "mule",
+      "ACC3346": "mule",
+      "ACC3347": "mule",
+      "ACC3348": "mule",
+      "ACC3349": "cashout"
+    }
+  },
+  {
+    "ring_id": "RING10",
+    "pattern": "B",
+    "member_ids": [
+      "ACC3370",
+      "ACC3371",
+      "ACC3372",
+      "ACC3373"
+    ],
+    "victim_txn_id": "TXN006799",
+    "victim_amount_paise": 41772100,
+    "victim_account_id": "VICTIM_RING10",
+    "roles": {
+      "ACC3370": "source",
+      "ACC3371": "relay",
+      "ACC3372": "relay",
+      "ACC3373": "cashout"
+    }
+  },
+  {
+    "ring_id": "RING11",
+    "pattern": "C",
+    "member_ids": [
+      "ACC3400",
+      "ACC3401",
+      "ACC3402",
+      "ACC3403",
+      "ACC3404",
+      "ACC3405",
+      "ACC3406",
+      "ACC3407",
+      "ACC3408"
+    ],
+    "victim_txn_id": "TXN006588",
+    "victim_amount_paise": 1011100,
+    "victim_account_id": "VICTIM_RING11",
+    "roles": {
+      "ACC3400": "coordinator",
+      "ACC3401": "mule",
+      "ACC3402": "mule",
+      "ACC3403": "mule",
+      "ACC3404": "mule",
+      "ACC3405": "mule",
+      "ACC3406": "mule",
+      "ACC3407": "mule",
+      "ACC3408": "cashout"
+    }
+  },
+  {
+    "ring_id": "RING12",
+    "pattern": "D",
+    "member_ids": [
+      "ACC3430",
+      "ACC3431",
+      "ACC3432",
+      "ACC3433",
+      "ACC3434",
+      "ACC3435",
+      "ACC3436",
+      "ACC3437",
+      "ACC3438"
+    ],
+    "victim_txn_id": "TXN006800",
+    "victim_amount_paise": 22029600,
+    "victim_account_id": "VICTIM_RING12",
+    "roles": {
+      "ACC3430": "source",
+      "ACC3431": "mule",
+      "ACC3432": "mule",
+      "ACC3433": "mule",
+      "ACC3434": "mule",
+      "ACC3435": "mule",
+      "ACC3436": "mule",
+      "ACC3437": "relay",
+      "ACC3438": "cashout"
+    }
+  },
+  {
+    "ring_id": "RING13",
+    "pattern": "A",
+    "member_ids": [
+      "ACC3460",
+      "ACC3461",
+      "ACC3462",
+      "ACC3463",
+      "ACC3464",
+      "ACC3465",
+      "ACC3466",
+      "ACC3467",
+      "ACC3468",
+      "ACC3469",
+      "ACC3470"
+    ],
+    "victim_txn_id": "TXN005823",
+    "victim_amount_paise": 109696300,
+    "victim_account_id": "VICTIM_RING13",
+    "roles": {
+      "ACC3460": "source",
+      "ACC3461": "mule",
+      "ACC3462": "mule",
+      "ACC3463": "mule",
+      "ACC3464": "mule",
+      "ACC3465": "mule",
+      "ACC3466": "mule",
+      "ACC3467": "mule",
+      "ACC3468": "mule",
+      "ACC3469": "cashout",
+      "ACC3470": "cashout"
+    }
+  },
+  {
+    "ring_id": "RING14",
+    "pattern": "B",
+    "member_ids": [
+      "ACC3490",
+      "ACC3491",
+      "ACC3492",
+      "ACC3493"
+    ],
+    "victim_txn_id": "TXN006629",
+    "victim_amount_paise": 75161100,
+    "victim_account_id": "VICTIM_RING14",
+    "roles": {
+      "ACC3490": "source",
+      "ACC3491": "relay",
+      "ACC3492": "relay",
+      "ACC3493": "cashout"
+    }
+  },
+  {
+    "ring_id": "RING15",
+    "pattern": "C",
+    "member_ids": [
+      "ACC3520",
+      "ACC3521",
+      "ACC3522",
+      "ACC3523",
+      "ACC3524",
+      "ACC3525",
+      "ACC3526",
+      "ACC3527",
+      "ACC3528",
+      "ACC3529"
+    ],
+    "victim_txn_id": "TXN008756",
+    "victim_amount_paise": 3193000,
+    "victim_account_id": "VICTIM_RING15",
+    "roles": {
+      "ACC3520": "coordinator",
+      "ACC3521": "mule",
+      "ACC3522": "mule",
+      "ACC3523": "mule",
+      "ACC3524": "mule",
+      "ACC3525": "mule",
+      "ACC3526": "mule",
+      "ACC3527": "mule",
+      "ACC3528": "mule",
+      "ACC3529": "cashout"
+    }
+  },
+  {
+    "ring_id": "RING16",
+    "pattern": "D",
+    "member_ids": [
+      "ACC3550",
+      "ACC3551",
+      "ACC3552",
+      "ACC3553",
+      "ACC3554",
+      "ACC3555"
+    ],
+    "victim_txn_id": "TXN005640",
+    "victim_amount_paise": 96390100,
+    "victim_account_id": "VICTIM_RING16",
+    "roles": {
+      "ACC3550": "source",
+      "ACC3551": "mule",
+      "ACC3552": "mule",
+      "ACC3553": "mule",
+      "ACC3554": "relay",
+      "ACC3555": "cashout"
+    }
+  },
+  {
+    "ring_id": "RING17",
+    "pattern": "A",
+    "member_ids": [
+      "ACC3580",
+      "ACC3581",
+      "ACC3582",
+      "ACC3583",
+      "ACC3584",
+      "ACC3585",
+      "ACC3586",
+      "ACC3587"
+    ],
+    "victim_txn_id": "TXN005684",
+    "victim_amount_paise": 70921200,
+    "victim_account_id": "VICTIM_RING17",
+    "roles": {
+      "ACC3580": "source",
+      "ACC3581": "mule",
+      "ACC3582": "mule",
+      "ACC3583": "mule",
+      "ACC3584": "mule",
+      "ACC3585": "mule",
+      "ACC3586": "mule",
+      "ACC3587": "cashout"
+    }
+  },
+  {
+    "ring_id": "RING18",
+    "pattern": "B",
+    "member_ids": [
+      "ACC3610",
+      "ACC3611",
+      "ACC3612",
+      "ACC3613",
+      "ACC3614"
+    ],
+    "victim_txn_id": "TXN005848",
+    "victim_amount_paise": 30331300,
+    "victim_account_id": "VICTIM_RING18",
+    "roles": {
+      "ACC3610": "source",
+      "ACC3611": "relay",
+      "ACC3612": "relay",
+      "ACC3613": "relay",
+      "ACC3614": "cashout"
+    }
+  },
+  {
+    "ring_id": "RING19",
+    "pattern": "C",
+    "member_ids": [
+      "ACC3640",
+      "ACC3641",
+      "ACC3642",
+      "ACC3643",
+      "ACC3644",
+      "ACC3645",
+      "ACC3646",
+      "ACC3647"
+    ],
+    "victim_txn_id": "TXN007877",
+    "victim_amount_paise": 1773000,
+    "victim_account_id": "VICTIM_RING19",
+    "roles": {
+      "ACC3640": "coordinator",
+      "ACC3641": "mule",
+      "ACC3642": "mule",
+      "ACC3643": "mule",
+      "ACC3644": "mule",
+      "ACC3645": "mule",
+      "ACC3646": "mule",
+      "ACC3647": "cashout"
+    }
+  },
+  {
+    "ring_id": "RING20",
+    "pattern": "D",
+    "member_ids": [
+      "ACC3670",
+      "ACC3671",
+      "ACC3672",
+      "ACC3673",
+      "ACC3674",
+      "ACC3675",
+      "ACC3676",
+      "ACC3677",
+      "ACC3678"
+    ],
+    "victim_txn_id": "TXN007553",
+    "victim_amount_paise": 78529400,
+    "victim_account_id": "VICTIM_RING20",
+    "roles": {
+      "ACC3670": "source",
+      "ACC3671": "mule",
+      "ACC3672": "mule",
+      "ACC3673": "mule",
+      "ACC3674": "mule",
+      "ACC3675": "mule",
+      "ACC3676": "mule",
+      "ACC3677": "relay",
+      "ACC3678": "cashout"
+    }
+  }
+]

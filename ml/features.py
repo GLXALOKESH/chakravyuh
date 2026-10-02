@@ -157,9 +157,7 @@ def _compute_core(acc, credits, debits, atm_txns) -> dict:
     txn_count = txn_in + txn_out
     counterparty_div = len(all_counterparties) / max(txn_count, 1)
 
-    in_degree  = len({s for s, _ in (creds_raw := [(None, None)] if not creds else
-                                     [(s, _) for s in [None] for _, _ in creds])})
-    # Simpler: unique senders and receivers
+    # Unique senders and receivers
     # (we don't store sender in credits index, so approximate)
     in_degree  = txn_in
     out_degree = len(set(to for _, _, to in debs))

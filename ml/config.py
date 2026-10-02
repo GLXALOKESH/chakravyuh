@@ -53,3 +53,13 @@ ISOLATION_FOREST_PARAMS = {
     "contamination": 0.08,
     "random_state": GLOBAL_SEED,
 }
+
+# Adversarial Loop (Ouroboros) Configuration
+OUROBOROS_DEFAULTS = {
+    "n_rounds": 3,
+    "amount_sigma": 0.10,        # Gaussian σ as fraction of amount
+    "temporal_lambda": 15.0,     # Poisson λ in minutes
+    "detection_threshold": 50,   # risk_v2 threshold for "detected"
+    "profile": "demo",
+}
+
