@@ -1,4 +1,5 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
 node_modules/
 .env
 .env.*
@@ -20,6 +21,8 @@ server/dist/
 data/*
 !data/.gitkeep
 =======
+=======
+>>>>>>> 7af34b4 (feat(server): scaffold Express API foundation on PostgreSQL)
 # Chakravyuh monorepo: client (Next.js), server (Express), ml (Python), data.
 # client/ keeps its own .gitignore for Next.js specifics.
 
@@ -99,4 +102,25 @@ desktop.ini
 
 # ---- Deploy ----
 .vercel
+<<<<<<< HEAD
 >>>>>>> 97ecd47 (feat: added frontend pages and ui refinements)
+=======
+=======
+node_modules/
+.env
+.env.*
+!.env.example
+*.log
+npm-debug.log*
+.DS_Store
+coverage/
+
+# In-process Postgres used when DATABASE_URL is unset (see server/.env.example)
+server/.pglite/
+
+# Generated ML data (TRD section 4: "generated, git-ignored").
+# Only the directory placeholder is tracked.
+data/*
+!data/.gitkeep
+>>>>>>> 88d5096 (feat(server): scaffold Express API foundation on PostgreSQL)
+>>>>>>> 7af34b4 (feat(server): scaffold Express API foundation on PostgreSQL)
