@@ -1,0 +1,29 @@
+[
+  {
+    "_id": "ALT01",
+    "ring_id": "RING01",
+    "fired_at": "2026-09-29T11:56:00Z",
+    "risk": 0.9998,
+    "members": 10,
+    "volume": 22321700,
+    "reason": "10 linked accounts forwarding within minutes"
+  },
+  {
+    "_id": "ALT02",
+    "ring_id": "RING02",
+    "fired_at": "2026-09-26T10:23:00Z",
+    "risk": 0.9999,
+    "members": 5,
+    "volume": 224974300,
+    "reason": "5 linked accounts forwarding within minutes"
+  },
+  {
+    "_id": "ALT03",
+    "ring_id": "RING03",
+    "fired_at": "2026-09-26T11:43:00Z",
+    "risk": 0.9991,
+    "members": 10,
+    "volume": 186831600,
+    "reason": "10 linked accounts forwarding within minutes"
+  }
+]

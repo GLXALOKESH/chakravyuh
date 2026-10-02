@@ -337,13 +337,123 @@ This is a minimum-cut problem with accounts as the cut units. Brute force gives 
 
 Assumption to state if asked: a channel that has been used once can carry any amount again.
 
-### 7.8 Recruitment predictor (F10)
+### 7.6 Taint tracing (F8)
 
-- **Candidates:** accounts not in a ring that share an identifier with a ring member, or sit within 2 hops of one.
-- **Features per (account, ring) pair:** shared devices, phones and IPs with ring members; number of ring members linked; account age; days since the link appeared; cosine similarity between the account's feature vector and the ring's mean vector; whether the account has any transactions yet.
-- **Training labels:** in the `train` profile, cut each ring's history just before its last members join. Accounts that join later are positives. Linked accounts that never join (the family device sharers) are negatives.
-- **Model:** XGBoost with the same settings as 7.3. Top 3 reasons come from the same contribution method.
-- **Fallback if time runs out:** a hand-weighted score over the same features. In that case label the number "risk score", not "probability".
+Taint tracing follows the victim's money through the transaction graph while preserving the **exact rupee amount** at every stage.
+
+#### Money precision rule
+
+All monetary values used internally by the taint engine MUST be stored as **integer paise**.
+
+- ₹1 = 100 paise
+- No floating-point arithmetic is used for balances, transaction amounts or taint amounts.
+- The UI converts paise to formatted rupee values only for display.
+- This prevents floating-point rounding errors across multiple transaction hops.
+
+#### Proportional taint rule
+
+Money leaving an account carries the same tainted proportion as the account's balance at that moment.
+
+For each outgoing transaction:
+
+```python
+moved = (amount_paise * taint_paise[u]) // balance_paise[u]
+```
+
+The result is an integer number of paise.
+
+Any fractional remainder is retained by the sending account as taint. This guarantees that no tainted money is created or destroyed by rounding.
+
+```python
+def trace(transactions, opening_balance, victim_txn_id, as_of=None):
+
+    bal = dict(opening_balance)       # account -> integer paise
+    taint = defaultdict(int)          # account -> integer tainted paise
+    flows = defaultdict(int)          # (from, to) -> integer tainted paise
+
+    started = False
+
+    for t in sorted(transactions, key=lambda t: t["ts"]):
+
+        if as_of and t["ts"] > as_of:
+            break
+
+        u = t["from"]
+        v = t["to"]
+        x = t["amount_paise"]
+
+        # Proportion of the sender's current balance that is tainted.
+        if started and bal.get(u, 0) > 0:
+            moved = (x * taint[u]) // bal[u]
+        else:
+            moved = 0
+
+        bal[u] = bal.get(u, 0) - x
+        bal[v] = bal.get(v, 0) + x
+
+        taint[u] -= moved
+        taint[v] += moved
+
+        if moved > 0:
+            flows[(u, v)] += moved
+
+        # The victim transaction introduces exactly 100% tainted money.
+        if t["_id"] == victim_txn_id:
+            taint[v] += x
+            started = True
+
+    return bal, taint, flows
+```
+
+#### Exact conservation invariant
+
+The taint engine MUST satisfy:
+
+```python
+sum(taint.values()) == victim_amount_paise
+```
+
+at every completed trace.
+
+This includes taint held by normal accounts and taint that has reached the special `CASH` account.
+
+Therefore:
+
+```text
+Total tainted money
+=
+Tainted money still held
++
+Tainted money already withdrawn
+```
+
+with no rounding loss.
+
+#### Display
+
+The backend stores paise but the dashboard displays whole rupees:
+
+```text
+Victim amount       ₹12,00,000
+Currently tainted   ₹8,90,000
+Lost to cash        ₹3,10,000
+──────────────────────────────
+Total               ₹12,00,000
+```
+
+Recommended lien per account:
+
+```python
+lien_paise = min(taint_paise[a], bal_paise[a])
+```
+
+The dashboard formats `lien_paise` into rupees.
+
+`taint["CASH"]` represents tainted money that has already been withdrawn and is shown separately as **"Lost to cash-out"**.
+
+Sankey links are generated from `flows`.
+
+**Hard requirement:** The displayed taint amounts must reconcile exactly to the original victim amount when converted back to paise. No ±₹1 tolerance is permitted.
 
 ### 7.9 Evaluation
 
