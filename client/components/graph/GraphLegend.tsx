@@ -41,9 +41,10 @@ export function GraphLegend() {
       <Mark label="Shared device or phone">
         <path d="M0 7h20" stroke="#f3ecdd" strokeWidth="1.500" strokeDasharray="4 3" />
       </Mark>
-      <Mark label="Other accounts">
-        <circle cx="5" cy="5" r="2" fill="#d9a9a4" />
-        <circle cx="13" cy="9" r="2" fill="#d9a9a4" />
+      <Mark label="Other accounts and their transfers">
+        <path d="M4 4.500 16 9.500" stroke="#d9a9a4" strokeOpacity="0.6" strokeWidth="1.200" />
+        <circle cx="4" cy="4.500" r="2.200" fill="#d9a9a4" />
+        <circle cx="16" cy="9.500" r="2.200" fill="#d9a9a4" />
       </Mark>
     </ul>
   );

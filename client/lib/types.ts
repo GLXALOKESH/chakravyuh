@@ -31,10 +31,18 @@ export interface RingEdge {
   amount?: number;
 }
 
+/** mock-only: an ordinary account and, when known, where it stands in the overview graph. */
+export interface GraphAccount {
+  id: string;
+  pos?: [x: number, y: number];
+}
+
 export interface RingDetail {
   id: string;
   risk: number;
   volume: number;
+  /** mock-only: centre and radius of the ring's formation in the overview graph. */
+  site?: { x: number; y: number; r: number };
   nodes: RingNode[];
   edges: RingEdge[];
   victim_txn_ids: string[];

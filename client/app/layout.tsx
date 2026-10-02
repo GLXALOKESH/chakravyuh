@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Anek_Devanagari, Anek_Latin } from "next/font/google";
+import { EnterScreen } from "@/components/ui/EnterScreen";
 import "./globals.css";
 
 const anek = Anek_Latin({
@@ -22,8 +23,11 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${anek.variable} ${anekDeva.variable} antialiased`}>
-      <body>{children}</body>
+    <html lang="en" className={`${anek.variable} ${anekDeva.variable} antialiased`} suppressHydrationWarning>
+      <body>
+        <EnterScreen />
+        {children}
+      </body>
     </html>
   );
 }
