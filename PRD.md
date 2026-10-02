@@ -106,6 +106,7 @@ Seven P0 features make the demo run, five P1 features make it different, and P2 
 | F15 | Police and bank views | A toggle that changes which panels lead | Member 2 |
 | F16 | GraphSAGE as V3 | Added as a third row in the metrics table | Member 3 |
 | F17 | Plain-language case summary | An LLM writes a short summary from the structured signals only | Member 1 |
+| F18 | Cash-out map (GIS) | ATM withdrawals and account home branches carry a city and coordinates; a Map tab in the ring view plots the ring's home branches and cash-out points; the entity panel shows distance from home branch to cash-out; falls back to a city table if map tiles do not load. Display only: no hotspot forecasting or routing | Members 3 and 2 |
 
 ## Demo scenario
 
@@ -146,9 +147,9 @@ The dashboard never calls the ML service directly. Express stores precomputed mo
 
 | Collection | Key fields |
 | --- | --- |
-| accounts | id, holder, bank, opened date, features, risk V1, risk V2, ring id, role |
+| accounts | id, holder, bank, home city and coordinates, opened date, features, risk V1, risk V2, ring id, role |
 | identifiers | id, type (device, phone or IP), linked account ids |
-| transactions | id, from, to, amount, timestamp, channel, fraud label |
+| transactions | id, from, to, amount, timestamp, channel, city and coordinates (ATM only), fraud label |
 | rings | id, member ids, volume, risk score, pattern |
 | alerts | id, ring id, fired at, reason |
 
@@ -165,6 +166,7 @@ Lock these shapes by hour 2. Member 1 serves mock responses until the Python ser
 | `POST /api/rings/:id/freeze` | Accounts to freeze and percentage of flow stopped, given k and any excluded accounts |
 | `GET /api/rings/:id/recruits` | Candidate accounts with probability and top 3 reasons |
 | `GET /api/rings/:id/evidence` | Evidence pack as a PDF |
+| `GET /api/rings/:id/geo` (P2) | Home branches and cash-out points with coordinates, and the ring's geographic spread in km |
 | Socket events: `replay:start`, `txn`, `alert` | Streamed transactions and alerts for live replay |
 
 The Python service exposes four internal routes that only Express calls: `POST /pipeline/run`, `/taint`, `/mincut` and `/recruits`.
