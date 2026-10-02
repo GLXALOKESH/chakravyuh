@@ -17,7 +17,7 @@ yarn-error.log*
 .pnpm-debug.log*
 
 # ---- Python (ml) ----
-pycache/
+__pycache__/
 *.py[cod]
 .venv/
 venv/
