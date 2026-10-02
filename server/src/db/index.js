@@ -164,7 +164,7 @@ export async function migrate({ logger = console } = {}) {
   for (const file of files) {
     if (applied.has(file)) continue;
     const sql = await fs.readFile(path.join(config.sqlDir, file), 'utf8');
-    logger.info?.(`migrate: applying ${file}`);
+    logger?.info?.(`migrate: applying ${file}`);
     await d.transaction(async (tx) => {
       await tx.exec(sql);
       await tx.query('INSERT INTO schema_migrations (filename) VALUES ($1)', [file]);
@@ -172,7 +172,7 @@ export async function migrate({ logger = console } = {}) {
     fresh.push(file);
   }
 
-  if (!fresh.length) logger.info?.('migrate: already up to date');
+  if (!fresh.length) logger?.info?.('migrate: already up to date');
   return fresh;
 }
 
