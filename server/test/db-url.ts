@@ -29,31 +29,12 @@ export const isPlaceholderUrl = (url: string | null | undefined): boolean => {
 /**
  * Points a connection string at a different database, keeping the rest intact.
  *
- * The path segment is the database name in a MongoDB URL, so only that is
- * replaced. Credentials, host, port and every query option - retryWrites, w,
- * tls, the Atlas SRV flags - are carried over untouched, which is why this
- * works the same for an Atlas SRV string and a local one.
+ * Lives in src/ because env.ts needs it too: MONGO_URL that names no database
+ * would otherwise land in `test`. Re-exported here so the test helper reads as
+ * one piece.
  */
-export const withDatabaseName = (url: string, name: string): string => {
-  try {
-    const parsed = new URL(url);
-    parsed.pathname = `/${name}`;
-    // URL serialises known search params back verbatim and keeps any unknown
-    // ones, which is what an Atlas query string needs.
-    return parsed.toString();
-  } catch {
-    // Not a URL-shaped string, so no parser to lean on. Swap the segment after
-    // the host and keep any query string, rather than guessing at the whole.
-    const questionMark = url.indexOf('?');
-    const base = questionMark === -1 ? url : url.slice(0, questionMark);
-    const query = questionMark === -1 ? '' : url.slice(questionMark);
-
-    const schemeEnd = base.indexOf('://') + 3;
-    const slash = base.indexOf('/', schemeEnd);
-    const head = slash === -1 ? base : base.slice(0, slash);
-    return `${head}/${name}${query}`;
-  }
-};
+import { withDatabaseName } from '../src/utilities/mongo-url.util.js';
+export { withDatabaseName };
 
 export const resolveTestDatabaseUrl = (env: NodeJS.ProcessEnv = process.env): string | null => {
   const explicit = env.TEST_MONGO_URL?.trim();

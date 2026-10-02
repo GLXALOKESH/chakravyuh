@@ -11,8 +11,8 @@ coverage/
 server/dist/
 *.tsbuildinfo
 
-# Generated Prisma client. No longer used: the server is on MongoDB with
-# Mongoose, which has no generated client and no codegen step.
+# Nothing generated to ignore here: Mongoose has no codegen step and MongoDB has
+# no migration output. server/src/models/ is hand-written and tracked.
 
 # Generated ML data (TRD section 4: "generated, git-ignored").
 # Only the directory placeholder is tracked.

@@ -21,7 +21,7 @@ product is labelled as such.
 
 | Area | Feature | State |
 | --- | --- | --- |
-| F6 | API and storage | done, on TypeScript and Prisma |
+| F6 | API and storage | done, on TypeScript and Mongoose |
 | F11 | Live replay over Socket.IO | done |
 | F12 | Evidence pack PDF | done |
 | F1 | Data generator | not started, `ml/` is empty |
@@ -38,19 +38,23 @@ either blocking the other.
 
 ```bash
 cd server
-cp .env.example .env     # then put a real PostgreSQL URL in DATABASE_URL
-npm install              # also generates the Prisma client
-npm run migrate:dev      # create the schema
+cp .env.example .env     # then put your MongoDB URL in MONGO_URL
+npm install
 npm run seed             # load data/demo/ or the dev fixtures
 npm start                # http://localhost:4000
 ```
+
+No schema step: MongoDB has no migrations and Mongoose needs no generated client.
+The seeder creates the indexes it needs.
 
 Without a database, `USE_MOCKS=true npm start` serves the contract fixtures and
 opens no connection; that is enough to build the frontend against.
 
 ```bash
-cd server && npm test    # 54 checks now, 97 once DATABASE_URL is set
+cd server && npm test    # 98 checks, all of them, with or without a database
 ```
+
+`npm test` starts its own MongoDB if `MONGO_URL` is not set, so no checks skip.
 
 ## Working in parallel
 
@@ -84,11 +88,12 @@ shared documents and the drift is a team decision.
    freeze optimiser takes an `as_of`, and the generator now produces train and
    test profiles besides the demo one. `GET /metrics` and `POST /replay/*` also
    exist in the implementation but not in the PRD contract table.
-2. **MongoDB to PostgreSQL.** The team chose PostgreSQL, so TRD section 2, the
-   section 6 document shapes, and `MONGO_URL` no longer match the code. The
-   schema is `server/prisma/schema.prisma`, and the API now runs on TypeScript
-   and Prisma rather than plain JavaScript and hand-written SQL. `MONGO_URL` is
-   `DATABASE_URL`.
+2. **Atlas instead of a local MongoDB.** TRD section 2 says `MongoDB (local)`.
+   An Atlas connection string in `MONGO_URL` is the same driver and the same wire
+   protocol, and it means the demo laptop needs no running mongod. Worth a
+   deliberate decision only because a local *standalone* mongod cannot run the
+   seeder's transaction at all — MongoDB requires a replica set for that, and
+   Atlas provides one by default.
 3. **Is the detection truly streaming?** The replay replays precomputed scores
    rather than scoring each transaction as it arrives. TRD section 9 already
    prescribes this and says to give that as the honest answer if asked, but it
@@ -99,6 +104,12 @@ shared documents and the drift is a team decision.
 ## Deviations
 
 Tracked in `server/README.md` under "Deviations from TRD". The short version:
-PostgreSQL instead of MongoDB, one added `recruits` table, Express 4 pinned, and
-`accounts.role` stored as a string rather than a database enum because Prisma
-cannot express a value containing a hyphen.
+Atlas instead of a local mongod, one added `recruits` collection, Express 4
+pinned, and `accounts.role` stored as a string rather than an enum because
+`cash-out` is not a legal identifier.
+
+
+
+
+
+

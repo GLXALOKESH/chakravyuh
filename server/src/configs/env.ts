@@ -10,6 +10,7 @@
 import dotenv from 'dotenv';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { withDefaultDatabaseName } from '../utilities/mongo-url.util.js';
 
 /** server/, two levels up from src/configs/. */
 export const serverRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -51,7 +52,21 @@ export interface AppConfig {
 /** The MONGO_URL default from the configuration table in TRD section 9. */
 const TRD_DEFAULT_MONGO_URL = 'mongodb://localhost:27017/chakravyuh';
 
+/** The database this project owns, and the one TRD section 9 defaults to. */
+const DB_NAME = 'chakravyuh';
+
 const explicitMongoUrl = process.env.MONGO_URL?.trim() || null;
+
+/**
+ * A connection string with no database name is a trap: the driver defaults to a
+ * database called `test`, so the server starts, every query succeeds, and the
+ * whole dataset lands somewhere nobody is looking. Atlas connection strings get
+ * copied out of the dashboard without the path, so the name is filled in here
+ * rather than left to chance. The TRD default URL already carries one.
+ */
+const mongoUrl = explicitMongoUrl
+  ? withDefaultDatabaseName(explicitMongoUrl, DB_NAME)
+  : TRD_DEFAULT_MONGO_URL;
 
 export const config: AppConfig = {
   port: int(process.env.PORT, 4000),
@@ -62,7 +77,7 @@ export const config: AppConfig = {
   // pointed at is not a database, and bin/server.ts and the test suite both need
   // to tell "the default local mongod is not running" apart from "no database
   // was ever chosen".
-  mongoUrl: explicitMongoUrl ?? TRD_DEFAULT_MONGO_URL,
+  mongoUrl,
   mongoUrlExplicit: explicitMongoUrl !== null,
 
   dbConnectTimeoutMs: int(process.env.DB_CONNECT_TIMEOUT_MS, 10_000),

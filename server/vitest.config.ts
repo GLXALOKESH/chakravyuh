@@ -4,10 +4,12 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
   test: {
     globals: false,
-    // The fixture generator builds 600 accounts and 5,000 transactions, and the
-    // PDF is written synchronously, so a couple of files run long by design.
-    testTimeout: 60_000,
-    hookTimeout: 60_000,
+    // Generous, because the cost here is dominated by round trips rather than
+    // by CPU: seed.test.ts reseeds before each of its checks, and against Atlas
+    // a seed of 5,000 documents takes roughly 25 seconds where a local mongod
+    // takes under one. Raise these rather than watching the suite flake.
+    testTimeout: 180_000,
+    hookTimeout: 180_000,
     include: ['test/**/*.test.ts'],
     // Runs once, before any worker: connects and creates the indexes.
     globalSetup: ['test/global-setup.ts'],
