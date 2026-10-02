@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 node_modules/
 .env
 .env.*
@@ -18,3 +19,84 @@ server/dist/
 # Only the directory placeholder is tracked.
 data/*
 !data/.gitkeep
+=======
+# Chakravyuh monorepo: client (Next.js), server (Express), ml (Python), data.
+# client/ keeps its own .gitignore for Next.js specifics.
+
+# ---- Node (client, server) ----
+node_modules/
+.pnpm-store/
+.next/
+out/
+build/
+dist/
+coverage/
+*.tsbuildinfo
+next-env.d.ts
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# ---- Python (ml) ----
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+*.egg-info/
+# Trained models are rebuilt by ml/pipeline.py
+ml/models/
+*.joblib
+*.pkl
+
+# ---- Generated data (TRD section 4: generated, git-ignored) ----
+data/demo/
+data/train/
+data/test/
+
+# ---- Secrets and local environment ----
+.env
+.env.*
+!.env.example
+*.pem
+
+# ---- Local databases ----
+*.sqlite
+*.sqlite3
+dump/
+
+# ---- AI assistant tooling ----
+# Each folder holds a copy of the same skill bundle with a ~19 MB binary, plus
+# machine-local settings. Reinstall the skill locally instead of committing it.
+.agent/
+.claude/
+.cursor/
+.gemini/
+.opencode/
+
+# Impeccable: keep the shared design files (.impeccable/design.json,
+# .impeccable/surfaces/), ignore per-machine and per-run output.
+.impeccable/config.local.json
+.impeccable/questions/
+.impeccable/review/
+.impeccable/mocks/
+.impeccable/build/
+
+# ---- OS and editors ----
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+*.swp
+
+# ---- Deploy ----
+.vercel
+>>>>>>> 97ecd47 (feat: added frontend pages and ui refinements)

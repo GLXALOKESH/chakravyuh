@@ -1,0 +1,871 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-02T17:33:59.842Z",
+  "title": "Design System: Chakravyuh",
+  "extensions": {
+    "colorMeta": {
+      "ink": {
+        "role": "neutral",
+        "displayName": "Warm Ink",
+        "canonical": "#17100e",
+        "oklch": "oklch(18.1% 0.013 36.5)",
+        "tonalRamp": [
+          "oklch(15.0% 0.013 36.5)",
+          "oklch(27.0% 0.013 36.5)",
+          "oklch(38.0% 0.013 36.5)",
+          "oklch(50.0% 0.013 36.5)",
+          "oklch(62.0% 0.013 36.5)",
+          "oklch(73.0% 0.013 36.5)",
+          "oklch(85.0% 0.013 36.5)",
+          "oklch(95.0% 0.013 36.5)"
+        ]
+      },
+      "ink-hi": {
+        "role": "neutral",
+        "displayName": "Warm Ink High",
+        "canonical": "#2b1e1a",
+        "oklch": "oklch(25.0% 0.022 37.8)",
+        "tonalRamp": [
+          "oklch(15.0% 0.022 37.8)",
+          "oklch(27.0% 0.022 37.8)",
+          "oklch(38.0% 0.022 37.8)",
+          "oklch(50.0% 0.022 37.8)",
+          "oklch(62.0% 0.022 37.8)",
+          "oklch(73.0% 0.022 37.8)",
+          "oklch(85.0% 0.022 37.8)",
+          "oklch(95.0% 0.022 37.8)"
+        ]
+      },
+      "ink-line": {
+        "role": "neutral",
+        "displayName": "Ink Line",
+        "canonical": "#47352f",
+        "oklch": "oklch(34.7% 0.028 39.2)",
+        "tonalRamp": [
+          "oklch(15.0% 0.028 39.2)",
+          "oklch(27.0% 0.028 39.2)",
+          "oklch(38.0% 0.028 39.2)",
+          "oklch(50.0% 0.028 39.2)",
+          "oklch(62.0% 0.028 39.2)",
+          "oklch(73.0% 0.028 39.2)",
+          "oklch(85.0% 0.028 39.2)",
+          "oklch(95.0% 0.028 39.2)"
+        ]
+      },
+      "on-ink": {
+        "role": "neutral",
+        "displayName": "On Ink",
+        "canonical": "#f3ecdd",
+        "oklch": "oklch(94.5% 0.021 85.9)",
+        "tonalRamp": [
+          "oklch(15.0% 0.021 85.9)",
+          "oklch(27.0% 0.021 85.9)",
+          "oklch(38.0% 0.021 85.9)",
+          "oklch(50.0% 0.021 85.9)",
+          "oklch(62.0% 0.021 85.9)",
+          "oklch(73.0% 0.021 85.9)",
+          "oklch(85.0% 0.021 85.9)",
+          "oklch(95.0% 0.021 85.9)"
+        ]
+      },
+      "on-ink-2": {
+        "role": "neutral",
+        "displayName": "On Ink Secondary",
+        "canonical": "#c4b3a6",
+        "oklch": "oklch(77.7% 0.027 59.8)",
+        "tonalRamp": [
+          "oklch(15.0% 0.027 59.8)",
+          "oklch(27.0% 0.027 59.8)",
+          "oklch(38.0% 0.027 59.8)",
+          "oklch(50.0% 0.027 59.8)",
+          "oklch(62.0% 0.027 59.8)",
+          "oklch(73.0% 0.027 59.8)",
+          "oklch(85.0% 0.027 59.8)",
+          "oklch(95.0% 0.027 59.8)"
+        ]
+      },
+      "stage": {
+        "role": "secondary",
+        "displayName": "Sindoor Oxblood",
+        "canonical": "#5b0f1e",
+        "oklch": "oklch(31.2% 0.107 15.5)",
+        "tonalRamp": [
+          "oklch(15.0% 0.107 15.5)",
+          "oklch(27.0% 0.107 15.5)",
+          "oklch(38.0% 0.107 15.5)",
+          "oklch(50.0% 0.107 15.5)",
+          "oklch(62.0% 0.107 15.5)",
+          "oklch(73.0% 0.107 15.5)",
+          "oklch(85.0% 0.107 15.5)",
+          "oklch(95.0% 0.107 15.5)"
+        ]
+      },
+      "stage-deep": {
+        "role": "secondary",
+        "displayName": "Oxblood Deep",
+        "canonical": "#3f0914",
+        "oklch": "oklch(24.6% 0.082 14.4)",
+        "tonalRamp": [
+          "oklch(15.0% 0.082 14.4)",
+          "oklch(27.0% 0.082 14.4)",
+          "oklch(38.0% 0.082 14.4)",
+          "oklch(50.0% 0.082 14.4)",
+          "oklch(62.0% 0.082 14.4)",
+          "oklch(73.0% 0.082 14.4)",
+          "oklch(85.0% 0.082 14.4)",
+          "oklch(95.0% 0.082 14.4)"
+        ]
+      },
+      "stage-line": {
+        "role": "secondary",
+        "displayName": "Oxblood Line",
+        "canonical": "#8a2b3c",
+        "oklch": "oklch(43.7% 0.129 13.8)",
+        "tonalRamp": [
+          "oklch(15.0% 0.129 13.8)",
+          "oklch(27.0% 0.129 13.8)",
+          "oklch(38.0% 0.129 13.8)",
+          "oklch(50.0% 0.129 13.8)",
+          "oklch(62.0% 0.129 13.8)",
+          "oklch(73.0% 0.129 13.8)",
+          "oklch(85.0% 0.129 13.8)",
+          "oklch(95.0% 0.129 13.8)"
+        ]
+      },
+      "on-stage": {
+        "role": "neutral",
+        "displayName": "On Stage",
+        "canonical": "#f3ecdd",
+        "oklch": "oklch(94.5% 0.021 85.9)",
+        "tonalRamp": [
+          "oklch(15.0% 0.021 85.9)",
+          "oklch(27.0% 0.021 85.9)",
+          "oklch(38.0% 0.021 85.9)",
+          "oklch(50.0% 0.021 85.9)",
+          "oklch(62.0% 0.021 85.9)",
+          "oklch(73.0% 0.021 85.9)",
+          "oklch(85.0% 0.021 85.9)",
+          "oklch(95.0% 0.021 85.9)"
+        ]
+      },
+      "on-stage-2": {
+        "role": "neutral",
+        "displayName": "On Stage Secondary",
+        "canonical": "#e0bdb8",
+        "oklch": "oklch(82.7% 0.041 27.6)",
+        "tonalRamp": [
+          "oklch(15.0% 0.041 27.6)",
+          "oklch(27.0% 0.041 27.6)",
+          "oklch(38.0% 0.041 27.6)",
+          "oklch(50.0% 0.041 27.6)",
+          "oklch(62.0% 0.041 27.6)",
+          "oklch(73.0% 0.041 27.6)",
+          "oklch(85.0% 0.041 27.6)",
+          "oklch(95.0% 0.041 27.6)"
+        ]
+      },
+      "stone": {
+        "role": "neutral",
+        "displayName": "Carved Stone",
+        "canonical": "#e8e1d1",
+        "oklch": "oklch(91.1% 0.023 87.2)",
+        "tonalRamp": [
+          "oklch(15.0% 0.023 87.2)",
+          "oklch(27.0% 0.023 87.2)",
+          "oklch(38.0% 0.023 87.2)",
+          "oklch(50.0% 0.023 87.2)",
+          "oklch(62.0% 0.023 87.2)",
+          "oklch(73.0% 0.023 87.2)",
+          "oklch(85.0% 0.023 87.2)",
+          "oklch(95.0% 0.023 87.2)"
+        ]
+      },
+      "stone-hi": {
+        "role": "neutral",
+        "displayName": "Stone High",
+        "canonical": "#f4efe3",
+        "oklch": "oklch(95.3% 0.017 88.0)",
+        "tonalRamp": [
+          "oklch(15.0% 0.017 88.0)",
+          "oklch(27.0% 0.017 88.0)",
+          "oklch(38.0% 0.017 88.0)",
+          "oklch(50.0% 0.017 88.0)",
+          "oklch(62.0% 0.017 88.0)",
+          "oklch(73.0% 0.017 88.0)",
+          "oklch(85.0% 0.017 88.0)",
+          "oklch(95.0% 0.017 88.0)"
+        ]
+      },
+      "stone-lo": {
+        "role": "neutral",
+        "displayName": "Stone Low",
+        "canonical": "#d5cab4",
+        "oklch": "oklch(84.2% 0.032 84.6)",
+        "tonalRamp": [
+          "oklch(15.0% 0.032 84.6)",
+          "oklch(27.0% 0.032 84.6)",
+          "oklch(38.0% 0.032 84.6)",
+          "oklch(50.0% 0.032 84.6)",
+          "oklch(62.0% 0.032 84.6)",
+          "oklch(73.0% 0.032 84.6)",
+          "oklch(85.0% 0.032 84.6)",
+          "oklch(95.0% 0.032 84.6)"
+        ]
+      },
+      "on-stone": {
+        "role": "neutral",
+        "displayName": "On Stone",
+        "canonical": "#17100e",
+        "oklch": "oklch(18.1% 0.013 36.5)",
+        "tonalRamp": [
+          "oklch(15.0% 0.013 36.5)",
+          "oklch(27.0% 0.013 36.5)",
+          "oklch(38.0% 0.013 36.5)",
+          "oklch(50.0% 0.013 36.5)",
+          "oklch(62.0% 0.013 36.5)",
+          "oklch(73.0% 0.013 36.5)",
+          "oklch(85.0% 0.013 36.5)",
+          "oklch(95.0% 0.013 36.5)"
+        ]
+      },
+      "on-stone-2": {
+        "role": "neutral",
+        "displayName": "On Stone Secondary",
+        "canonical": "#5a4640",
+        "oklch": "oklch(41.3% 0.029 37.3)",
+        "tonalRamp": [
+          "oklch(15.0% 0.029 37.3)",
+          "oklch(27.0% 0.029 37.3)",
+          "oklch(38.0% 0.029 37.3)",
+          "oklch(50.0% 0.029 37.3)",
+          "oklch(62.0% 0.029 37.3)",
+          "oklch(73.0% 0.029 37.3)",
+          "oklch(85.0% 0.029 37.3)",
+          "oklch(95.0% 0.029 37.3)"
+        ]
+      },
+      "turmeric": {
+        "role": "primary",
+        "displayName": "Turmeric",
+        "canonical": "#f4a915",
+        "oklch": "oklch(78.8% 0.162 76.1)",
+        "tonalRamp": [
+          "oklch(15.0% 0.162 76.1)",
+          "oklch(27.0% 0.162 76.1)",
+          "oklch(38.0% 0.162 76.1)",
+          "oklch(50.0% 0.162 76.1)",
+          "oklch(62.0% 0.162 76.1)",
+          "oklch(73.0% 0.162 76.1)",
+          "oklch(85.0% 0.162 76.1)",
+          "oklch(95.0% 0.162 76.1)"
+        ]
+      },
+      "turmeric-hi": {
+        "role": "primary",
+        "displayName": "Turmeric High",
+        "canonical": "#ffc64d",
+        "oklch": "oklch(85.7% 0.148 82.9)",
+        "tonalRamp": [
+          "oklch(15.0% 0.148 82.9)",
+          "oklch(27.0% 0.148 82.9)",
+          "oklch(38.0% 0.148 82.9)",
+          "oklch(50.0% 0.148 82.9)",
+          "oklch(62.0% 0.148 82.9)",
+          "oklch(73.0% 0.148 82.9)",
+          "oklch(85.0% 0.148 82.9)",
+          "oklch(95.0% 0.148 82.9)"
+        ]
+      },
+      "role-source": {
+        "role": "tertiary",
+        "displayName": "Source",
+        "canonical": "#f6f0e0",
+        "oklch": "oklch(95.6% 0.022 89.8)",
+        "tonalRamp": [
+          "oklch(15.0% 0.022 89.8)",
+          "oklch(27.0% 0.022 89.8)",
+          "oklch(38.0% 0.022 89.8)",
+          "oklch(50.0% 0.022 89.8)",
+          "oklch(62.0% 0.022 89.8)",
+          "oklch(73.0% 0.022 89.8)",
+          "oklch(85.0% 0.022 89.8)",
+          "oklch(95.0% 0.022 89.8)"
+        ]
+      },
+      "role-mule": {
+        "role": "tertiary",
+        "displayName": "Mule",
+        "canonical": "#ff9db5",
+        "oklch": "oklch(80.2% 0.120 4.3)",
+        "tonalRamp": [
+          "oklch(15.0% 0.120 4.3)",
+          "oklch(27.0% 0.120 4.3)",
+          "oklch(38.0% 0.120 4.3)",
+          "oklch(50.0% 0.120 4.3)",
+          "oklch(62.0% 0.120 4.3)",
+          "oklch(73.0% 0.120 4.3)",
+          "oklch(85.0% 0.120 4.3)",
+          "oklch(95.0% 0.120 4.3)"
+        ]
+      },
+      "role-relay": {
+        "role": "tertiary",
+        "displayName": "Relay",
+        "canonical": "#3ccbb8",
+        "oklch": "oklch(76.3% 0.122 182.1)",
+        "tonalRamp": [
+          "oklch(15.0% 0.122 182.1)",
+          "oklch(27.0% 0.122 182.1)",
+          "oklch(38.0% 0.122 182.1)",
+          "oklch(50.0% 0.122 182.1)",
+          "oklch(62.0% 0.122 182.1)",
+          "oklch(73.0% 0.122 182.1)",
+          "oklch(85.0% 0.122 182.1)",
+          "oklch(95.0% 0.122 182.1)"
+        ]
+      },
+      "role-cashout": {
+        "role": "tertiary",
+        "displayName": "Cash-out",
+        "canonical": "#6fb8ff",
+        "oklch": "oklch(76.4% 0.126 249.2)",
+        "tonalRamp": [
+          "oklch(15.0% 0.126 249.2)",
+          "oklch(27.0% 0.126 249.2)",
+          "oklch(38.0% 0.126 249.2)",
+          "oklch(50.0% 0.126 249.2)",
+          "oklch(62.0% 0.126 249.2)",
+          "oklch(73.0% 0.126 249.2)",
+          "oklch(85.0% 0.126 249.2)",
+          "oklch(95.0% 0.126 249.2)"
+        ]
+      },
+      "role-coordinator": {
+        "role": "tertiary",
+        "displayName": "Coordinator",
+        "canonical": "#c6e24a",
+        "oklch": "oklch(86.5% 0.175 119.3)",
+        "tonalRamp": [
+          "oklch(15.0% 0.175 119.3)",
+          "oklch(27.0% 0.175 119.3)",
+          "oklch(38.0% 0.175 119.3)",
+          "oklch(50.0% 0.175 119.3)",
+          "oklch(62.0% 0.175 119.3)",
+          "oklch(73.0% 0.175 119.3)",
+          "oklch(85.0% 0.175 119.3)",
+          "oklch(95.0% 0.175 119.3)"
+        ]
+      },
+      "role-member": {
+        "role": "tertiary",
+        "displayName": "Member (drawn hollow)",
+        "canonical": "#f3ecdd",
+        "oklch": "oklch(94.5% 0.021 85.9)",
+        "tonalRamp": [
+          "oklch(15.0% 0.021 85.9)",
+          "oklch(27.0% 0.021 85.9)",
+          "oklch(38.0% 0.021 85.9)",
+          "oklch(50.0% 0.021 85.9)",
+          "oklch(62.0% 0.021 85.9)",
+          "oklch(73.0% 0.021 85.9)",
+          "oklch(85.0% 0.021 85.9)",
+          "oklch(95.0% 0.021 85.9)"
+        ]
+      },
+      "crowd": {
+        "role": "tertiary",
+        "displayName": "Crowd",
+        "canonical": "#d9a9a4",
+        "oklch": "oklch(77.7% 0.057 25.3)",
+        "tonalRamp": [
+          "oklch(15.0% 0.057 25.3)",
+          "oklch(27.0% 0.057 25.3)",
+          "oklch(38.0% 0.057 25.3)",
+          "oklch(50.0% 0.057 25.3)",
+          "oklch(62.0% 0.057 25.3)",
+          "oklch(73.0% 0.057 25.3)",
+          "oklch(85.0% 0.057 25.3)",
+          "oklch(95.0% 0.057 25.3)"
+        ]
+      },
+      "crowd-hot": {
+        "role": "tertiary",
+        "displayName": "Crowd Hot",
+        "canonical": "#fff6e6",
+        "oklch": "oklch(97.6% 0.023 82.1)",
+        "tonalRamp": [
+          "oklch(15.0% 0.023 82.1)",
+          "oklch(27.0% 0.023 82.1)",
+          "oklch(38.0% 0.023 82.1)",
+          "oklch(50.0% 0.023 82.1)",
+          "oklch(62.0% 0.023 82.1)",
+          "oklch(73.0% 0.023 82.1)",
+          "oklch(85.0% 0.023 82.1)",
+          "oklch(95.0% 0.023 82.1)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display-hero": {
+        "displayName": "Display hero",
+        "purpose": "The landing page h1. Width 80, weight 800; 3.7rem, 2.7rem below 640px."
+      },
+      "display-section": {
+        "displayName": "Display section",
+        "purpose": "Landing section headings. 2.8rem, 2.4rem below 640px; the closing section steps up to 3rem (2.6rem below 640px)."
+      },
+      "display": {
+        "displayName": "Display figure",
+        "purpose": "The replay clock. Figure style: width 82, bold, tabular lining numerals."
+      },
+      "headline": {
+        "displayName": "Headline figure",
+        "purpose": "The risk percentage on an alert card; a stand-alone figure in a landing sentence."
+      },
+      "wordmark-deva": {
+        "displayName": "Devanagari wordmark",
+        "purpose": "The wordmark in Anek Devanagari 700, turmeric, beside the Latin name."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Panel headings, ring names, the Latin wordmark, the label of the primary button."
+      },
+      "lead": {
+        "displayName": "Lead",
+        "purpose": "Landing section sentences, 1.125rem; 1.25rem at line-height 1.5 when they carry inline figures."
+      },
+      "figure": {
+        "displayName": "Figure",
+        "purpose": "Counts, rupee amounts, times, speeds and bar values, 1rem to 1.25rem; 1.6em inline in a landing sentence."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Reasons, row labels, legend and stage labels, landing notes and sources. The 1rem reading floor."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Text inside the Synthetic data badge and the Police | Bank toggle."
+      },
+      "chip": {
+        "displayName": "Chip",
+        "purpose": "The two letters P2 only."
+      }
+    },
+    "rootFontSize": {
+      "value": "clamp(13px, min(1.1111vw, 1.9753vh), 24px)",
+      "purpose": "Dashboard. 16px at 1440 x 810. All sizes are rem, so the one-screen layout keeps its proportions on 720p and 1080p projectors."
+    },
+    "rootFontSizeLanding": {
+      "value": "clamp(15px, min(1.1111vw, 1.9753vh), 22px)",
+      "selector": "html:has(.landing)",
+      "purpose": "Landing page. Same scale with a higher floor and a lower ceiling, because it is also read on a phone."
+    },
+    "shadows": [
+      {
+        "name": "tag-float",
+        "value": "0 6px 18px -6px rgb(0 0 0 / 0.6)",
+        "purpose": "Ring tags floating over the stage."
+      },
+      {
+        "name": "tooltip-float",
+        "value": "0 8px 20px -8px rgb(0 0 0 / 0.7)",
+        "purpose": "The account tooltip."
+      },
+      {
+        "name": "stage-control",
+        "value": "0 14px 40px -12px rgb(0 0 0 / 0.7)",
+        "purpose": "The large Start control on the idle stage."
+      },
+      {
+        "name": "stage-control-landing",
+        "value": "0 1rem 3rem -0.8rem rgb(0 0 0 / 0.75)",
+        "purpose": "The large play control on the landing page's closing section."
+      },
+      {
+        "name": "button-float",
+        "value": "0 0.9rem 2.5rem -0.8rem rgb(0 0 0 / 0.7)",
+        "purpose": "The primary pill button in the clearing."
+      },
+      {
+        "name": "card-hover",
+        "value": "0 0.6rem 1.5rem -0.9rem rgb(63 9 20 / 0.7)",
+        "purpose": "An alert card under the pointer; absent at rest."
+      }
+    ],
+    "gradients": [
+      {
+        "name": "stage-ground",
+        "value": "radial-gradient(120% 90% at 40% 50%, transparent 55%, #3f0914 100%), #5b0f1e",
+        "purpose": "The stage vignette; the only gradient in the system."
+      }
+    ],
+    "focus": [
+      {
+        "name": "focus-dark",
+        "value": "3px solid #f4a915, offset 2px",
+        "purpose": "Focus ring on ink and oxblood."
+      },
+      {
+        "name": "focus-stone",
+        "value": "3px solid #5b0f1e, offset 2px",
+        "purpose": "Focus ring inside the stone rails, where turmeric is too faint."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-out-expo",
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "The system easing for entrances and the idle Start control."
+      },
+      {
+        "name": "alert-in",
+        "value": "0.9s ease-out-expo; from opacity 0, translateY(-14px), warm-lit filter",
+        "purpose": "A new alert card lands lit, then settles."
+      },
+      {
+        "name": "ring-tag",
+        "value": "0.6s ease-out-expo, 0.9s delay; from opacity 0, translate 0 8px",
+        "purpose": "Ring tag and stage labels appear after the formation closes."
+      },
+      {
+        "name": "bar-grow",
+        "value": "0.9s ease-out-expo, scaleX from 0, 120ms stagger",
+        "purpose": "Result bars grow from the left."
+      },
+      {
+        "name": "formation-close",
+        "value": "1.1s expo.out per layer, 0.14s stagger from the rim inwards",
+        "purpose": "The one authored moment: layers draw closed when the alert fires."
+      },
+      {
+        "name": "layer-turn",
+        "value": "0.035 rad/s, alternating direction per layer",
+        "purpose": "Closed layers turn slowly."
+      },
+      {
+        "name": "money-travel",
+        "value": "0.85s power2.inOut; receiver settles from 145% over 0.5s expo.out",
+        "purpose": "A turmeric dot travels its edge and the receiver swells."
+      },
+      {
+        "name": "focus-dim",
+        "value": "0.35s; other rings to 16% opacity, crowd to 25%",
+        "purpose": "Pointing at an alert or tag isolates its ring."
+      },
+      {
+        "name": "control-state",
+        "value": "150ms to 200ms colour; press scale 0.95",
+        "purpose": "Hover and press on controls."
+      },
+      {
+        "name": "section-snap",
+        "value": "scroll-snap-type: y proximity; sections snap-align center; scroll-behavior: smooth",
+        "purpose": "The landing page scrolls a section at a time."
+      },
+      {
+        "name": "tunnel-depth",
+        "value": "2.6 layers per section; depth eased 10% of the remaining distance per frame",
+        "purpose": "Scrolling moves inward through the formation."
+      },
+      {
+        "name": "tunnel-arrival",
+        "value": "clearing radius closes 27% over the last section, smoothstep",
+        "purpose": "The formation tightens around the play control."
+      },
+      {
+        "name": "tunnel-close",
+        "value": "1.3s expo.out per layer, 0.13s stagger from the rim inwards (max 6 steps), 0.15s delay",
+        "purpose": "On load the tunnel's layers draw closed."
+      },
+      {
+        "name": "tunnel-turn",
+        "value": "0.03 rad/s, alternating direction per layer",
+        "purpose": "Tunnel layers turn slowly."
+      },
+      {
+        "name": "tunnel-money",
+        "value": "one dot per path, about 4.5s per trip (0.22 cycles/s), opacity sin-faded at both ends",
+        "purpose": "Money moves outward between layers."
+      },
+      {
+        "name": "copy-fade",
+        "value": "opacity 1 within 0.1 viewport of centre, 0 by 0.38",
+        "purpose": "Section copy is gone before it reaches a layer."
+      },
+      {
+        "name": "gate-dot-current",
+        "value": "0.2s; background to turmeric, scale 1.8",
+        "purpose": "The current section dot."
+      },
+      {
+        "name": "cta-hover",
+        "value": "0.2s; background to turmeric-hi, arrow translateX 0.25rem; press scale 0.95",
+        "purpose": "Primary pill button."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "all durations 0.01ms; graph shows final state, no travel or turning; the landing tunnel holds one still formation with no money dots",
+        "purpose": "prefers-reduced-motion."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "screen-floor",
+        "value": "1040px x 560px",
+        "purpose": "Dashboard minimum size; it does not reflow below it and has no mobile layout."
+      },
+      {
+        "name": "design-reference",
+        "value": "1440px x 810px",
+        "purpose": "The size at which 1rem is 16px."
+      },
+      {
+        "name": "landing-min",
+        "value": "390px",
+        "purpose": "Narrowest width the landing page is built and checked at."
+      },
+      {
+        "name": "sm",
+        "value": "640px",
+        "purpose": "Landing: display sizes step up, Latin wordmark and full link label appear, tunnel growth ratio switches from 1.13 to 1.24."
+      },
+      {
+        "name": "md",
+        "value": "768px",
+        "purpose": "Landing: the section dots appear."
+      }
+    ],
+    "formation": {
+      "gate": "0.5 rad",
+      "gateTurn": "2.1 rad per layer",
+      "layerStroke": "3.2 design units",
+      "designSpace": "820 x 680, scaled uniformly to fit the stage",
+      "sites": "one large (r 218) left, two small (r 124) stacked right",
+      "marks": {
+        "account": "filled disc sized by risk",
+        "member": "hollow ring",
+        "victim": "diamond",
+        "cash": "turmeric square",
+        "flow": "shaft width by amount, arrowhead at the receiver",
+        "identityLink": "dashed line"
+      },
+      "tunnel": {
+        "renderer": "canvas 2D, fixed behind the page, centred below the 3.5rem bar",
+        "clearing": "stage-deep at 60% opacity; radius max(0.46 x short side, min(0.36 x height below bar, 0.72 x width))",
+        "arrivalClose": "0.27 of the clearing radius over the last section",
+        "growth": {
+          "wide": 1.24,
+          "narrow": 1.13,
+          "switchAt": "640px"
+        },
+        "layersPerSection": 2.6,
+        "layer": "turmeric at 90% opacity, round caps, gate 0.5 rad, gate turn 2.1 rad per layer",
+        "stroke": "max(3.4px, min(9, 2.6 x radius/clearing) x max(1, short side/520))",
+        "accounts": "3 to 5 filled role-colour discs per layer, radius stroke x 2.4 x (0.8 to 1.3)",
+        "moneyPath": "stone at 40%, width max(1px, stroke x 0.45), to the nearest account on the layer inside, only within 0.75 rad",
+        "moneyDot": "turmeric, radius stroke x 1.1"
+      }
+    }
+  },
+  "components": [
+    {
+      "name": "Play Button",
+      "kind": "button",
+      "refersTo": "button-play",
+      "description": "The one filled turmeric control: starts and pauses the replay.",
+      "html": "<div class=\"ds-ink\"><button class=\"ds-play\" aria-label=\"Play replay\"><svg viewBox=\"0 0 24 24\" fill=\"currentColor\" aria-hidden=\"true\"><path d=\"M7 4.5v15a1 1 0 0 0 1.53.85l12-7.5a1 1 0 0 0 0-1.7l-12-7.5A1 1 0 0 0 7 4.5Z\"/></svg></button><button class=\"ds-restart\" aria-label=\"Restart replay\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M4 12a8 8 0 1 0 2.6-5.9\"/><path d=\"M4 4v5h5\"/></svg></button></div>",
+      "css": ".ds-ink { display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1.25rem; background: var(--color-ink, #17100e); } .ds-play { display: grid; place-items: center; width: 3rem; height: 3rem; border: none; border-radius: 9999px; background: var(--color-turmeric, #f4a915); color: var(--color-ink, #17100e); cursor: pointer; transition: transform 0.2s, background-color 0.2s; } .ds-play svg { width: 1.5rem; height: 1.5rem; transform: translateX(1px); } .ds-play:hover { background: var(--color-turmeric-hi, #ffc64d); } .ds-play:active { transform: scale(0.95); } .ds-restart { display: grid; place-items: center; width: 2.5rem; height: 2.5rem; border: none; border-radius: 9999px; background: transparent; color: var(--color-on-ink-2, #c4b3a6); box-shadow: 0 0 0 1px var(--color-ink-line, #47352f); cursor: pointer; transition: color 0.15s; } .ds-restart svg { width: 1.25rem; height: 1.25rem; } .ds-restart:hover { color: var(--color-on-ink, #f3ecdd); } .ds-play:focus-visible, .ds-restart:focus-visible { outline: 3px solid var(--color-turmeric, #f4a915); outline-offset: 2px; }"
+    },
+    {
+      "name": "Segmented Control",
+      "kind": "nav",
+      "refersTo": "segmented",
+      "description": "Pill well on ink with a stone pill for the selected option. Police | Bank view and replay speed.",
+      "html": "<div class=\"ds-ink2\"><div class=\"ds-seg\" role=\"radiogroup\" aria-label=\"View\"><button class=\"ds-seg-opt\" role=\"radio\" aria-checked=\"true\">Police</button><button class=\"ds-seg-opt\" role=\"radio\" aria-checked=\"false\">Bank</button></div><div class=\"ds-seg\" role=\"radiogroup\" aria-label=\"Replay speed\"><button class=\"ds-seg-opt ds-seg-fig\" role=\"radio\" aria-checked=\"false\">0.5x</button><button class=\"ds-seg-opt ds-seg-fig\" role=\"radio\" aria-checked=\"true\">1x</button><button class=\"ds-seg-opt ds-seg-fig\" role=\"radio\" aria-checked=\"false\">2x</button><button class=\"ds-seg-opt ds-seg-fig\" role=\"radio\" aria-checked=\"false\">4x</button></div></div>",
+      "css": ".ds-ink2 { display: flex; gap: 1.25rem; padding: 0.75rem 1.25rem; background: var(--color-ink, #17100e); font-family: var(--font-sans, 'Anek Latin', 'Segoe UI', system-ui, sans-serif); } .ds-seg { display: flex; padding: 0.25rem; border-radius: 9999px; background: var(--color-ink-hi, #2b1e1a); box-shadow: 0 0 0 1px var(--color-ink-line, #47352f); } .ds-seg-opt { height: 2rem; padding: 0 1rem; border: none; border-radius: 9999px; background: transparent; color: var(--color-on-ink-2, #c4b3a6); font: inherit; font-size: 0.875rem; font-weight: 600; cursor: pointer; transition: color 0.15s, background-color 0.15s; } .ds-seg-opt:hover { color: var(--color-on-ink, #f3ecdd); } .ds-seg-opt[aria-checked=\"true\"] { background: var(--color-stone, #e8e1d1); color: var(--color-on-stone, #17100e); } .ds-seg-fig { min-width: 3rem; padding: 0 0.625rem; font-size: 1.125rem; font-stretch: 82%; font-variation-settings: 'wdth' 82; font-variant-numeric: tabular-nums lining-nums; font-weight: 700; letter-spacing: -0.01em; } .ds-seg-opt:focus-visible { outline: 3px solid var(--color-turmeric, #f4a915); outline-offset: 2px; }"
+    },
+    {
+      "name": "Wordmark and Synthetic Data Badge",
+      "kind": "chip",
+      "refersTo": "badge-synthetic",
+      "description": "The permanent top-bar pair: Devanagari wordmark beside the Latin name, then the Synthetic data badge.",
+      "html": "<div class=\"ds-top\"><a class=\"ds-wordmark\" href=\"#\"><span lang=\"hi\" class=\"ds-wordmark-deva\">चक्रव्यूह</span><span class=\"ds-wordmark-latin\">Chakravyuh</span></a><span class=\"ds-badge\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M9 3h6\"/><path d=\"M10 3v6.5L4.8 18a2 2 0 0 0 1.7 3h11a2 2 0 0 0 1.7-3L14 9.500V3\"/><path d=\"M7.500 14.500h9\"/></svg>Synthetic data</span></div>",
+      "css": ".ds-top { display: flex; align-items: center; gap: 1.25rem; height: 3.5rem; padding: 0 1.25rem; background: var(--color-ink, #17100e); border-bottom: 1px solid var(--color-ink-line, #47352f); color: var(--color-on-ink, #f3ecdd); font-family: var(--font-sans, 'Anek Latin', 'Segoe UI', system-ui, sans-serif); } .ds-wordmark { display: flex; align-items: baseline; gap: 0.625rem; color: inherit; text-decoration: none; border-radius: 0.25rem; } .ds-wordmark-deva { font-family: var(--font-deva, 'Anek Devanagari', 'Nirmala UI', sans-serif); font-size: 1.5rem; font-weight: 700; line-height: 1; color: var(--color-turmeric, #f4a915); } .ds-wordmark-latin { font-size: 1.25rem; font-weight: 700; line-height: 1; letter-spacing: -0.025em; } .ds-badge { display: inline-flex; align-items: center; gap: 0.375rem; height: 2rem; padding: 0 0.75rem; border: 1px solid var(--color-turmeric, #f4a915); border-radius: 9999px; color: var(--color-turmeric, #f4a915); font-size: 0.875rem; font-weight: 600; } .ds-badge svg { width: 1rem; height: 1rem; } .ds-wordmark:focus-visible { outline: 3px solid var(--color-turmeric, #f4a915); outline-offset: 2px; }"
+    },
+    {
+      "name": "P2 Chip",
+      "kind": "chip",
+      "refersTo": "chip-p2",
+      "description": "Marks a stretch feature. Stone-low on the rails, ink-high with a hairline ring on ink.",
+      "html": "<div class=\"ds-chip-row\"><span class=\"ds-chip-ground ds-chip-ground-stone\"><span class=\"ds-p2\">P2</span></span><span class=\"ds-chip-ground ds-chip-ground-ink\"><span class=\"ds-p2 ds-p2-ink\">P2</span></span></div>",
+      "css": ".ds-chip-row { display: flex; font-family: var(--font-sans, 'Anek Latin', 'Segoe UI', system-ui, sans-serif); } .ds-chip-ground { padding: 1rem 1.25rem; } .ds-chip-ground-stone { background: var(--color-stone, #e8e1d1); } .ds-chip-ground-ink { background: var(--color-ink, #17100e); } .ds-p2 { display: inline-flex; align-items: center; height: 1.25rem; padding: 0 0.375rem; border-radius: 0.25rem; background: var(--color-stone-lo, #d5cab4); color: var(--color-on-stone-2, #5a4640); font-size: 0.75rem; font-weight: 700; line-height: 1; } .ds-p2-ink { background: var(--color-ink-hi, #2b1e1a); color: var(--color-on-ink-2, #c4b3a6); box-shadow: 0 0 0 1px var(--color-ink-line, #47352f); }"
+    },
+    {
+      "name": "Alert Card",
+      "kind": "card",
+      "refersTo": "alert-card",
+      "description": "A fired alert on the stone rail; the whole card links to its ring and focuses it on the stage.",
+      "html": "<div class=\"ds-rail\"><a class=\"ds-alert\" href=\"#\"><div class=\"ds-alert-head\"><div class=\"ds-alert-disc\"><svg class=\"ds-alert-glyph\" viewBox=\"-50 -50 100 100\" aria-hidden=\"true\"><path d=\"M -6.18 6.26 A 8.80 8.80 0 1 1 -2.43 8.46\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\"/><path d=\"M -4.57 -17.00 A 17.60 17.60 0 1 1 -12.16 -12.73\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\"/><path d=\"M 25.47 6.96 A 26.40 26.40 0 1 1 25.69 -6.10\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\"/><path d=\"M -25.15 24.62 A 35.20 35.20 0 1 1 -10.27 33.67\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\"/><path d=\"M -10.70 -42.68 A 44.00 44.00 0 1 1 -29.85 -32.33\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\"/><rect x=\"-3.2\" y=\"-3.2\" width=\"6.4\" height=\"6.4\" transform=\"rotate(45 0 0)\" fill=\"#f3ecdd\"/><circle cx=\"7\" cy=\"5\" r=\"4\" fill=\"#f6f0e0\"/><circle cx=\"-12\" cy=\"13\" r=\"4\" fill=\"#ff9db5\"/><circle cx=\"18\" cy=\"-19\" r=\"4\" fill=\"#ff9db5\"/><circle cx=\"-26\" cy=\"-3\" r=\"4\" fill=\"#3ccbb8\"/><circle cx=\"12\" cy=\"33\" r=\"4\" fill=\"#6fb8ff\"/><circle cx=\"-22\" cy=\"-27\" r=\"3.2\" fill=\"none\" stroke=\"#f3ecdd\" stroke-width=\"1.8\"/><rect x=\"29.800\" y=\"26.800\" width=\"6.4\" height=\"6.4\" fill=\"#f4a915\"/></svg></div><div class=\"ds-alert-main\"><div class=\"ds-alert-row\"><h3 class=\"ds-alert-name\">Ring 01</h3><span class=\"ds-alert-time\">09:16</span></div><div class=\"ds-alert-risk\">91% <span>risk</span></div><div class=\"ds-alert-facts\">9 accounts · ₹12,00,000</div></div></div><p class=\"ds-alert-reason\">5 linked accounts forwarding within minutes</p><div class=\"ds-alert-foot\"><span>Cash-out in about <b>12 min</b> <span class=\"ds-alert-p2\">P2</span></span><svg class=\"ds-alert-arrow\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M5 12h14\"/><path d=\"m13 6 6 6-6 6\"/></svg></div></a></div>",
+      "css": ".ds-rail { width: 18.75rem; padding: 1rem; background: var(--color-stone, #e8e1d1); color: var(--color-on-stone, #17100e); font-family: var(--font-sans, 'Anek Latin', 'Segoe UI', system-ui, sans-serif); line-height: 1.35; } .ds-alert { display: block; padding: 0.625rem 0.75rem; border: 1px solid var(--color-stone-lo, #d5cab4); border-radius: 0.75rem; background: var(--color-stone-hi, #f4efe3); color: inherit; text-decoration: none; transition: border-color 0.2s, box-shadow 0.2s; } .ds-alert:hover { border-color: var(--color-stage, #5b0f1e); box-shadow: 0 0.6rem 1.5rem -0.9rem rgb(63 9 20 / 0.7); } .ds-alert:focus-visible { outline: 3px solid var(--color-stage, #5b0f1e); outline-offset: 2px; } .ds-alert-head { display: flex; align-items: center; gap: 0.75rem; } .ds-alert-disc { display: grid; place-items: center; flex: none; width: 4.25rem; height: 4.25rem; border-radius: 9999px; background: var(--color-stage, #5b0f1e); color: var(--color-turmeric, #f4a915); } .ds-alert-glyph { width: 3.875rem; height: 3.875rem; } .ds-alert-main { flex: 1; min-width: 0; } .ds-alert-row { display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem; } .ds-alert-name { margin: 0; font-size: 1.25rem; font-weight: 700; line-height: 1.25; } .ds-alert-time { font-stretch: 82%; font-variation-settings: 'wdth' 82; font-variant-numeric: tabular-nums lining-nums; font-weight: 700; letter-spacing: -0.01em; font-weight: 500; font-size: 1rem; color: var(--color-on-stone-2, #5a4640); } .ds-alert-risk { font-stretch: 82%; font-variation-settings: 'wdth' 82; font-variant-numeric: tabular-nums lining-nums; font-weight: 700; letter-spacing: -0.01em; font-size: 1.75rem; line-height: 1; color: var(--color-stage, #5b0f1e); } .ds-alert-risk span { font-size: 1rem; color: var(--color-on-stone-2, #5a4640); } .ds-alert-facts { font-stretch: 82%; font-variation-settings: 'wdth' 82; font-variant-numeric: tabular-nums lining-nums; font-weight: 700; letter-spacing: -0.01em; font-weight: 600; margin-top: 0.25rem; font-size: 1rem; } .ds-alert-reason { margin: 0.5rem 0 0; font-size: 1rem; line-height: 1.375; color: var(--color-on-stone-2, #5a4640); } .ds-alert-foot { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-top: 0.375rem; font-size: 1rem; color: var(--color-on-stone-2, #5a4640); } .ds-alert-foot b { font-stretch: 82%; font-variation-settings: 'wdth' 82; font-variant-numeric: tabular-nums lining-nums; font-weight: 700; letter-spacing: -0.01em; color: var(--color-stage, #5b0f1e); } .ds-alert-p2 { display: inline-flex; align-items: center; height: 1.25rem; padding: 0 0.375rem; margin-left: 0.25rem; border-radius: 0.25rem; background: var(--color-stone-lo, #d5cab4); font-size: 0.75rem; font-weight: 700; line-height: 1; } .ds-alert-arrow { width: 1.25rem; height: 1.25rem; color: var(--color-stage, #5b0f1e); transition: transform 0.2s; } .ds-alert:hover .ds-alert-arrow { transform: translateX(0.125rem); }"
+    },
+    {
+      "name": "Ring Tag",
+      "kind": "custom",
+      "refersTo": "ring-tag",
+      "description": "Stone pill floating beside a closed formation on the stage; opens the ring.",
+      "html": "<div class=\"ds-stage\"><a class=\"ds-tag\" href=\"#\"><span class=\"ds-tag-name\">Ring 01</span><span class=\"ds-tag-fig\">9 accounts</span><span class=\"ds-tag-fig\">₹12,00,000</span><svg class=\"ds-tag-arrow\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M5 12h14\"/><path d=\"m13 6 6 6-6 6\"/></svg></a></div>",
+      "css": ".ds-stage { padding: 1.5rem; background: radial-gradient(120% 90% at 40% 50%, transparent 55%, var(--color-stage-deep, #3f0914) 100%), var(--color-stage, #5b0f1e); font-family: var(--font-sans, 'Anek Latin', 'Segoe UI', system-ui, sans-serif); } .ds-tag { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.25rem 0.625rem 0.25rem 0.875rem; border-radius: 9999px; background: var(--color-stone-hi, #f4efe3); color: var(--color-on-stone, #17100e); font-size: 1rem; white-space: nowrap; text-decoration: none; box-shadow: 0 6px 18px -6px rgb(0 0 0 / 0.6); transition: background-color 0.15s; } .ds-tag:hover { background: var(--color-turmeric, #f4a915); } .ds-tag:focus-visible { outline: 3px solid var(--color-turmeric, #f4a915); outline-offset: 2px; } .ds-tag-name { font-weight: 700; } .ds-tag-fig { font-stretch: 82%; font-variation-settings: 'wdth' 82; font-variant-numeric: tabular-nums lining-nums; font-weight: 700; letter-spacing: -0.01em; } .ds-tag-arrow { width: 1rem; height: 1rem; }"
+    },
+    {
+      "name": "Graph Legend",
+      "kind": "custom",
+      "refersTo": "",
+      "description": "Names every mark on the stage, so colour is never the only cue. Member is hollow; edges end in an arrowhead.",
+      "html": "<ul class=\"ds-legend\"><li><svg viewBox=\"0 0 20 14\"><circle cx=\"10\" cy=\"7\" r=\"6\" fill=\"#f6f0e0\"/></svg>Source</li><li><svg viewBox=\"0 0 20 14\"><circle cx=\"10\" cy=\"7\" r=\"6\" fill=\"#ff9db5\"/></svg>Mule</li><li><svg viewBox=\"0 0 20 14\"><circle cx=\"10\" cy=\"7\" r=\"6\" fill=\"#3ccbb8\"/></svg>Relay</li><li><svg viewBox=\"0 0 20 14\"><circle cx=\"10\" cy=\"7\" r=\"6\" fill=\"#6fb8ff\"/></svg>Cash-out</li><li><svg viewBox=\"0 0 20 14\"><circle cx=\"10\" cy=\"7\" r=\"6\" fill=\"#c6e24a\"/></svg>Coordinator</li><li><svg viewBox=\"0 0 20 14\"><circle cx=\"10\" cy=\"7\" r=\"4.800\" fill=\"none\" stroke=\"#f3ecdd\" stroke-width=\"2.400\"/></svg>Member</li><li><svg viewBox=\"0 0 20 14\"><rect x=\"5.500\" y=\"2.500\" width=\"9\" height=\"9\" transform=\"rotate(45 10 7)\" fill=\"#f3ecdd\"/></svg>Victim</li><li><svg viewBox=\"0 0 20 14\"><rect x=\"5\" y=\"2\" width=\"10\" height=\"10\" fill=\"#f4a915\"/></svg>Cash withdrawn</li><li><svg viewBox=\"0 0 20 14\"><path d=\"M0 7h13\" stroke=\"#f3ecdd\" stroke-opacity=\"0.6\" stroke-width=\"2\"/><path d=\"M13 2.500 20 7l-7 4.500Z\" fill=\"#f3ecdd\" fill-opacity=\"0.6\"/><circle cx=\"6\" cy=\"7\" r=\"3.500\" fill=\"#f4a915\"/></svg>Money moving</li><li><svg viewBox=\"0 0 20 14\"><path d=\"M0 7h20\" stroke=\"#f3ecdd\" stroke-width=\"1.500\" stroke-dasharray=\"4 3\"/></svg>Shared device or phone</li><li><svg viewBox=\"0 0 20 14\"><circle cx=\"5\" cy=\"5\" r=\"2\" fill=\"#d9a9a4\"/><circle cx=\"13\" cy=\"9\" r=\"2\" fill=\"#d9a9a4\"/></svg>Other accounts</li></ul>",
+      "css": ".ds-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 0.375rem 1.25rem; margin: 0; padding: 0.625rem 1.25rem; list-style: none; background: var(--color-stage, #5b0f1e); border-top: 1px solid var(--color-stage-line, #8a2b3c); color: var(--color-on-stage, #f3ecdd); font-family: var(--font-sans, 'Anek Latin', 'Segoe UI', system-ui, sans-serif); font-size: 1rem; font-weight: 500; } .ds-legend li { display: flex; align-items: center; gap: 0.5rem; } .ds-legend svg { width: 1.25rem; height: 0.875rem; }"
+    },
+    {
+      "name": "Paired Result Bars",
+      "kind": "custom",
+      "refersTo": "bar-v2",
+      "description": "V1 against V2 for one measure: stone-low track, V1 in secondary text colour, V2 in oxblood, figures right-aligned.",
+      "html": "<div class=\"ds-results\"><h3 class=\"ds-results-h\">Ring members found</h3><div class=\"ds-bar-row\"><span class=\"ds-bar-tag\">V1</span><span class=\"ds-bar-track\"><span class=\"ds-bar ds-bar-v1\" style=\"width:58%\"></span></span><span class=\"ds-bar-val\">58%</span></div><div class=\"ds-bar-row\"><span class=\"ds-bar-tag\">V2</span><span class=\"ds-bar-track\"><span class=\"ds-bar ds-bar-v2\" style=\"width:91%\"></span></span><span class=\"ds-bar-val ds-bar-val-v2\">91%</span></div></div>",
+      "css": ".ds-results { width: 20rem; padding: 1rem 1.25rem; background: var(--color-stone, #e8e1d1); color: var(--color-on-stone, #17100e); font-family: var(--font-sans, 'Anek Latin', 'Segoe UI', system-ui, sans-serif); } .ds-results-h { margin: 0 0 0.25rem; font-size: 1rem; font-weight: 600; line-height: 1.25; } .ds-bar-row { display: grid; grid-template-columns: 1.75rem 1fr 3rem; align-items: center; gap: 0.5rem; margin-top: 0.25rem; } .ds-bar-tag { font-stretch: 82%; font-variation-settings: 'wdth' 82; font-variant-numeric: tabular-nums lining-nums; font-weight: 700; letter-spacing: -0.01em; font-size: 1rem; color: var(--color-on-stone-2, #5a4640); } .ds-bar-track { display: block; height: 0.875rem; border-radius: 0.125rem; background: var(--color-stone-lo, #d5cab4); } .ds-bar { display: block; height: 100%; border-radius: 0.125rem; transform-origin: left; animation: ds-bar-grow 0.9s cubic-bezier(0.16, 1, 0.3, 1) both; } .ds-bar-v1 { background: var(--color-on-stone-2, #5a4640); } .ds-bar-v2 { background: var(--color-stage, #5b0f1e); animation-delay: 120ms; } .ds-bar-val { font-stretch: 82%; font-variation-settings: 'wdth' 82; font-variant-numeric: tabular-nums lining-nums; font-weight: 700; letter-spacing: -0.01em; font-size: 1.125rem; text-align: right; } .ds-bar-val-v2 { color: var(--color-stage, #5b0f1e); } @keyframes ds-bar-grow { from { transform: scaleX(0); } } @media (prefers-reduced-motion: reduce) { .ds-bar { animation-duration: 0.01ms; } }"
+    },
+    {
+      "name": "Formation Glyph",
+      "kind": "custom",
+      "refersTo": "",
+      "description": "The signature form: gated concentric arcs (gate 0.5 rad, each turned 2.1 rad from the last), with accounts in role colours.",
+      "html": "<div class=\"ds-form-stage\"><svg class=\"ds-form\" viewBox=\"-50 -50 100 100\" aria-hidden=\"true\"><path d=\"M -6.18 6.26 A 8.80 8.80 0 1 1 -2.43 8.46\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\"/><path d=\"M -4.57 -17.00 A 17.60 17.60 0 1 1 -12.16 -12.73\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\"/><path d=\"M 25.47 6.96 A 26.40 26.40 0 1 1 25.69 -6.10\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\"/><path d=\"M -25.15 24.62 A 35.20 35.20 0 1 1 -10.27 33.67\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\"/><path d=\"M -10.70 -42.68 A 44.00 44.00 0 1 1 -29.85 -32.33\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\"/><rect x=\"-3.2\" y=\"-3.2\" width=\"6.4\" height=\"6.4\" transform=\"rotate(45 0 0)\" fill=\"#f3ecdd\"/><circle cx=\"7\" cy=\"5\" r=\"4\" fill=\"#f6f0e0\"/><circle cx=\"-12\" cy=\"13\" r=\"4\" fill=\"#ff9db5\"/><circle cx=\"18\" cy=\"-19\" r=\"4\" fill=\"#ff9db5\"/><circle cx=\"-26\" cy=\"-3\" r=\"4\" fill=\"#3ccbb8\"/><circle cx=\"12\" cy=\"33\" r=\"4\" fill=\"#6fb8ff\"/><circle cx=\"-22\" cy=\"-27\" r=\"3.2\" fill=\"none\" stroke=\"#f3ecdd\" stroke-width=\"1.8\"/><rect x=\"29.800\" y=\"26.800\" width=\"6.4\" height=\"6.4\" fill=\"#f4a915\"/></svg></div>",
+      "css": ".ds-form-stage { display: grid; place-items: center; padding: 1.5rem; background: radial-gradient(120% 90% at 40% 50%, transparent 55%, var(--color-stage-deep, #3f0914) 100%), var(--color-stage, #5b0f1e); color: var(--color-turmeric, #f4a915); } .ds-form { width: 11rem; height: 11rem; }"
+    },
+    {
+      "name": "Account Tooltip",
+      "kind": "custom",
+      "refersTo": "tooltip",
+      "description": "Ink box above the account under the pointer: id, role and risk in plain words.",
+      "html": "<div class=\"ds-tip-stage\"><div class=\"ds-tip\" role=\"status\"><b class=\"ds-tip-fig\">AC-1042</b> · Mule · <span class=\"ds-tip-fig\">94%</span> risk</div></div>",
+      "css": ".ds-tip-stage { padding: 1.5rem; background: var(--color-stage, #5b0f1e); font-family: var(--font-sans, 'Anek Latin', 'Segoe UI', system-ui, sans-serif); } .ds-tip { display: inline-block; padding: 0.375rem 0.75rem; border-radius: 0.375rem; background: var(--color-ink, #17100e); color: var(--color-on-ink, #f3ecdd); font-size: 1rem; white-space: nowrap; box-shadow: 0 8px 20px -8px rgb(0 0 0 / 0.7); } .ds-tip-fig { font-stretch: 82%; font-variation-settings: 'wdth' 82; font-variant-numeric: tabular-nums lining-nums; font-weight: 700; letter-spacing: -0.01em; }"
+    },
+    {
+      "name": "Primary Pill Button",
+      "kind": "button",
+      "refersTo": "button-cta",
+      "description": "The one filled turmeric action in a landing view, floating in the clearing; opens the dashboard.",
+      "html": "<div class=\"ds-cta-ground\"><a class=\"ds-cta\" href=\"#\">Open the dashboard<svg class=\"ds-cta-arrow\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M5 12h14\"/><path d=\"m13 6 6 6-6 6\"/></svg></a></div>",
+      "css": ".ds-cta-ground { display: grid; place-items: center; padding: 2rem; background: var(--color-stage-deep, #3f0914); font-family: var(--font-sans, 'Anek Latin', 'Segoe UI', system-ui, sans-serif); } .ds-cta { display: inline-flex; align-items: center; gap: 0.75rem; height: 3.5rem; padding: 0 1.5rem 0 1.75rem; border-radius: 9999px; background: var(--color-turmeric, #f4a915); color: var(--color-ink, #17100e); font-size: 1.25rem; font-weight: 700; text-decoration: none; box-shadow: 0 0.9rem 2.5rem -0.8rem rgb(0 0 0 / 0.7); transition: background-color 0.2s, transform 0.2s; } .ds-cta:hover { background: var(--color-turmeric-hi, #ffc64d); } .ds-cta:active { transform: scale(0.95); } .ds-cta:focus-visible { outline: 3px solid var(--color-turmeric, #f4a915); outline-offset: 2px; } .ds-cta-arrow { width: 1.5rem; height: 1.5rem; transition: transform 0.2s; } .ds-cta:hover .ds-cta-arrow { transform: translateX(0.25rem); }"
+    },
+    {
+      "name": "Dashboard Link",
+      "kind": "button",
+      "refersTo": "button-nav",
+      "description": "Stone pill on the landing page's ink bar; turns turmeric on hover like a ring tag.",
+      "html": "<div class=\"ds-navlink-bar\"><a class=\"ds-navlink\" href=\"#\">Open the dashboard<svg class=\"ds-navlink-arrow\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M5 12h14\"/><path d=\"m13 6 6 6-6 6\"/></svg></a></div>",
+      "css": ".ds-navlink-bar { display: flex; align-items: center; justify-content: flex-end; height: 3.5rem; padding: 0 1.25rem; background: var(--color-ink, #17100e); border-bottom: 1px solid var(--color-ink-line, #47352f); font-family: var(--font-sans, 'Anek Latin', 'Segoe UI', system-ui, sans-serif); } .ds-navlink { display: inline-flex; align-items: center; gap: 0.5rem; height: 2.25rem; padding: 0 1rem; border-radius: 9999px; background: var(--color-stone, #e8e1d1); color: var(--color-on-stone, #17100e); font-size: 1rem; font-weight: 700; text-decoration: none; transition: background-color 0.15s; } .ds-navlink:hover { background: var(--color-turmeric, #f4a915); } .ds-navlink:focus-visible { outline: 3px solid var(--color-turmeric, #f4a915); outline-offset: 2px; } .ds-navlink-arrow { width: 1rem; height: 1rem; }"
+    },
+    {
+      "name": "Section Dots",
+      "kind": "nav",
+      "refersTo": "gate-nav",
+      "description": "Vertical ink pill fixed to the right edge of the landing page from 768px; the current section's dot is turmeric at 180%.",
+      "html": "<div class=\"ds-dots-ground\"><nav class=\"ds-dots\" aria-label=\"Sections\"><a class=\"ds-dot\" href=\"#\" aria-current=\"true\" aria-label=\"Start\"><span></span></a><a class=\"ds-dot\" href=\"#\" aria-label=\"The problem\"><span></span></a><a class=\"ds-dot\" href=\"#\" aria-label=\"Taint tracing\"><span></span></a><a class=\"ds-dot\" href=\"#\" aria-label=\"Freeze order\"><span></span></a></nav></div>",
+      "css": ".ds-dots-ground { display: grid; place-items: center; padding: 1.5rem; background: var(--color-stage, #5b0f1e); } .ds-dots { display: flex; flex-direction: column; gap: 0.25rem; padding: 0.375rem; border-radius: 9999px; background: var(--color-ink, #17100e); } .ds-dot { display: grid; place-items: center; width: 1.5rem; height: 1.5rem; border-radius: 9999px; } .ds-dot span { width: 0.5rem; height: 0.5rem; border-radius: 9999px; background: var(--color-on-ink-2, #c4b3a6); transition: transform 0.2s, background-color 0.2s; } .ds-dot:hover span { background: var(--color-on-ink, #f3ecdd); } .ds-dot[aria-current=\"true\"] span { background: var(--color-turmeric, #f4a915); transform: scale(1.8); } .ds-dot:focus-visible { outline: 3px solid var(--color-turmeric, #f4a915); outline-offset: 2px; }"
+    },
+    {
+      "name": "Landing Section",
+      "kind": "custom",
+      "refersTo": "bar-taint",
+      "description": "One idea in the clearing: display heading, a lead sentence with inline figures, the taint bar, and the example note. In the build the clearing is a disc drawn by the tunnel canvas; it is squared off here only to frame the preview.",
+      "html": "<div class=\"ds-gate\"><div class=\"ds-gate-clearing\"><h2 class=\"ds-gate-h\">Follow the victim's money, hop by hop.</h2><p class=\"ds-gate-lead\">Fraud cases in 2025 were worth <span class=\"ds-gate-fig ds-gate-money\">₹22,931 crore</span> across <span class=\"ds-gate-fig\">28 lakh</span> cases.</p><div class=\"ds-taint\"><div class=\"ds-taint-row\"><span class=\"ds-taint-label\">Mule account balance</span><span class=\"ds-taint-fig ds-taint-total\">₹52,000</span></div><div class=\"ds-taint-track\"><div class=\"ds-taint-bar\"></div></div><div class=\"ds-taint-row\"><span>Traced to the victim: <b class=\"ds-taint-fig ds-gate-money\">₹38,000</b></span><span class=\"ds-taint-rest\">Left alone: <span class=\"ds-taint-fig\">₹14,000</span></span></div></div><p class=\"ds-gate-note\">Example figures, not results. This view opens from a ring and is not in the build yet.</p></div></div>",
+      "css": ".ds-gate { display: grid; place-items: center; padding: 1.5rem; background: radial-gradient(120% 90% at 40% 50%, transparent 55%, var(--color-stage-deep, #3f0914) 100%), var(--color-stage, #5b0f1e); color: var(--color-on-stage, #f3ecdd); font-family: var(--font-sans, 'Anek Latin', 'Segoe UI', system-ui, sans-serif); line-height: 1.35; text-align: center; } .ds-gate-clearing { width: 100%; max-width: 35rem; padding: 3rem 2.5rem; border-radius: 2rem; background: rgb(63 9 20 / 0.6); } .ds-gate-h { margin: 0; font-stretch: 80%; font-variation-settings: 'wdth' 80; font-weight: 800; letter-spacing: -0.015em; font-size: 2.8rem; line-height: 1.05; text-wrap: balance; } .ds-gate-lead { margin: 1.5rem 0 0; font-size: 1.25rem; line-height: 1.5; } .ds-gate-fig { font-stretch: 82%; font-variation-settings: 'wdth' 82; font-variant-numeric: tabular-nums lining-nums; font-weight: 700; letter-spacing: -0.01em; font-size: 1.6em; line-height: 1; white-space: nowrap; } .ds-gate-money { color: var(--color-turmeric, #f4a915); } .ds-taint { max-width: 24rem; margin: 1.75rem auto 0; text-align: left; font-size: 1rem; } .ds-taint-row { display: flex; align-items: baseline; justify-content: space-between; } .ds-taint-label { font-weight: 600; } .ds-taint-fig { font-stretch: 82%; font-variation-settings: 'wdth' 82; font-variant-numeric: tabular-nums lining-nums; font-weight: 700; letter-spacing: -0.01em; } .ds-taint-total { font-size: 1.25rem; } .ds-taint-track { height: 1.25rem; margin: 0.5rem 0; overflow: hidden; border-radius: 0.125rem; background: rgb(243 236 221 / 0.25); } .ds-taint-bar { width: 73%; height: 100%; border-radius: 0.125rem; background: var(--color-turmeric, #f4a915); } .ds-taint-rest { color: var(--color-on-stage-2, #e0bdb8); } .ds-gate-note { margin: 1.25rem 0 0; font-size: 1rem; color: var(--color-on-stage-2, #e0bdb8); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Carved Formation",
+    "overview": "Chakravyuh draws each detected fraud ring as the battle formation the product is named for: the victim's money at the centre, one concentric gated layer per hop, cash-out on the rim. The ground is a deep sindoor-oxblood stage under near-black warm ink bars. On the dashboard the stage is framed left and right by pale stone rails and capped by two control bars; on the landing page it runs full bleed under one ink bar, and the formation itself is the backdrop the visitor travels into. Everything on the stage is flat and drawn at a stone-carving line weight; nothing glows.\n\nThe dashboard is built for a presenter and a room, not a desk: one viewport with no page scroll, and a root font size that scales with the viewport so the same proportions hold on a 720p or a 1080p projector. The landing page is read alone, on a laptop or a phone: it scrolls one section at a time and sets its copy in a dark clearing at the centre of the formation. On both, text is sparse and large; figures are heavy, condensed and tabular so they read from the back of a hall. Honesty about the data is part of the look: a Synthetic data badge sits permanently beside the wordmark, stretch features carry a P2 chip, and invented figures are labelled as samples or examples in the view that shows them.",
+    "keyCharacteristics": [
+      "Three grounds with fixed jobs: ink for controls, oxblood for the graph, stone for reading.",
+      "One accent, turmeric, which means tainted money, the formation, live state, or the one primary action.",
+      "Roles differ by shape as well as colour; every mark on the dashboard stage is named in the legend.",
+      "Viewport-scaled rem sizing; the dashboard is a single screen with no page scroll, the landing page scrolls a section at a time.",
+      "Flat fills and solid lines; depth only as a soft shadow under things that float."
+    ],
+    "rules": [
+      {
+        "name": "The Turmeric Rule",
+        "body": "Turmeric means tainted money, the formation's layers, live state, or the one primary action. Money: the money dot, the cash square, rupee amounts and the share of money stopped, the taint bar, the ring around an account marked to freeze. Live state: the Play control, hover on a ring tag or the dashboard link, the current section dot, focus and selection. Primary action: the one filled button that opens or starts the replay. Its only standing uses outside that are the two permanent top-bar marks, the Devanagari wordmark and the Synthetic data badge. Counts and percentages that are not money stay in the text colour. It is never a decorative fill and never a role colour.",
+        "section": "colors"
+      },
+      {
+        "name": "The Stone Swap Rule",
+        "body": "Turmeric does not sit directly on stone. On the rails the emphasis colour and the focus ring are oxblood; turmeric appears there only inside an oxblood disc.",
+        "section": "colors"
+      },
+      {
+        "name": "The Shape And Colour Rule",
+        "body": "No role is told apart by colour alone. Member is hollow, the victim is a diamond, cash is a square, shared devices are a dashed line, and the legend names every one.",
+        "section": "colors"
+      },
+      {
+        "name": "The Figure Rule",
+        "body": "Every number is set in the figure style: width 82, weight 700 by default, tabular lining numerals, tracking -0.01em. Numbers never appear in the normal-width body style.",
+        "section": "typography"
+      },
+      {
+        "name": "The One Rem Floor Rule",
+        "body": "Anything meant to be read from the room is 1rem or larger. Only control labels (0.875rem) and the P2 chip (0.75rem) sit below it.",
+        "section": "typography"
+      },
+      {
+        "name": "The Rem Only Rule",
+        "body": "Type and layout sizes are in rem. The dashboard root is `clamp(13px, min(1.1111vw, 1.9753vh), 24px)`, which is 16px at 1440 x 810, so the whole screen scales as one piece. The landing page uses the same scale with a higher floor and a lower ceiling, `clamp(15px, min(1.1111vw, 1.9753vh), 22px)`, because it is also read on a phone.",
+        "section": "typography"
+      },
+      {
+        "name": "The Two Voices Rule",
+        "body": "Width 80 at weight 800 is for landing headlines only; width 82 at weight 700 is for numbers only. A headline is never set in the figure style and a number is never set in the display style.",
+        "section": "typography"
+      },
+      {
+        "name": "The Rails Read, The Stage Shows Rule",
+        "body": "On the dashboard, sentences and tables live on stone. The stage carries only the drawing, short labels, floating ring tags and the legend.",
+        "section": "layout"
+      },
+      {
+        "name": "The Clearing Rule",
+        "body": "Where there are no rails, sentences sit on the stage only inside a clearing: an oxblood-deep disc at 60% opacity that the formation is kept out of. Copy never lies across a layer; a section's copy is fully opaque within a tenth of a viewport of centre and gone by 38%, before it reaches the layers above and below.",
+        "section": "layout"
+      },
+      {
+        "name": "The No Glow Rule",
+        "body": "Nothing on the stage is lit from within: no bloom, no blur, no additive blending. Marks are flat fills, and emphasis comes from colour, size and the closing of the layers.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do size type and layout in rem so the viewport-scaled root carries the whole screen.",
+      "Do set every number in the figure style: width 82, bold, tabular lining numerals.",
+      "Do keep sentences on the stone rails on the dashboard, and inside the clearing where the stage has no rails.",
+      "Do give every new stage mark its own shape and a named entry in the legend.",
+      "Do end a money flow in an arrowhead at the receiver.",
+      "Do use oxblood for emphasis and focus on stone, and turmeric on ink and oxblood.",
+      "Do keep the Synthetic data badge on every page and a P2 chip beside every stretch feature.",
+      "Do label invented figures in the view that shows them: as samples directly under the heading on the dashboard, as \"Example figures, not results.\" closing the section on the landing page.",
+      "Do keep the tunnel's layers at 3.4px or heavier on screen, at any viewport.",
+      "Do honour reduced motion by showing the final state."
+    ],
+    "donts": [
+      "Don't add a turmeric use that is not tainted money, a formation layer, live state, or the one primary action; the wordmark and the Synthetic data badge are the only standing exceptions.",
+      "Don't place turmeric text or fills directly on stone.",
+      "Don't add glow, bloom, blur or additive blending to the stage.",
+      "Don't set reading text below 1rem.",
+      "Don't let the dashboard scroll; only a rail scrolls, inside itself.",
+      "Don't set copy on the stage across a formation layer; outside the dashboard's labels and tags, text on oxblood belongs in the clearing.",
+      "Don't box landing copy in cards or panels; the clearing is the only container.",
+      "Don't distinguish roles by colour alone.",
+      "Don't put a shadow between the grounds; shadows belong only under things that float.",
+      "Don't add a second accent colour or use a role colour outside account marks and the legend."
+    ]
+  }
+}

@@ -1,0 +1,148 @@
+@import "tailwindcss";
+
+@theme {
+  /* Ground: near-black warm ink for the control bars */
+  --color-ink: #17100e;
+  --color-ink-hi: #2b1e1a;
+  --color-ink-line: #47352f;
+  --color-on-ink: #f3ecdd;
+  --color-on-ink-2: #c4b3a6;
+
+  /* Stage: the sindoor-oxblood field the graph lives on */
+  --color-stage: #5b0f1e;
+  --color-stage-deep: #3f0914;
+  --color-stage-line: #8a2b3c;
+  --color-on-stage: #f3ecdd;
+  --color-on-stage-2: #e0bdb8;
+
+  /* Stone: the pale rails that frame the stage */
+  --color-stone: #e8e1d1;
+  --color-stone-hi: #f4efe3;
+  --color-stone-lo: #d5cab4;
+  --color-on-stone: #17100e;
+  --color-on-stone-2: #5a4640;
+
+  /* Turmeric: tainted money and anything live */
+  --color-turmeric: #f4a915;
+  --color-turmeric-hi: #ffc64d;
+
+  --font-sans: var(--font-anek), "Segoe UI", system-ui, sans-serif;
+  --font-deva: var(--font-anek-deva), "Nirmala UI", sans-serif;
+
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+html {
+  /* 16px at 1440 x 810. Every size below is in rem, so the one-screen layout
+     holds its proportions on a 720p or a 1080p projector. */
+  font-size: clamp(13px, min(1.1111vw, 1.9753vh), 24px);
+  height: 100%;
+  background: var(--color-ink);
+  color-scheme: dark;
+}
+
+body {
+  height: 100%;
+  background: var(--color-ink);
+  color: var(--color-on-ink);
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  line-height: 1.35;
+}
+
+::selection {
+  background: var(--color-turmeric);
+  color: var(--color-ink);
+}
+
+:focus-visible {
+  outline: 3px solid var(--color-turmeric);
+  outline-offset: 2px;
+}
+
+/* On the stone rails a turmeric ring is too faint; use oxblood there. */
+.on-stone :focus-visible {
+  outline-color: var(--color-stage);
+}
+
+/* Figures: heavy, condensed, tabular. Read from the back of the room. */
+.fig {
+  font-stretch: 82%;
+  font-variation-settings: "wdth" 82;
+  font-variant-numeric: tabular-nums lining-nums;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+/* Display: the same heavy condensed voice, for landing page headlines. */
+.display {
+  font-stretch: 80%;
+  font-variation-settings: "wdth" 80;
+  font-weight: 800;
+  letter-spacing: -0.015em;
+}
+
+/* The landing page scrolls a section at a time, one gate after another. */
+html:has(.landing) {
+  /* Read on phones too, so the floor is higher than the dashboard's. */
+  font-size: clamp(15px, min(1.1111vw, 1.9753vh), 22px);
+  scroll-snap-type: y proximity;
+  scroll-behavior: smooth;
+}
+
+.gate-dot[aria-current="true"] > span:first-child {
+  background: var(--color-turmeric);
+  transform: scale(1.8);
+}
+
+.rail-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-stone-lo) transparent;
+}
+
+.stage-ground {
+  background:
+    radial-gradient(120% 90% at 40% 50%, transparent 55%, var(--color-stage-deep) 100%),
+    var(--color-stage);
+}
+
+/* A new alert lands lit in turmeric, then settles. */
+@keyframes alert-in {
+  from {
+    opacity: 0;
+    transform: translateY(-14px);
+    filter: brightness(1.15) sepia(0.9) saturate(3);
+  }
+}
+.alert-in {
+  animation: alert-in 0.9s var(--ease-out-expo) both;
+}
+
+@keyframes ring-tag {
+  from {
+    opacity: 0;
+    translate: 0 8px;
+  }
+}
+.ring-tag {
+  animation: ring-tag 0.6s var(--ease-out-expo) 0.9s both;
+}
+
+@keyframes bar-grow {
+  from {
+    transform: scaleX(0);
+  }
+}
+.bar-grow {
+  transform-origin: left;
+  animation: bar-grow 0.9s var(--ease-out-expo) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
