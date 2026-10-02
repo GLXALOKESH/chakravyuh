@@ -129,10 +129,234 @@
           ]
         }
       ]
+    },
+    {
+      "round": 2,
+      "type": "adversarial",
+      "metrics": {
+        "pr_auc_v1": 1.0,
+        "pr_auc_v2": 1.0,
+        "ring_recall": 1.0,
+        "pattern_d_recall": 0.0,
+        "n_fraud_accounts": 29,
+        "n_flagged": 29,
+        "note": "Synthetic data — rings planted by the team"
+      },
+      "adversary_config": {
+        "amount_sigma": 0.1,
+        "temporal_lambda": 15.0,
+        "strategy_weights": {
+          "amount_jitter": 0.2479338842975206,
+          "temporal_delay": 0.2479338842975206,
+          "multi_hop": 0.25206611570247933,
+          "topology_split": 0.25206611570247933
+        }
+      },
+      "n_adversarial_txns": 46,
+      "n_adversarial_accs": 5,
+      "n_detected": 29,
+      "n_missed": 0,
+      "evasion_rate": 0.0,
+      "detection_rate": 1.0,
+      "mutation_metadata": [
+        {
+          "original_ring_id": "RING01",
+          "original_pattern": "A",
+          "mutation_types": [
+            "amount_jitter",
+            "temporal_delay"
+          ],
+          "mutation_parameters": {
+            "amount_sigma": 0.1,
+            "temporal_lambda": 15.0
+          },
+          "adversarial_round": 2,
+          "random_seed": 42,
+          "n_original_txns": 16,
+          "n_mutated_txns": 16,
+          "n_new_accounts": 0,
+          "original_member_ids": [
+            "ACC0700",
+            "ACC0701",
+            "ACC0702",
+            "ACC0703",
+            "ACC0704",
+            "ACC0705",
+            "ACC0706",
+            "ACC0707",
+            "ACC0708"
+          ]
+        },
+        {
+          "original_ring_id": "RING02",
+          "original_pattern": "B",
+          "mutation_types": [
+            "topology_split",
+            "amount_jitter"
+          ],
+          "mutation_parameters": {
+            "amount_sigma": 0.1,
+            "temporal_lambda": 15.0
+          },
+          "adversarial_round": 2,
+          "random_seed": 42,
+          "n_original_txns": 6,
+          "n_mutated_txns": 9,
+          "n_new_accounts": 2,
+          "original_member_ids": [
+            "ACC0730",
+            "ACC0731",
+            "ACC0732",
+            "ACC0733",
+            "ACC0734"
+          ]
+        },
+        {
+          "original_ring_id": "RING03",
+          "original_pattern": "C",
+          "mutation_types": [
+            "multi_hop",
+            "amount_jitter",
+            "temporal_delay"
+          ],
+          "mutation_parameters": {
+            "amount_sigma": 0.1,
+            "temporal_lambda": 15.0
+          },
+          "adversarial_round": 2,
+          "random_seed": 42,
+          "n_original_txns": 18,
+          "n_mutated_txns": 21,
+          "n_new_accounts": 3,
+          "original_member_ids": [
+            "ACC0760",
+            "ACC0761",
+            "ACC0762",
+            "ACC0763",
+            "ACC0764",
+            "ACC0765",
+            "ACC0766",
+            "ACC0767",
+            "ACC0768",
+            "ACC0769"
+          ]
+        }
+      ]
+    },
+    {
+      "round": 3,
+      "type": "adversarial",
+      "metrics": {
+        "pr_auc_v1": 0.9491,
+        "pr_auc_v2": 0.9491,
+        "ring_recall": 0.9459,
+        "pattern_d_recall": 0.0,
+        "n_fraud_accounts": 37,
+        "n_flagged": 35,
+        "note": "Synthetic data — rings planted by the team"
+      },
+      "adversary_config": {
+        "amount_sigma": 0.1,
+        "temporal_lambda": 15.0,
+        "strategy_weights": {
+          "amount_jitter": 0.2253944402704733,
+          "temporal_delay": 0.2253944402704733,
+          "multi_hop": 0.2746055597295267,
+          "topology_split": 0.2746055597295267
+        }
+      },
+      "n_adversarial_txns": 53,
+      "n_adversarial_accs": 13,
+      "n_detected": 35,
+      "n_missed": 2,
+      "evasion_rate": 0.0541,
+      "detection_rate": 0.9459,
+      "mutation_metadata": [
+        {
+          "original_ring_id": "RING01",
+          "original_pattern": "A",
+          "mutation_types": [
+            "multi_hop",
+            "amount_jitter"
+          ],
+          "mutation_parameters": {
+            "amount_sigma": 0.1,
+            "temporal_lambda": 15.0
+          },
+          "adversarial_round": 3,
+          "random_seed": 42,
+          "n_original_txns": 16,
+          "n_mutated_txns": 23,
+          "n_new_accounts": 7,
+          "original_member_ids": [
+            "ACC0700",
+            "ACC0701",
+            "ACC0702",
+            "ACC0703",
+            "ACC0704",
+            "ACC0705",
+            "ACC0706",
+            "ACC0707",
+            "ACC0708"
+          ]
+        },
+        {
+          "original_ring_id": "RING02",
+          "original_pattern": "B",
+          "mutation_types": [
+            "amount_jitter"
+          ],
+          "mutation_parameters": {
+            "amount_sigma": 0.1,
+            "temporal_lambda": 15.0
+          },
+          "adversarial_round": 3,
+          "random_seed": 42,
+          "n_original_txns": 6,
+          "n_mutated_txns": 6,
+          "n_new_accounts": 0,
+          "original_member_ids": [
+            "ACC0730",
+            "ACC0731",
+            "ACC0732",
+            "ACC0733",
+            "ACC0734"
+          ]
+        },
+        {
+          "original_ring_id": "RING03",
+          "original_pattern": "C",
+          "mutation_types": [
+            "multi_hop",
+            "amount_jitter"
+          ],
+          "mutation_parameters": {
+            "amount_sigma": 0.1,
+            "temporal_lambda": 15.0
+          },
+          "adversarial_round": 3,
+          "random_seed": 42,
+          "n_original_txns": 18,
+          "n_mutated_txns": 24,
+          "n_new_accounts": 6,
+          "original_member_ids": [
+            "ACC0760",
+            "ACC0761",
+            "ACC0762",
+            "ACC0763",
+            "ACC0764",
+            "ACC0765",
+            "ACC0766",
+            "ACC0767",
+            "ACC0768",
+            "ACC0769"
+          ]
+        }
+      ]
     }
   ],
   "config": {
-    "n_rounds": 1,
+    "n_rounds": 3,
     "profile": "demo",
     "seed": 42,
     "initial_accounts": 625,
@@ -152,19 +376,19 @@
       "ring_recall": 1.0
     },
     "post_training_baseline": {
-      "pr_auc_v1": 1.0,
-      "pr_auc_v2": 1.0,
-      "ring_recall": 1.0
+      "pr_auc_v1": 0.7195,
+      "pr_auc_v2": 0.7195,
+      "ring_recall": 0.7083
     },
     "improvement": {
       "description": "Comparison of original vs adversarial vs post-training detection",
       "original_detection_rate": 1.0,
       "adversarial_detection_rate": 1.0,
-      "post_training_detection_rate": 1.0
+      "post_training_detection_rate": 0.7083
     },
-    "total_adversarial_accounts": 9,
-    "total_adversarial_txns": 49,
-    "total_rounds": 1
+    "total_adversarial_accounts": 27,
+    "total_adversarial_txns": 148,
+    "total_rounds": 3
   },
-  "elapsed_seconds": 1.3
+  "elapsed_seconds": 2.4
 }
