@@ -27,8 +27,8 @@ export const VIEW_TAB: Record<ViewMode, string> = { police: "taint", bank: "free
 
 export const SPEEDS = [0.5, 1, 2, 4] as const;
 
-/** Replay seconds per real second at 1x: the three-hour demo window in about 60 s. */
-export const BASE_SPEED = 180;
+/** The `speed` sent with `replay:start` at 1x (TRD: 60 is the default pace, about a minute for the demo). */
+export const BASE_SPEED = 60;
 
 export function ringHref(ringId: string, view: ViewMode) {
   return `/rings/${ringId}?tab=${VIEW_TAB[view]}`;

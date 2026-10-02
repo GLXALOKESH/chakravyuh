@@ -1,5 +1,5 @@
 import { ROLES } from "@/lib/constants";
-import { buildFormation, GATE, gateStart, nodePoint } from "@/lib/formation";
+import { buildFormation, GATE, gateStart } from "@/lib/formation";
 import type { RingDetail } from "@/lib/types";
 
 const TAU = Math.PI * 2;
@@ -11,8 +11,9 @@ function arcPath(radius: number, start: number) {
 }
 
 /**
- * The formation as a small drawing: gated concentric layers, and when a ring is
- * given, its accounts standing on them in their role colours.
+ * A small drawing. Given a ring, its money flow in miniature: accounts in
+ * their role colours, joined by the transfers between them. Given none, the
+ * Chakravyuh mark of gated concentric layers.
  */
 export function FormationGlyph({
   ring,
@@ -26,8 +27,10 @@ export function FormationGlyph({
   className?: string;
 }) {
   const formation = ring ? buildFormation(ring) : null;
-  const count = formation?.layers ?? layers;
   const radius = 44;
+  // The flow is shrunk to sit inside the disc it is shown on.
+  const k = formation ? Math.min(62 / (formation.width || 1), 52 / (formation.height || 1), 0.5) : 1;
+  const at = new Map(formation?.nodes.map((n) => [n.id, { x: n.x * k, y: n.y * k }]));
   return (
     <svg
       viewBox="-50 -50 100 100"
@@ -35,18 +38,26 @@ export function FormationGlyph({
       className={className}
       aria-hidden="true"
     >
-      {Array.from({ length: count }, (_, i) => (
-        <path
-          key={i}
-          d={arcPath((radius * (i + 1)) / count, gateStart(i + 1))}
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={ring ? 1.6 : 0.7}
-          strokeLinecap="round"
-        />
-      ))}
+      {!formation &&
+        Array.from({ length: layers }, (_, i) => (
+          <path
+            key={i}
+            d={arcPath((radius * (i + 1)) / layers, gateStart(i + 1))}
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="0.7"
+            strokeLinecap="round"
+          />
+        ))}
+      {formation?.flows.map((f) => {
+        const p = at.get(f.from);
+        const q = at.get(f.to);
+        return p && q ? (
+          <line key={`${f.from}>${f.to}`} x1={p.x} y1={p.y} x2={q.x} y2={q.y} stroke="#f3ecdd" strokeOpacity="0.5" strokeWidth="1" />
+        ) : null;
+      })}
       {formation?.nodes.map((n) => {
-        const p = nodePoint(n, formation.layers, radius);
+        const p = at.get(n.id)!;
         if (n.type !== "account") {
           return (
             <rect
@@ -61,7 +72,7 @@ export function FormationGlyph({
           );
         }
         if (n.role === "member") {
-          return <circle key={n.id} cx={p.x} cy={p.y} r="3.2" fill="none" stroke={ROLES.member.color} strokeWidth="1.8" />;
+          return <circle key={n.id} cx={p.x} cy={p.y} r="3.2" fill="#5b0f1e" stroke={ROLES.member.color} strokeWidth="1.8" />;
         }
         return <circle key={n.id} cx={p.x} cy={p.y} r="4" fill={n.role ? ROLES[n.role].color : "#f3ecdd"} />;
       })}

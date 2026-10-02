@@ -2,12 +2,13 @@
 
 import { PauseIcon, PlayIcon, RestartIcon } from "@/components/ui/icons";
 import { SPEEDS } from "@/lib/constants";
-import { clockDate, clockTime, shortTime } from "@/lib/format";
+import { clockDate, clockTime, shortDate, shortTime } from "@/lib/format";
 import { pause, play, restart, setSpeed } from "@/lib/replay";
 import { useDashboard } from "@/lib/store";
 import { TickStrip } from "./TickStrip";
 
 const speedLabel = (s: number) => `${s}x`;
+const edge = (at: number, span: number) => (span > 86_400_000 ? shortDate(at) : shortTime(at));
 
 export function ReplayBar() {
   const ready = useDashboard((s) => s.ready);
@@ -76,8 +77,9 @@ export function ReplayBar() {
       >
         <TickStrip />
         <div className="fig flex justify-between text-base font-medium leading-tight text-on-ink-2">
-          <span>{win ? shortTime(win.start) : ""}</span>
-          <span>{win ? shortTime(win.end) : ""}</span>
+          {/* A window longer than a day is labelled by date, a shorter one by time. */}
+          <span>{win ? edge(win.start, win.end - win.start) : ""}</span>
+          <span>{win ? edge(win.end, win.end - win.start) : ""}</span>
         </div>
       </div>
     </section>
