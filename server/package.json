@@ -4,14 +4,14 @@
   "private": true,
   "type": "module",
   "description": "Chakravyuh fraud-ring API: Express, TypeScript, Mongoose on MongoDB",
-  "main": "dist/bin/server.js",
+  "main": "dist/src/bin/server.js",
   "engines": {
     "node": ">=20"
   },
   "scripts": {
     "dev": "tsx watch src/bin/server.ts",
     "start": "tsx src/bin/server.ts",
-    "build": "tsc -p tsconfig.build.json",
+    "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "db:indexes": "tsx src/bin/indexes.ts",
     "seed": "tsx src/bin/seed.ts",
@@ -38,6 +38,5 @@
     "tsx": "^4.23.15",
     "typescript": "^6.0.3",
     "vitest": "^5.0.3"
-
   }
 }
