@@ -1,0 +1,33 @@
+warning: in the working copy of 'ml/BACKEND_IMPLEMENTATION_GUIDE.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'ml/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'ml/data/demo/outputs/accounts.json', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'ml/data/demo/outputs/alerts.json', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'ml/data/demo/outputs/fund_flows.json', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'ml/data/demo/outputs/metrics.json', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'ml/data/demo/outputs/ouroboros_results.json', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'ml/data/demo/outputs/rings.json', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'ml/geo.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'ml/mongo_pusher.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'ml/run.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'ml/temporal.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'ml/tests/test_geo.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'ml/tests/test_temporal.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'patch_answers.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'patch_gen.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'revert_gen.py', LF will be replaced by CRLF the next time Git touches it
+ ml/__pycache__/config.cpython-313.pyc          |   Bin [31m1615[m -> [32m0[m bytes
+ ml/__pycache__/features.cpython-313.pyc        |   Bin [31m25509[m -> [32m0[m bytes
+ ml/__pycache__/generate.cpython-313.pyc        |   Bin [31m45170[m -> [32m0[m bytes
+ ml/__pycache__/loop.cpython-313.pyc            |   Bin [31m13435[m -> [32m0[m bytes
+ ml/__pycache__/models.cpython-313.pyc          |   Bin [31m19772[m -> [32m0[m bytes
+ ml/__pycache__/rings.cpython-313.pyc           |   Bin [31m15862[m -> [32m0[m bytes
+ ml/data/demo/outputs/accounts.json             | 37766 [32m+++++++[m[31m--------[m
+ ml/data/demo/outputs/alerts.json               |    12 [32m+[m[31m-[m
+ ml/data/demo/outputs/fund_flows.json           | 57213 [32m++++++++++++[m[31m-----------[m
+ ml/data/demo/outputs/metrics.json              |    12 [32m+[m[31m-[m
+ ml/data/demo/outputs/ouroboros_results.json    |    75 [32m+[m[31m-[m
+ ml/data/demo/outputs/rings.json                | 20133 [32m+++++++[m[31m-[m
+ ml/models.py                                   |     7 [32m+[m[31m-[m
+ ml/saved_models/v2_model.pkl                   |   Bin [31m161067[m -> [32m289975[m bytes
+ ml/tests/__pycache__/test_loop.cpython-313.pyc |   Bin [31m2821[m -> [32m0[m bytes
+ 15 files changed, 68041 insertions(+), 47177 deletions(-)

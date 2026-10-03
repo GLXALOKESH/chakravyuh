@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "items": [
+    {
+      "title": "Inspect branch state and identify merge conflicts with main",
+      "status": "done"
+    },
+    {
+      "title": "Resolve conflicting changes and check the combined code",
+      "status": "done"
+    },
+    {
+      "title": "Run relevant checks and provide steps to finish the merge",
+      "status": "done"
+    }
+  ],
+  "updated_at": "2026-10-03T08:02:30.595Z",
+  "session_id": "01a100bc-b059-7592-9396-90d5a38c85f8"
+}

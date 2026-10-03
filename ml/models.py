@@ -270,9 +270,10 @@ def evaluate(scored_df: pd.DataFrame, ground_truth: list,
     if "prob_v2" in scored_df.columns and y_true.sum() > 0:
         pr_auc_v2 = average_precision_score(y_true, scored_df["prob_v2"].fillna(0))
 
-    # Ring recall: fraction of fraud members with risk_v2 >= threshold
-    max_val = scored_df["risk_v2"].max() if "risk_v2" in scored_df.columns and len(scored_df) > 0 else 1.0
-    threshold = 0.50 if max_val <= 1.0 else 50
+    # Ring recall: fraction of fraud members with risk_v2 >= 0.5. risk_v2 is a
+    # 0-1 probability (score_accounts); this compared it with 50, so recall
+    # always came out 0.
+    threshold = 0.5
     flagged   = set(scored_df[scored_df["risk_v2"] >= threshold].index)
     fraud_in_df  = all_fraud_ids & set(idx)
     ring_recall  = len(fraud_in_df & flagged) / max(len(fraud_in_df), 1)
