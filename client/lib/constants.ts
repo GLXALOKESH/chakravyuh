@@ -20,6 +20,8 @@ export const COLORS = {
   stageDeep: "#3f0914",
   crowd: "#d9a9a4",
   crowdHot: "#fff6e6",
+  /** An ordinary account the live model rates as risky: the hotter, the riskier. */
+  risk: "#ff6a3d",
 } as const;
 
 /** Tab a ring opens on, by view (PRODUCT.md: Police opens Taint, Bank opens Freeze). */

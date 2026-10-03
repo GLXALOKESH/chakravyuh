@@ -107,14 +107,22 @@ function reachesCash(start: string, graph: Map<string, Set<string>>, frozen: Set
   return false;
 }
 
-/** Tainted money that freezing `frozen` keeps from reaching cash. */
-function secured(taint: Map<string, number>, graph: Map<string, Set<string>>, frozen: Set<string>) {
+/** Tainted money in accounts that can still send it to cash, with `frozen` frozen. */
+function atRiskWith(taint: Map<string, number>, graph: Map<string, Set<string>>, frozen: Set<string>) {
   let total = 0;
   for (const [id, held] of taint) {
-    if (held <= 0 || isSpecial(id)) continue;
-    if (frozen.has(id) || !reachesCash(id, graph, frozen)) total += held;
+    if (held > 0 && !isSpecial(id) && !frozen.has(id) && reachesCash(id, graph, frozen)) total += held;
   }
   return total;
+}
+
+/**
+ * Tainted money that freezing `frozen` keeps from reaching cash: what was at
+ * risk before, less what still is. (As in ml/freeze.py: counting every account
+ * that cannot reach cash would include money that never could.)
+ */
+function secured(taint: Map<string, number>, graph: Map<string, Set<string>>, frozen: Set<string>) {
+  return atRiskWith(taint, graph, new Set()) - atRiskWith(taint, graph, frozen);
 }
 
 function* combinations<T>(items: T[], size: number, from = 0, picked: T[] = []): Generator<T[]> {

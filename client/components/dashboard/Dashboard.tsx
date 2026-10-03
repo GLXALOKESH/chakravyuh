@@ -74,16 +74,22 @@ export function Dashboard() {
               className="flex flex-wrap items-center gap-x-5 gap-y-1.5 border-t border-stage-line px-5 py-2.5 text-base font-medium text-on-stage"
             >
               <li className="flex items-center gap-2">
-                <span className="size-3.5 rounded-full border border-on-stage-2 bg-on-stage-2/30" aria-hidden="true" />
+                <span className="size-3.5 rounded-full bg-stone/40" aria-hidden="true" />
                 Ordinary cash withdrawals, by city
               </li>
               <li className="flex items-center gap-2">
-                <span className="size-3.5 rounded-full border-2 border-stone bg-stage-deep" aria-hidden="true" />
-                Cash withdrawn by a ring account
+                <span className="size-3.5 rounded-full border-[1.5px] border-ink bg-turmeric" aria-hidden="true" />
+                Cash withdrawn by a ring, sized by amount
               </li>
               <li className="flex items-center gap-2">
-                <span className="size-3.5 rounded-full border-[3px] border-stage-deep bg-stone" aria-hidden="true" />
+                <span className="size-3.5 rounded-full border-2 border-stone bg-stage-deep" aria-hidden="true" />
                 Ring account&apos;s home branch
+              </li>
+              <li className="flex items-center gap-2">
+                <svg viewBox="0 0 22 12" className="h-3 w-5.5" aria-hidden="true">
+                  <path d="M1 10Q11 -3 21 10" fill="none" stroke="#f4a915" strokeWidth="1.8" />
+                </svg>
+                Home branch to cash-out
               </li>
             </ul>
           )}

@@ -7,10 +7,11 @@ import { TopBar } from "@/components/dashboard/TopBar";
 import { CashMap } from "@/components/map/CashMap";
 import { ArrowIcon } from "@/components/ui/icons";
 import { P2Chip } from "@/components/ui/P2Chip";
-import { getRecruits, getRing, getRingGeo, getTaint, postFreeze } from "@/lib/api";
+import { getRecruits, getRing, getRingGeo, getTaint, postEvidence, postFreeze } from "@/lib/api";
 import { ringLabel, ROLE_ORDER, ROLES, VIEW_TAB } from "@/lib/constants";
 import { count, inr, pct } from "@/lib/format";
 import { completeRing } from "@/lib/ring";
+import { victimTxnsFor } from "@/lib/replay";
 import { useDashboard } from "@/lib/store";
 import type { FreezeRequest, FreezeResult, Recruit, RingDetail, RingGeo, TaintResult } from "@/lib/types";
 import { EntityPanel } from "./EntityPanel";
@@ -32,6 +33,36 @@ type Tab = (typeof TABS)[number]["id"];
  * The open tab and the selected account live in the URL, so a pasted link
  * restores the same view.
  */
+/**
+ * The ring diagram as a PNG data URL. Styles that come from class names are
+ * written onto a copy of the SVG first, since an SVG drawn as an image cannot
+ * see the page's stylesheet.
+ */
+async function svgToPng(svg: SVGSVGElement): Promise<string> {
+  const copy = svg.cloneNode(true) as SVGSVGElement;
+  const from = svg.querySelectorAll("text");
+  copy.querySelectorAll("text").forEach((t, i) => {
+    const style = getComputedStyle(from[i]);
+    t.setAttribute("fill", style.fill);
+    t.setAttribute("font-size", style.fontSize);
+    t.setAttribute("font-weight", style.fontWeight);
+    t.setAttribute("font-family", style.fontFamily);
+  });
+  const box = svg.getBoundingClientRect();
+  const scale = 2;
+  copy.setAttribute("width", String(box.width));
+  copy.setAttribute("height", String(box.height));
+  const image = new Image();
+  image.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(new XMLSerializer().serializeToString(copy))}`;
+  await image.decode();
+  const canvas = Object.assign(document.createElement("canvas"), { width: box.width * scale, height: box.height * scale });
+  const ctx = canvas.getContext("2d")!;
+  ctx.fillStyle = "#5b0f1e";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+  return canvas.toDataURL("image/png");
+}
+
 export function RingView({ id }: { id: string }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -67,7 +98,10 @@ export function RingView({ id }: { id: string }) {
   useEffect(() => {
     let stale = false;
     getRing(id)
-      .then((detail) => !stale && setRing(completeRing(detail)))
+      .then(async (detail) => {
+        const victims = await victimTxnsFor(detail);
+        if (!stale) setRing(completeRing(detail, victims));
+      })
       .catch((e: unknown) => !stale && setError(e instanceof Error ? e.message : "The ring could not be loaded."));
     getTaint(id, { as_of: asOf }).then((t) => !stale && setTaint(t)).catch(() => undefined);
     getRecruits(id).then((r) => !stale && setRecruits(r)).catch(() => !stale && setRecruits([]));
@@ -95,6 +129,30 @@ export function RingView({ id }: { id: string }) {
     window.clearTimeout(toastTimer.current);
     setToast(message);
     toastTimer.current = window.setTimeout(() => setToast(null), 3200);
+  };
+
+  const formation = useRef<HTMLElement>(null);
+  const [exporting, setExporting] = useState(false);
+  /** The server builds the PDF, with the diagram as drawn here attached as a PNG. */
+  const exportPack = async () => {
+    setExporting(true);
+    try {
+      const svg = formation.current?.querySelector("svg");
+      const pdf = await postEvidence(id, { graph_png: svg ? await svgToPng(svg) : undefined, as_of: asOf });
+      if (!pdf) {
+        say("The evidence pack is built by the server, which is not connected. Nothing was downloaded.");
+        return;
+      }
+      const url = URL.createObjectURL(pdf);
+      const link = Object.assign(document.createElement("a"), { href: url, download: `${id}-evidence.pdf` });
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 10_000);
+      say("Evidence pack downloaded.");
+    } catch (e) {
+      say(`The evidence pack could not be built: ${e instanceof Error ? e.message : "unknown error"}.`);
+    } finally {
+      setExporting(false);
+    }
   };
 
   const mapData = useMemo(
@@ -148,16 +206,17 @@ export function RingView({ id }: { id: string }) {
           ))}
           <button
             type="button"
-            onClick={() => say("The evidence pack would be exported here. Nothing was downloaded.")}
-            className="flex h-10 items-center rounded-full bg-turmeric px-5 font-bold text-ink transition-colors hover:bg-turmeric-hi active:scale-95"
+            disabled={exporting}
+            onClick={() => void exportPack()}
+            className="flex h-10 items-center rounded-full bg-turmeric px-5 font-bold text-ink transition-colors hover:bg-turmeric-hi active:scale-95 disabled:opacity-60"
           >
-            Export evidence pack
+            {exporting ? "Building the pack…" : "Export evidence pack"}
           </button>
         </div>
       </header>
 
       <div className="grid min-h-0 grid-cols-[minmax(0,1fr)_21rem] grid-rows-[minmax(0,50%)_minmax(0,1fr)]">
-        <section aria-label="Formation" className="stage-ground relative min-h-0">
+        <section ref={formation} aria-label="Formation" className="stage-ground relative min-h-0">
           {ring && (
             <ul aria-label="Roles in this ring" className="absolute left-5 top-4 space-y-1.5 font-medium text-on-stage">
               {ROLE_ORDER.filter((role) => ring.nodes.some((n) => n.role === role)).map((role) => (

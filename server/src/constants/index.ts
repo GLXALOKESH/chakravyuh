@@ -51,6 +51,24 @@ export const REPLAY_EVENTS = {
 
 export type ReplayEventName = (typeof REPLAY_EVENTS)[keyof typeof REPLAY_EVENTS];
 
+/**
+ * Live mode's socket events (docs/STREAMING.md). The generator's data reaches
+ * the dashboard as it is made, and the predictor's answers follow it.
+ */
+export const STREAM_EVENTS = {
+  START: 'stream:start',
+  STOP: 'stream:stop',
+  STATE: 'stream:state',
+  SNAPSHOT: 'stream:snapshot',
+  TXNS: 'stream:txns',
+  SCORES: 'stream:scores',
+  RING: 'stream:ring',
+  ALERT: 'stream:alert',
+  CLOCK: 'stream:clock',
+  END: 'stream:end',
+  ERROR: 'stream:error',
+} as const;
+
 /** Node and edge discriminators in the ring graph payload. */
 export const NODE_TYPES = ['account', 'device', 'phone', 'ip'] as const;
 export const EDGE_KINDS = ['txn', 'identity'] as const;

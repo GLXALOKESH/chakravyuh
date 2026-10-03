@@ -121,14 +121,60 @@ html[data-entered] .enter-screen {
   animation: enter-clear 0.5s 6s forwards;
 }
 
-/* The map. Street tiles are toned toward the stone rails so the oxblood marks
-   are the only strong colour on them. */
+/* The map: dark tiles warmed toward the oxblood stage, place names kept
+   quiet, so nothing on it is brighter than the ring marks. */
 .cash-map .leaflet-container {
-  background: var(--color-stone);
+  background: #1f0a0d;
   font: inherit;
 }
-.cash-map .leaflet-tile-pane {
-  filter: grayscale(1) sepia(0.32) contrast(0.92) brightness(1.02);
+.cash-map .map-tiles {
+  filter: sepia(1) hue-rotate(-30deg) saturate(2.2) brightness(0.95);
+}
+.cash-map .map-names {
+  opacity: 0.7;
+}
+.cash-map .leaflet-control-zoom {
+  border: 0;
+  border-radius: 9999px;
+  overflow: hidden;
+  box-shadow: 0 8px 20px -8px rgb(0 0 0 / 0.7);
+}
+.cash-map .leaflet-control-zoom a {
+  width: 2.5rem;
+  height: 2.5rem;
+  line-height: 2.5rem;
+  border: 0;
+  background: var(--color-ink);
+  color: var(--color-on-ink-2);
+  font: 600 1.25rem/2.5rem inherit;
+}
+.cash-map .leaflet-control-zoom a.leaflet-disabled {
+  background: var(--color-ink);
+  color: rgb(196 179 166 / 0.35);
+}
+.cash-map .leaflet-control-zoom a:hover {
+  background: var(--color-ink-hi);
+  color: var(--color-on-ink);
+}
+/* A withdrawal that has just happened. */
+@keyframes map-ripple {
+  from {
+    transform: scale(0.2);
+    opacity: 0.9;
+  }
+  to {
+    transform: scale(1.4);
+    opacity: 0;
+  }
+}
+.map-ripple {
+  border-radius: 9999px;
+  border: 2px solid var(--color-stone);
+  animation: map-ripple 1.3s var(--ease-out-expo) forwards;
+  pointer-events: none;
+}
+.map-ripple-turmeric {
+  border: 3px solid var(--color-turmeric);
 }
 .cash-map .leaflet-tooltip {
   border: 0;
@@ -142,8 +188,13 @@ html[data-entered] .enter-screen {
 .cash-map .leaflet-tooltip::before {
   display: none;
 }
-.cash-map .leaflet-control-attribution {
+.cash-map .leaflet-container .leaflet-control-attribution {
   font-size: 0.75rem;
+  background: rgb(23 16 14 / 0.7);
+  color: var(--color-on-ink-2);
+}
+.cash-map .leaflet-control-attribution a {
+  color: var(--color-on-ink);
 }
 
 /* Selectable marks inside an SVG (ring accounts, flow bars): the focus ring

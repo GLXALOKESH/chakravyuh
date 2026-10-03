@@ -72,7 +72,7 @@ def _build_ring_graph(candidate_ids, transactions, identifiers):
 
 def discover_rings(accounts, transactions, identifiers, scored_df,
                    risk_threshold=0.5, min_members=3, min_mean_risk=0.6,
-                   seed=42):
+                   seed=42, neighbour_floor=0.2):
     """
     Discover fraud rings using Louvain community detection.
 
@@ -113,21 +113,35 @@ def discover_rings(accounts, transactions, identifiers, scored_df,
 
     print(f"  [rings] {len(high_risk)} high-risk seed accounts")
 
-    # Step 2: expand to neighbours (shared identifier or transaction)
+    # Step 2: expand to neighbours (shared identifier or transaction).
+    #
+    # Ordinary accounts also share devices, phones and IPs (a family, an
+    # office) and ring members also pay ordinary people, so expanding to every
+    # neighbour drowns a ring in bystanders and no community passes the risk
+    # filter. A neighbour by transaction joins only if the model gives it at
+    # least `neighbour_floor` risk itself; a shared identifier pulls in its
+    # users only when two or more flagged accounts are on it, which is what a
+    # ring's own device looks like. That second rule is how a coordinator with
+    # little money through it still joins its ring. "Two or more" also has to
+    # be most of the identifier's users, or a busy shared IP would qualify.
+    prob = scored_df["prob_v2"] if "prob_v2" in scored_df.columns else scored_df["risk_v2"] / 100.0
+    risk_of = prob.to_dict()
     candidates = set(high_risk)
 
     # Expand via transactions
     for t in transactions:
         frm, to = t["from"], t["to"]
-        if frm in high_risk and to in all_account_ids:
+        if frm in high_risk and to in all_account_ids and risk_of.get(to, 0.0) >= neighbour_floor:
             candidates.add(to)
-        if to in high_risk and frm in all_account_ids:
+        if to in high_risk and frm in all_account_ids and risk_of.get(frm, 0.0) >= neighbour_floor:
             candidates.add(frm)
 
     # Expand via shared identifiers
+    ring_like = []
     for rec in identifiers:
         overlap = set(rec["account_ids"]) & high_risk
-        if overlap:
+        if len(overlap) >= 2 and len(overlap) * 2 >= len(rec["account_ids"]):
+            ring_like.append(rec)
             for a in rec["account_ids"]:
                 if a in all_account_ids:
                     candidates.add(a)
@@ -142,8 +156,10 @@ def discover_rings(accounts, transactions, identifiers, scored_df,
         print("  [rings] Too few candidates for ring detection.")
         return []
 
-    # Step 3: build graph and run Louvain
-    G = _build_ring_graph(candidates, transactions, identifiers)
+    # Step 3: build graph and run Louvain. Only ring-like identifiers link
+    # accounts here: a household's shared IP between two candidates is not
+    # evidence that they are in the same ring.
+    G = _build_ring_graph(candidates, transactions, ring_like)
 
     # Remove isolated nodes
     isolates = list(nx.isolates(G))
@@ -160,7 +176,19 @@ def discover_rings(accounts, transactions, identifiers, scored_df,
     rings = []
     ring_idx = 0
 
+    # Accounts tied to another candidate by a ring-like identifier.
+    tied = set()
+    for rec in ring_like:
+        inside = [a for a in rec["account_ids"] if a in candidates]
+        if len(inside) >= 2:
+            tied.update(inside)
+
     for comm in communities:
+        # A community is the ring plus whoever it trades with. Keep the
+        # accounts the model rates as risky, and those tied in by a shared
+        # ring identifier (a coordinator moves little money but shares the
+        # ring's devices); drop the everyday counterparties.
+        comm = {a for a in comm if risk_of.get(a, 0.0) >= risk_threshold * 0.6 or a in tied}
         if len(comm) < min_members:
             continue
 

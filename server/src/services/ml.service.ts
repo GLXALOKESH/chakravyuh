@@ -37,6 +37,8 @@ export interface TaintRequest {
   ring_id: string;
   victim_txn_id: string | null;
   as_of: string | null;
+  /** Set for a live ring: Python then reads that run's ledger instead of the demo files. */
+  run_id?: string;
 }
 
 export interface FreezeRequest extends TaintRequest {

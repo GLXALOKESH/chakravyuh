@@ -1,4 +1,5 @@
-import { ROLE_ORDER, ROLES } from "@/lib/constants";
+import { COLORS, ROLE_ORDER, ROLES } from "@/lib/constants";
+import { useDashboard } from "@/lib/store";
 
 function Mark({ children, label }: { children: React.ReactNode; label: string }) {
   return (
@@ -13,6 +14,7 @@ function Mark({ children, label }: { children: React.ReactNode; label: string })
 
 /** Colour is never the only cue: every role and mark on the stage is named here. */
 export function GraphLegend() {
+  const live = useDashboard((s) => s.mode === "live");
   return (
     <ul
       aria-label="Graph legend"
@@ -41,6 +43,11 @@ export function GraphLegend() {
       <Mark label="Shared device or phone">
         <path d="M0 7h20" stroke="#f3ecdd" strokeWidth="1.500" strokeDasharray="4 3" />
       </Mark>
+      {live && (
+        <Mark label="Rated risky by the model">
+          <circle cx="10" cy="7" r="5.5" fill={COLORS.risk} />
+        </Mark>
+      )}
       <Mark label="Other accounts, larger with more dealings">
         <path d="M4 9.500 15 5" stroke="#d9a9a4" strokeOpacity="0.6" strokeWidth="1.200" />
         <circle cx="4" cy="9.500" r="2" fill="#d9a9a4" />

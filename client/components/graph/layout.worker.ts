@@ -29,7 +29,14 @@ export interface LayoutRing {
 export interface LayoutReset {
   type: "reset";
 }
-export type LayoutMessage = LayoutAdd | LayoutRing | LayoutReset;
+/** A ring's panel is coming down (a live ring about to be drawn again): its accounts go free. */
+export interface LayoutUnring {
+  type: "unring";
+  site: { x: number; y: number; hw: number; hh: number };
+  /** Account numbers to let go of. */
+  pins: number[];
+}
+export type LayoutMessage = LayoutAdd | LayoutRing | LayoutReset | LayoutUnring;
 
 export interface LayoutFrame {
   /** x, y per account, in number order. */
@@ -167,6 +174,13 @@ self.addEventListener("message", (event: MessageEvent<LayoutMessage>) => {
     link.links([]);
   } else if (message.type === "ring") {
     ring(message);
+  } else if (message.type === "unring") {
+    sites = sites.filter((s) => s.x !== message.site.x || s.y !== message.site.y);
+    for (const i of message.pins) {
+      const n = nodes[i];
+      if (n) n.fx = n.fy = null;
+    }
+    simulation.alpha(Math.max(simulation.alpha(), 0.3));
   } else {
     add(message);
   }

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { getAccount } from "@/lib/api";
 import { ROLE_ORDER, ROLES } from "@/lib/constants";
-import { clockDate, inr, pct } from "@/lib/format";
+import { clockDate, inr, pct, shortDate, shortTime } from "@/lib/format";
 import type { AccountDetail, Recruit, RingDetail, TaintResult } from "@/lib/types";
 
 const KIND: Record<string, string> = { device: "Device", phone: "Phone", ip: "IP address" };
@@ -43,13 +43,13 @@ export function EntityPanel({
   useEffect(() => {
     if (!account) return;
     let stale = false;
-    getAccount(account)
+    getAccount(account, ring.id.startsWith("LIVE-"))
       .then((detail) => !stale && setLoaded({ detail, error: null, id: account }))
       .catch((e: unknown) => !stale && setLoaded({ detail: null, error: e instanceof Error ? e.message : "Not found", id: account }));
     return () => {
       stale = true;
     };
-  }, [account]);
+  }, [account, ring.id]);
 
   if (!account) {
     const counts = ROLE_ORDER.map((role) => [role, ring.nodes.filter((n) => n.type === "account" && n.role === role).length] as const).filter(
@@ -87,10 +87,9 @@ export function EntityPanel({
   return (
     <div className="p-5">
       <p className="fig text-on-stone-2">{a.id}</p>
-      <h2 className="text-2xl font-bold leading-tight">{a.holder}</h2>
+      <h2 className="text-2xl font-bold leading-tight">{a.holder ?? "Holder not recorded"}</h2>
       <p className="text-on-stone-2">
-        {a.bank}
-        {a.home ? ` · ${a.home.city}` : ""} · opened {clockDate(Date.parse(a.opened_at))}
+        {[a.bank, a.home?.city, a.opened_at ? `opened ${clockDate(Date.parse(a.opened_at))}` : null].filter(Boolean).join(" · ")}
       </p>
 
       {recruit ? (
@@ -107,7 +106,7 @@ export function EntityPanel({
         a.role && (
           <section className="mt-4">
             <RoleChip role={a.role} />
-            {a.role_reason && <p className="mt-1.5 leading-snug">{a.role_reason}.</p>}
+            {a.role_reason && <p className="mt-1.5 leading-snug">{a.role_reason.replace(/\.?$/, ".")}</p>}
           </section>
         )
       )}
@@ -115,10 +114,12 @@ export function EntityPanel({
       <section className="mt-5">
         <h3 className="font-bold">Risk</h3>
         <div className="flex items-baseline gap-3">
-          <span className="fig text-[2rem] leading-none text-stage">{pct(a.risk_v2)}</span>
-          <span className="text-on-stone-2">
-            <span className="fig">{pct(a.risk_v1)}</span> without identity data
-          </span>
+          <span className="fig text-[2rem] leading-none text-stage">{a.risk_v2 === null ? "—" : pct(a.risk_v2)}</span>
+          {a.risk_v1 !== null && (
+            <span className="text-on-stone-2">
+              <span className="fig">{pct(a.risk_v1)}</span> without identity data
+            </span>
+          )}
         </div>
       </section>
 
@@ -174,6 +175,33 @@ export function EntityPanel({
                 </span>
               </li>
             ))}
+          </ul>
+        </section>
+      )}
+
+      {!!a.recent_transactions?.length && (
+        <section className="mt-5">
+          <h3 className="font-bold">Recent transactions</h3>
+          <ul className="mt-1 divide-y divide-stone-lo">
+            {a.recent_transactions.slice(0, 8).map((t) => {
+              const out = t.from === a.id;
+              const other = out ? t.to : t.from;
+              return (
+                <li key={t.id} className="flex items-baseline justify-between gap-3 py-1">
+                  <span className="min-w-0 truncate">
+                    <span className="text-on-stone-2">{out ? "To" : "From"}</span>{" "}
+                    <span className="fig">{other === "CASH" ? `cash${t.location ? `, ${t.location.city}` : ""}` : other}</span>
+                    <span className="block text-sm text-on-stone-2">
+                      {shortDate(Date.parse(t.ts))}, {shortTime(Date.parse(t.ts))} · {t.channel}
+                    </span>
+                  </span>
+                  <span className={`fig shrink-0 text-lg ${out ? "" : "text-stage"}`}>
+                    {out ? "−" : "+"}
+                    {inr(t.amount)}
+                  </span>
+                </li>
+              );
+            })}
           </ul>
         </section>
       )}

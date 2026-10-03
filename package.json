@@ -1,0 +1,9 @@
+{
+  "name": "chakravyuh",
+  "private": true,
+  "description": "Runs the ML service, the server and the dashboard together. Each part keeps its own package.json.",
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "dev:live": "node scripts/dev.mjs --stream-only"
+  }
+}

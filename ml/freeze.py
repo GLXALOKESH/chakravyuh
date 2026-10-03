@@ -77,25 +77,17 @@ def _at_risk(taint_map, flow_graph, frozen=None):
 
 def _secured_by_freezing(taint_map, flow_graph, freeze_set):
     """
-    Secured amount = taint in frozen accounts + taint in accounts that
-    can no longer reach CASH after the freeze.
+    Secured amount = the tainted money at risk before the freeze minus what
+    is still at risk after it: taint in the frozen accounts, plus taint in
+    accounts the freeze cuts off from CASH.
+
+    This used to add up taint in every account that could not reach CASH
+    after the freeze, including accounts that never could (an outsider a ring
+    member paid). That counted money that was never at risk, and once ring
+    members also made ordinary payments a freeze could "secure" more than
+    130% of what was at risk.
     """
-    member_nodes = {n for n in flow_graph.nodes() if n != CASH}
-    remaining = set(flow_graph.nodes()) - freeze_set
-    subgraph = flow_graph.subgraph(remaining)
-
-    secured = 0
-    for aid, tainted in taint_map.items():
-        if tainted <= 0 or aid == CASH or aid.startswith("VICTIM") or aid == "SALARY":
-            continue
-        if aid in freeze_set:
-            # Frozen account's taint is secured
-            secured += tainted
-        elif aid not in subgraph or not nx.has_path(subgraph, aid, CASH):
-            # Account can no longer reach CASH
-            secured += tainted
-
-    return secured
+    return _at_risk(taint_map, flow_graph) - _at_risk(taint_map, flow_graph, frozen=set(freeze_set))
 
 
 def recommend_freeze(ring, transactions, accounts, victim_txn_id=None,

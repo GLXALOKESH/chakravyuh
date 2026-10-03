@@ -524,6 +524,9 @@ SIGNAL_LABELS = {
     "counterparty_div":    lambda v: f"Low counterparty diversity ({v:.2f})",
     "home_cashout_km":     lambda v: f"Withdraws cash {v:.0f} km from home branch",
     "amount_out":          lambda v: f"Total outflow ₹{int(v)//100:,}",
+    "amount_in":           lambda v: f"Total inflow ₹{int(v)//100:,}",
+    "txn_in":              lambda v: f"{int(v)} incoming transactions",
+    "txn_out":             lambda v: f"{int(v)} outgoing transactions",
 }
 
 

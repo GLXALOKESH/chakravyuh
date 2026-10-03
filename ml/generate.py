@@ -165,11 +165,12 @@ def iid(n):  return f"IP{n:04d}"
 # ─────────────────────────────────────────────────────────────────
 
 def make_accounts(n, rng, start_dt, id_offset=0):
-    """Normal accounts: opened 0–365 days before start_dt."""
+    """Normal accounts: opened 0–365 days before start_dt, a few of them in the last week."""
     accs = []
     for i in range(n):
         account_id = aid(i + id_offset)
-        days_before = rng.randint(0, 365)
+        # A share are new customers, so a young account is not proof of a mule (6b).
+        days_before = rng.randint(0, 6) if rng.random() < NEW_ACCOUNT_SHARE else rng.randint(0, 365)
         opened_at = start_dt - timedelta(days=days_before)
         balance_rupees = rng.randint(100, 500_000)
         accs.append({
@@ -380,6 +381,104 @@ def gen_normal_txns(accounts, n_target, start_dt, days, rng, ctr, balances):
         ctr[0] += 1
         generated += 1
 
+    return txns
+
+
+# ─────────────────────────────────────────────────────────────────
+# 6b. LEGITIMATE LOOK-ALIKES (hard negatives)
+# ─────────────────────────────────────────────────────────────────
+#
+# Without these, every normal account made a handful of unhurried transfers
+# over the whole window and was opened months earlier, so speed or a new
+# account alone separated rings from everyone else and the models scored a
+# perfect 1.00 on it. Real banks see honest customers who look like mules for
+# a moment: money forwarded within minutes, a shop's burst of small payments
+# taken out as cash, accounts opened last week. With these in the data the
+# models have to learn what actually tells a ring apart.
+
+NEW_ACCOUNT_SHARE = 0.06    # normal accounts opened in the last week
+FORWARDER_SHARE   = 0.05    # quick pass-through episodes per account per 30 days
+MERCHANT_SHARE    = 0.03    # busy-hour bursts per account per 30 days
+
+
+def _payer(all_aids, balances, rng, exclude, amount):
+    """A normal account that can afford `amount`, or None after a few tries."""
+    for _ in range(12):
+        a = rng.choice(all_aids)
+        if a != exclude and balances.get(a, 0) >= amount:
+            return a
+    return None
+
+
+def plan_quick_forward(acc_id, all_aids, balances, rng, at):
+    """An honest pass-through: a large transfer in, moved on within minutes
+    (rent, a family member, the customer's own account at another bank)."""
+    amount = rng.randint(30_000, 600_000) * 100
+    sender = _payer(all_aids, balances, rng, acc_id, amount)
+    if sender is None:
+        return []
+    plan = [(at, {"from": sender, "to": acc_id, "amount_paise": amount,
+                  "channel": rng.choice(["IMPS", "NEFT", "UPI"]), "location": None})]
+    left = (int(amount * rng.uniform(0.85, 0.98)) // 100) * 100
+    n_out = rng.randint(1, 3)
+    t = at
+    for k in range(n_out):
+        t = t + timedelta(minutes=rng.randint(3, 40))
+        part = left if k == n_out - 1 else (int(left * rng.uniform(0.3, 0.6)) // 100) * 100
+        left -= part
+        to = rng.choice([a for a in rng.sample(all_aids, 4) if a != acc_id] or [sender])
+        if part > 0:
+            plan.append((t, {"from": acc_id, "to": to, "amount_paise": part,
+                             "channel": rng.choice(["IMPS", "UPI", "NEFT"]), "location": None}))
+    return plan
+
+
+def plan_merchant_burst(acc_id, all_aids, balances, rng, at, home):
+    """A shop's busy hour: many small UPI payments in, then most of the
+    takings withdrawn as cash near home or sent on to a supplier."""
+    plan = []
+    t = at
+    total = 0
+    for _ in range(rng.randint(8, 25)):
+        t = t + timedelta(minutes=rng.randint(1, 8))
+        amount = rng.randint(50, 3000) * 100
+        payer = _payer(all_aids, balances, rng, acc_id, amount)
+        if payer is None:
+            continue
+        plan.append((t, {"from": payer, "to": acc_id, "amount_paise": amount, "channel": "UPI", "location": None}))
+        total += amount
+    if total < 50_000:
+        return plan
+    t = t + timedelta(minutes=rng.randint(30, 240))
+    out = (int(total * rng.uniform(0.70, 0.95)) // 100) * 100
+    if rng.random() < 0.6:
+        lat, lng = jitter(home["lat"], home["lng"], rng)
+        plan.append((t, {"from": acc_id, "to": CASH, "amount_paise": out, "channel": "ATM",
+                         "location": {"city": home["city"], "lat": lat, "lng": lng}}))
+    else:
+        to = rng.choice([a for a in rng.sample(all_aids, 4) if a != acc_id] or [all_aids[0]])
+        plan.append((t, {"from": acc_id, "to": to, "amount_paise": out, "channel": rng.choice(["IMPS", "NEFT"]), "location": None}))
+    return plan
+
+
+def gen_lookalike_txns(accounts, start_dt, days, rng, ctr, balances):
+    """The batch generator's look-alikes, spread over the whole window."""
+    all_aids = [a["_id"] for a in accounts]
+    by_id = {a["_id"]: a for a in accounts}
+    span = int(days * 86400)
+    n_fwd = int(len(accounts) * FORWARDER_SHARE * days / 30)
+    n_mer = int(len(accounts) * MERCHANT_SHARE * days / 30)
+    txns = []
+    for kind in ["forward"] * n_fwd + ["merchant"] * n_mer:
+        acc = rng.choice(all_aids)
+        at = start_dt + timedelta(seconds=rng.randint(3600, max(3601, span - 6 * 3600)))
+        plan = (plan_quick_forward(acc, all_aids, balances, rng, at) if kind == "forward"
+                else plan_merchant_burst(acc, all_aids, balances, rng, at, by_id[acc]["home"]))
+        for ts, body in plan:
+            balances[body["from"]] = balances.get(body["from"], 0) - body["amount_paise"]
+            balances[body["to"]] = balances.get(body["to"], 0) + body["amount_paise"]
+            txns.append({"_id": tid(ctr[0]), **body, "ts": fmt_ts(ts), "is_fraud": False})
+            ctr[0] += 1
     return txns
 
 
@@ -926,12 +1025,19 @@ def generate_profile(profile: str):
         acc_e = plant_account_e(first_ring_members, id_list, rng, start_dt, e_offset)
         print(f"  Account E: {acc_e['_id']}")
 
-    # 4. Normal identifiers
+    # 4. Everyday identifiers: a device, a phone and an IP for every account,
+    # ring members and Account E included. Ring members used to get only the
+    # ring's shared device or phone and never an IP, while every normal
+    # account had all three, so "has no IP on record" alone picked out the
+    # rings and the models scored 1.00 on that rather than on behaviour.
+    # Rings are still told apart by what they share (step 2), not by what
+    # they lack.
     n_devs   = max(50, cfg["n_accounts"] // 5)
     n_phones = max(50, cfg["n_accounts"] // 5)
     n_ips    = max(30, cfg["n_accounts"] // 8)
+    everyone = normal_accs + all_ring_accs + ([acc_e] if acc_e else [])
     normal_id_list = assign_normal_identifiers(
-        normal_accs, rng, n_devs, n_phones, n_ips, share_rate=0.04
+        everyone, rng, n_devs, n_phones, n_ips, share_rate=0.04
     )
     # Merge: ring identifiers take precedence
     ring_id_keys = {r["_id"] for r in id_list}
@@ -943,10 +1049,18 @@ def generate_profile(profile: str):
     print(f"  Generating {cfg['n_normal_txns']} normal transactions...")
     balances["SALARY"] = 10**15
     balances[CASH]     = 0
+    # Ring members are people too: they draw a salary and make ordinary
+    # transfers like everyone else, around the fraud. Without this a ring
+    # account existed only for the hours of its cascade, which made "all of
+    # this account's activity is in one burst" a perfect fraud label.
     normal_txns = gen_normal_txns(
-        normal_accs, cfg["n_normal_txns"], start_dt,
+        everyone, cfg["n_normal_txns"], start_dt,
         cfg["days"], rng, ctr, balances
     )
+    # 5b. Honest customers who look like mules for a moment (section 6b).
+    lookalike_txns = gen_lookalike_txns(normal_accs, start_dt, cfg["days"], rng, ctr, balances)
+    print(f"  Added {len(lookalike_txns)} look-alike transactions (quick forwards, merchant bursts).")
+    normal_txns = normal_txns + lookalike_txns
 
     # 6. Assemble all accounts + transactions
     all_accs = normal_accs + all_ring_accs

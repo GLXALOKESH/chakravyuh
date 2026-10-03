@@ -8,6 +8,7 @@
  * compile error in one place instead of a silent undefined at runtime.
  */
 import dotenv from 'dotenv';
+import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { withDefaultDatabaseName } from '../utilities/mongo-url.util.js';
@@ -47,7 +48,35 @@ export interface AppConfig {
   readonly dataDir: string;
   readonly replayDefaultSpeed: number;
   readonly replayTickMs: number;
+  /** Live mode (docs/STREAMING.md). */
+  readonly stream: {
+    /** Serve live mode with no database: replay and the stored-data routes are switched off. */
+    readonly only: boolean;
+    /** Python that runs ml/stream_generator.py. */
+    readonly pythonBin: string;
+    readonly generatorScript: string;
+    readonly defaultRate: number;
+    readonly tickMs: number;
+    readonly predictIntervalMs: number;
+    /** Longer than ML_TIMEOUT_MS: a batch can carry a few thousand transactions. */
+    readonly predictTimeoutMs: number;
+    /** Transactions per predictor request, at most. */
+    readonly predictBatchMax: number;
+    /** A run ends at this many transactions, so memory stays bounded. */
+    readonly maxTxns: number;
+    /** Required on POST /api/stream/ingest. Unset, that route is closed. */
+    readonly ingestToken: string | null;
+  };
 }
+
+/** The ML virtualenv's Python if there is one, else whatever `python` is on the PATH. */
+const defaultPython = (): string => {
+  const venv = path.join(repoRoot, 'ml', '.venv');
+  for (const candidate of [path.join(venv, 'Scripts', 'python.exe'), path.join(venv, 'bin', 'python')]) {
+    if (fs.existsSync(candidate)) return candidate;
+  }
+  return process.platform === 'win32' ? 'python' : 'python3';
+};
 
 /** The MONGO_URL default from the configuration table in TRD section 9. */
 const TRD_DEFAULT_MONGO_URL = 'mongodb://localhost:27017/chakravyuh';
@@ -95,6 +124,19 @@ export const config: AppConfig = {
   /** Replay defaults, from the socket table in TRD section 8. */
   replayDefaultSpeed: int(process.env.REPLAY_DEFAULT_SPEED, 60),
   replayTickMs: int(process.env.REPLAY_TICK_MS, 250),
+
+  stream: {
+    only: bool(process.env.STREAM_ONLY, false),
+    pythonBin: process.env.PYTHON_BIN ?? defaultPython(),
+    generatorScript: process.env.STREAM_GENERATOR ?? path.join(repoRoot, 'ml', 'stream_generator.py'),
+    defaultRate: int(process.env.STREAM_DEFAULT_RATE, 300),
+    tickMs: int(process.env.STREAM_TICK_MS, 250),
+    predictIntervalMs: int(process.env.STREAM_PREDICT_INTERVAL_MS, 1000),
+    predictTimeoutMs: int(process.env.STREAM_PREDICT_TIMEOUT_MS, 5000),
+    predictBatchMax: int(process.env.STREAM_PREDICT_BATCH_MAX, 5000),
+    maxTxns: int(process.env.STREAM_MAX_TXNS, 200_000),
+    ingestToken: process.env.STREAM_INGEST_TOKEN?.trim() || null,
+  },
 };
 
 export const isProduction = (): boolean => config.nodeEnv === 'production';

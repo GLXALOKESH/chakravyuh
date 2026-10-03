@@ -6,11 +6,18 @@ Exposes REST endpoints for on-demand ML operations:
 - POST /mincut              Live min-cut freeze optimization (TRD §3, §7.7, §7.10)
 - POST /pipeline/run        Run full pipeline for a profile
 - POST /ouroboros/run       Execute N-round red vs blue adversarial battle
+- POST /predict/reset       Start a live run on the online predictor (online.py)
+- POST /predict             Score the next batch of a live run: scores, rings, alerts
 - GET  /health              Healthcheck
+
+The live predictor keeps its state in this process, so run one worker and
+leave auto-reload off (set ML_RELOAD=1 to turn it on while editing).
 """
 
 import json
+import os
 import sys
+import threading
 from pathlib import Path
 from typing import Dict, List, Any, Optional
 
@@ -35,6 +42,20 @@ try:
     FASTAPI_AVAILABLE = True
 except ImportError:
     FASTAPI_AVAILABLE = False
+
+from online import OnlineScorer, RunMismatch
+
+# One live predictor per process. Its models load (or train, about 3 s) in the
+# background so the service answers /health straight away.
+ONLINE = OnlineScorer()
+threading.Thread(target=ONLINE.warm, name="online-warm", daemon=True).start()
+
+
+def _live_ledger(ring_id, run_id):
+    """The live run's ring, transactions and accounts, when the request is about the live run."""
+    if not run_id or run_id != ONLINE.run_id:
+        return None
+    return ONLINE.ledger_view(ring_id)
 
 
 def _load_data(profile="demo"):
@@ -74,6 +95,7 @@ if FASTAPI_AVAILABLE:
         as_of: Optional[str] = None
         transactions: Optional[List[Dict[str, Any]]] = None
         opening_balances: Optional[Dict[str, int]] = None
+        run_id: Optional[str] = None
 
     class FreezeRequest(BaseModel):
         ring_id: Optional[str] = "RING01"
@@ -84,6 +106,19 @@ if FASTAPI_AVAILABLE:
         ring: Optional[Dict[str, Any]] = None
         transactions: Optional[List[Dict[str, Any]]] = None
         accounts: Optional[List[Dict[str, Any]]] = None
+        run_id: Optional[str] = None
+
+    class PredictResetRequest(BaseModel):
+        run_id: str
+        sim_start: Optional[str] = None
+
+    class PredictRequest(BaseModel):
+        run_id: str
+        seq: int
+        clock: Optional[str] = None
+        accounts: List[Dict[str, Any]] = []
+        identifiers: List[Dict[str, Any]] = []
+        txns: List[Dict[str, Any]] = []
 
     class PipelineRequest(BaseModel):
         profile: str = "demo"
@@ -96,13 +131,31 @@ if FASTAPI_AVAILABLE:
 
     @app.get("/health")
     def health():
-        return {"status": "ok", "service": "chakravyuh-ml"}
+        return {"status": "ok", "service": "chakravyuh-ml", "online": ONLINE.health()}
+
+    @app.post("/predict/reset")
+    def predict_reset(req: PredictResetRequest):
+        return ONLINE.reset(req.run_id, req.sim_start)
+
+    @app.post("/predict")
+    def predict(req: PredictRequest):
+        if not ONLINE.ready:
+            raise HTTPException(status_code=503, detail="models are still loading")
+        try:
+            return ONLINE.predict(req.model_dump())
+        except RunMismatch as e:
+            raise HTTPException(status_code=409, detail=e.detail)
 
     @app.post("/taint")
     def taint_endpoint(req: TaintRequest):
         try:
             from taint import trace
-            accounts, txns, rings = _load_data("demo")
+            live = _live_ledger(req.ring_id, req.run_id)
+            if live:
+                live_ring, txns, accounts = live
+                rings = [live_ring]
+            else:
+                accounts, txns, rings = _load_data("demo")
             transactions = req.transactions or txns
 
             # Normalise: ensure each txn has amount_paise for the trace function
@@ -124,6 +177,9 @@ if FASTAPI_AVAILABLE:
             # Opening balances in paise
             if req.opening_balances:
                 open_bal = req.opening_balances
+            elif live:
+                # The live ledger is paise throughout; no guessing at units.
+                open_bal = {a["_id"]: a["opening_balance"] for a in accounts}
             else:
                 open_bal = {a["_id"]: a["opening_balance"] * 100
                             if a["opening_balance"] < 1_000_000
@@ -186,7 +242,12 @@ if FASTAPI_AVAILABLE:
     def mincut_endpoint(req: FreezeRequest):
         try:
             from freeze import recommend_freeze
-            accounts, txns, rings = _load_data("demo")
+            live = _live_ledger(req.ring_id, req.run_id)
+            if live:
+                live_ring, txns, accounts = live
+                rings = [live_ring]
+            else:
+                accounts, txns, rings = _load_data("demo")
             ring = req.ring or next(
                 (r for r in rings
                  if r.get("_id") == req.ring_id or r.get("ring_id") == req.ring_id),
@@ -211,7 +272,7 @@ if FASTAPI_AVAILABLE:
             for a in acc_list:
                 na = dict(a)
                 bal = na.get("opening_balance", 0)
-                if bal < 1_000_000:
+                if bal < 1_000_000 and not live:
                     na["opening_balance"] = bal * 100
                 norm_accounts.append(na)
 
@@ -270,4 +331,5 @@ if __name__ == "__main__":
         print("    pip install fastapi uvicorn")
     else:
         import uvicorn
-        uvicorn.run("service:app", host="0.0.0.0", port=8000, reload=True)
+        # Reload restarts the process, which would throw away a live run.
+        uvicorn.run("service:app", host="0.0.0.0", port=8000, reload=os.getenv("ML_RELOAD") == "1")
