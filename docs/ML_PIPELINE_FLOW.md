@@ -13,9 +13,14 @@ with it.
 > so §§1–5 describe the intended design; §0 below records what actually landed
 > and the two places it does not line up with the server.
 
-## 0. What exists, and the two things to fix
+## 0. What exists, and where it stands
+
+**For current numbers read `PROJECT_STATUS.md` first.** This section records what
+was true when the pipeline landed; the status doc has the latest.
 
 ### Built
+
+17 modules, ~7,500 lines, 8 test files:
 
 | Module | Role |
 | --- | --- |
@@ -27,75 +32,55 @@ with it.
 | `freeze.py` | Freeze optimiser (TRD §7.7) |
 | `detector.py` | Detection logic |
 | `loop.py`, `adversary.py` | Adversarial loop and demo judging |
-| `export.py` | Writes the JSON the server reads |
+| `export.py`, `run.py` | Orchestration and JSON export |
+| `mongo_pusher.py` | Pushes straight to Atlas |
 | `service.py` | FastAPI/HTTP service |
+| `geo.py` | Geospatial helpers |
 
-Outputs are present and populated:
+### The data no longer arrives as files
 
-```
-ml/data/demo/            accounts.json  identifiers.json  transactions.json
-                          ground_truth.json
-ml/data/demo/outputs/    rings.json  alerts.json  metrics.json  recruits.json
-ml/data/{train,test}/    profiles exist
-```
+The pipeline now pushes directly to MongoDB Atlas via `mongo_pusher.py`, which
+does `delete_many({})` per collection before inserting. The server reads whatever
+is in the database.
 
-Tests: `ml/tests/` holds 7 files — `test_generate.py`, `test_features.py`
-(via `test_rings.py`), `test_taint.py`, `test_freeze.py`, `test_rings.py`,
-`test_loop.py`, `test_adversary.py`, `test_contingencies.py`.
+**`pnpm run seed` is therefore not part of the normal flow.** It exists for the
+file-based path, and running it now would overwrite the ML team's data with
+fixtures. After a push the only command needed is `pnpm run db:indexes`, because
+a direct push skips index creation the way the seeder does it.
 
-### Blocker 1: `amount_paise` is not `amount`
+### Resolved
 
-The generated transactions use `amount_paise`:
+**`amount_paise` versus `amount`.** Resolved by design, not by patch.
+`generate.py` emits `amount_paise` internally because the taint arithmetic needs
+it; `run.py` converts to rupees on export. The Atlas push is correct — confirmed
+live as `TXN000276 amount=16835` with no `amount_paise` key.
 
-```
-ml/data/demo/transactions.json
-  keys: _id, from, to, amount_paise, ts, channel, location, is_fraud
-```
+The one consequence worth documenting: **`pnpm run seed` only works on files
+produced by `run.py`**, never on raw generator output.
 
-The server schema requires `amount` and will reject every transaction. Values
-are genuinely paise — `19114400` is ₹191,144 — and
-`docs/BACKEND_INTERFACE.md` line 174 mandates paise.
+**The data directory mismatch.** No longer applies. The server reads Atlas rather
+than `<repo>/data/<profile>/`.
 
-TRD §6 specifies rupees (`"amount": 48000`). This is a field rename plus a
-100× disagreement about units, and it needs a decision rather than a fix: if
-paise wins, the frontend divides by 100 and every `pct_stopped` figure in the
-demo shifts accordingly.
+**The `risk_v2` scale.** `_normalise_to_100` is no longer called in
+`ml/models.py`; scores are true 0–1 probabilities.
 
-Everything else in the generated data already matches TRD §6 — `_id`, `ts`,
-`channel`, `location`, `is_fraud`, and channels correctly limited to
-`UPI | IMPS | NEFT | ATM`. Accounts carry `holder`, `bank`, `home`, `opened_at`,
-`opening_balance`, `features`, `risk_v1`, `risk_v2`, `signals`, `ring_id`,
-`role`, `role_reason`. Only the amount field diverges.
+### Open
 
-### Blocker 2: the two sides read different directories
+**No dependencies installed.** `fastapi`, `uvicorn`, `pydantic`, `numpy`,
+`pandas`, `sklearn`, `xgboost`, `shap`, `networkx`, `pymongo` — none present on
+the backend machine. So `ml/service.py` has never started there, and the live
+`/taint` and `/mincut` calls remain unverified. This is the last untested seam in
+the project.
 
-`ml/config.py` sets `DATA_DIR` to `<repo>/ml/data`. The server resolves
-`dataDir` to `<repo>/data` and reads `<repo>/data/<profile>/`.
+**Ring risk reads ~0.999 on all three rings.** The scale bug is fixed but the
+stored values are unchanged, so three bars render at 99.9%.
 
-`<repo>/data/demo/` currently contains only `.gitkeep`, so **`npm run seed`
-cannot see the pipeline output** and falls back to `src/fixtures/`. The
-dashboard looks correct because the fixture dataset satisfies the same
-contract — which is precisely why this is easy to miss.
+**`recruits` is empty.** F10 fell back to a hand-weighted score; agreed to label
+it "risk score" rather than "probability".
 
-The fallback is doing more harm than good now: it hides blocker 1 entirely.
-
-### Blocker 3 (minor): `recruits.json` is empty
-
-Two bytes. The recruiter is optional per `ml/README.md`, so this is consistent
-rather than broken. `GET /api/rings/:id/recruits` returns an empty array.
-
-### `service.py` route names line up
-
-```
-GET  /health          ✓
-POST /taint           ✓
-POST /mincut          ✓
-POST /pipeline/run    ✓
-POST /ouroboros/run   (extra, harmless)
-```
-
-But the service has never been started against the server, so request and
-response shapes are still unverified in both directions.
+**`signals` on 27 of 926 accounts.** Deliberate — SHAP runs only above
+`risk_v2 >= 0.5`. The frontend should show "below the risk threshold" rather
+than an empty panel.
 
 ---
 
@@ -124,7 +109,7 @@ Read alongside:
 │                                        outputs/*.json      │
 └──────────────────────────────────────────┬─────────────────┘
                                            │
-                    npm run seed (the only handoff)
+                    pnpm run seed (the only handoff)
                                            │
 ┌─ ONLINE, run by the server ───────────────▼─────────────────┐
 │                                                            │
@@ -284,10 +269,10 @@ reads the dashboard.
 
 ---
 
-## 3. The handoff: `npm run seed`
+## 3. The handoff: `pnpm run seed`
 
 ```bash
-cd server && npm run seed
+cd server && pnpm run seed
 ```
 
 This is the only integration point. It:
@@ -416,7 +401,7 @@ server would keep serving stale data.
 
 ```bash
 python ml/pipeline.py --profile demo
-cd server && npm run seed
+cd server && pnpm run seed
 ```
 
 One extra command in a rehearsed demo step is not a risk. An auto-reseed is a
@@ -493,22 +478,24 @@ unlabelled — it is the negative case the recruitment predictor is scored again
 
 ## 10. Open questions
 
-1. **Paise or rupees?** The highest-priority question in this document. TRD §6
-   says rupees; `docs/BACKEND_INTERFACE.md` and the generated data say paise.
-   Whichever wins, one side has to change, and the frontend display depends on
-   the answer. See §0, blocker 1.
-2. **Which data directory is canonical?** `ml/data/<profile>/` or
-   `<repo>/data/<profile>/`? See §0, blocker 2.
-3. **`default_taint` structure.** TRD §6 shows `{}`. The cached freeze path
-   recomputes `secured` and `pct_stopped` from per-account taint, so this needs
-   `{ account_id: taint }` or similar. What shape are you producing?
-4. **The 3 second budget.** Brute force over combinations is exponential in `k`.
-   Can it hold, or do you want the timeout raised knowingly?
-5. **Pattern D recall.** Both fixture metric rows are `null`. Is a pattern-D
-   detector coming?
+**Resolved 3 Oct 2026** — see §0 for what changed and `PROJECT_STATUS.md` for
+current state.
+
+1. ~~Paise or rupees?~~ Resolved: `run.py` converts on export; the Atlas data
+   is in rupees.
+2. ~~Which data directory is canonical?~~ No longer applies — the pipeline pushes
+   directly to Atlas.
+3. **`default_taint` structure.** Confirmed real and per-ring, not `{}`.
+4. **The 3 second budget.** Still open. Brute force over combinations is
+   exponential in `k`, and `RING03` now has 11 members. Untestable until the
+   dependencies are installed.
+5. **Pattern D recall.** Both metric rows are `null`. Is a pattern-D detector
+   coming?
 6. **`geo_spread_km`.** Map is P2 per TRD §11. Populate now or leave null?
 7. **V2 versus V1.** The demo narrative is that identity linking catches what
-   transaction flow misses. If your numbers do not show that, better to know now.
+   transaction flow misses. If the numbers do not show that, better to know now.
+8. **Ring risk ~0.999.** Three rings at 99.9% reads as synthetic. Scale bug is
+   fixed — is the model genuinely that confident, or did the push predate it?
 
 Anything in here you disagree with, say so and I will change the server. Cheaper
 to argue now than to debug during the demo.

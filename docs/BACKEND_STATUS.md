@@ -1,15 +1,17 @@
 # Backend: what has been built
 
-**Owner:** Member 1 (server). Status as of the MongoDB migration.
+**Owner:** Member 1 (server).
 
 This is what exists, why it is built the way it is, and what is deliberately not
 done. Read `HOW_DATA_FLOWS.md` if you need to know how to feed it;
 `ML_INTEGRATION.md` if you are writing the pipeline.
 
-> **Current state, 3 Oct 2026:** the backend and the ML pipeline are both
-> substantially built, but **they cannot talk to each other yet.** Two concrete
-> mismatches block the handoff, listed in §Not done. The Python side is not
-> empty any more — `ml/` holds 14 modules and ~5,100 lines.
+> **For current numbers, read `PROJECT_STATUS.md` first.** This document explains
+> the design and the reasoning; that one records what is true right now. They are
+> kept separate deliberately — a design doc that gets rewritten every time
+> something changes stops being a design doc.
+>
+> Measured benchmarks and test reports are in [`tests/`](tests/).
 
 ---
 
@@ -19,23 +21,21 @@ Working and verified against **MongoDB Atlas** (`hackathon.gqtv7yg.mongodb.net`)
 
 ```
 pnpm typecheck   clean
-pnpm build       clean
-pnpm test        103 passed, 0 failed, 0 skipped
+pnpm test        114 passed, 0 failed, 0 skipped
 ```
 
-Verified live on the cluster: all 14 endpoints return correct shapes, schema and
-indexes created, fixture dataset seeded, replay socket emits the full script,
-evidence PDF generates.
+Serving the ML team's pushed dataset: 926 accounts, 8,041 transactions, 3 rings,
+3 alerts. All 15 endpoints return correct shapes.
 
-Stack: Express 4, TypeScript (strict), Mongoose 9, class-validator,
-Socket.IO, ~6,750 lines across `src/` and `test/`.
+Stack: Express 4, TypeScript (strict), Mongoose 9, class-validator, Socket.IO,
+~6,750 lines across `src/` and `test/`.
 
 ### The three services, as they actually stand
 
 | Area | State |
 | --- | --- |
-| Server (`server/`) | Complete. 14 endpoints, verified live against Atlas |
-| ML pipeline (`ml/`) | **Built.** 14 modules, ~5,100 lines, 7 test files |
+| Server (`server/`) | Complete. 15 endpoints, 114 tests, verified live against Atlas |
+| ML pipeline (`ml/`) | Written. 17 modules, ~7,500 lines. 12 deps not installed, so untested from here |
 | Frontend (`client/`) | In progress — Next.js, graph components landed on `main` |
 
 ---
@@ -165,7 +165,7 @@ fields under `details.fields`.
 | `mongo-url.test.ts` | 5 | Connection string normalisation |
 
 With no `MONGO_URL`, `global-setup.ts` starts its own single-node replica set
-in-process, so `npm test` needs nothing. With a URL, it uses that, pointed at
+in-process, so `pnpm test` needs nothing. With a URL, it uses that, pointed at
 `chakravyuh_test` — a separate database on the same cluster, because the suite
 clears collections and that should never cost anyone their dev data.
 
@@ -260,62 +260,35 @@ Called out so nobody assumes otherwise.
 
 ### Two blockers between the server and the pipeline
 
-Both are on the ML side, and both were introduced by `docs/BACKEND_INTERFACE.md`,
-which specifies a different field name than TRD §6 does.
+**Resolved 3 Oct 2026.** Both were on the ML side; see `PROJECT_STATUS.md` for
+the current position.
 
-**1. `amount_paise` versus `amount`.** The generated transactions carry
-`amount_paise`, not `amount`:
+**1. `amount_paise` versus `amount` — resolved by design.** The Atlas push writes
+`amount` in rupees, confirmed live (`TXN000276 amount=16835`, no `amount_paise`
+key). `ml/generate.py` still emits `amount_paise` internally, because the taint
+arithmetic needs paise; `ml/run.py` converts on export. The consequence is that
+`pnpm run seed` only works on files produced by `run.py`.
 
-```
-ml/data/demo/transactions.json
-  keys: _id, from, to, amount_paise, ts, channel, location, is_fraud
-```
-
-`server/src/models/transaction.model.ts` requires `amount`. Every transaction
-would be rejected, and because validation is explicit the seed fails loudly
-rather than dropping rows — so this is at least visible immediately.
-
-`docs/BACKEND_INTERFACE.md` line 174 states "All monetary values are integers
-(1 INR = 100 paise)" and the generated figures are consistent with that
-(`19114400` paise = ₹191,144). **TRD §6 says rupees**, with `"amount": 48000`
-as the worked example. So this is not a unit slip — it is a field rename plus a
-100× disagreement about what the number means.
-
-Someone has to decide which is authoritative. If paise wins, the server stores
-it and the frontend divides by 100; every `pct_stopped` and `secured` figure
-changes accordingly.
-
-**2. The data directory does not line up.** `server/src/configs/env.ts` resolves
-`dataDir` to `<repoRoot>/data`, so the seeder reads
-`/Users/shovan/Developer/chakravyuh/data/demo/`. The pipeline writes to
-`ml/data/demo/`, which is where `ml/config.py` points `DATA_DIR`.
-
-Both paths resolve to the repo root under different module systems, so they
-only coincide by accident. Right now `<repoRoot>/data/demo/` contains nothing
-but a `.gitkeep`, which means **`npm run seed` cannot see the pipeline's output
-at all** and silently falls back to `src/fixtures/`.
-
-That fallback is why this has not broken anything yet, and it is also why it is
-worth fixing before the demo — the dashboard looks fine, it is just showing
-generated fixture data rather than the real pipeline.
+**2. The data directory no longer applies.** The ML team pushes directly to Atlas
+via `mongo_pusher.py`, so the server reads whatever is in the database rather
+than `data/<profile>/`. `pnpm run seed` is no longer part of the normal flow and
+would overwrite their data with fixtures.
 
 ### Also outstanding
 
-**The live Python path has still never run.** `ml/service.py` exists and defines
-`/health`, `/taint`, `/mincut`, `/pipeline/run` and `/ouroboros/run`, so the
-route names line up. But it has never been started against the server, so
-`/taint` and `/freeze` have only ever taken the cached-fallback path. The
-request and response shapes remain unverified in both directions.
+**The live Python path has still never run.** `ml/service.py` defines `/health`,
+`/taint`, `/mincut`, `/pipeline/run` and `/ouroboros/run`, so the route names
+line up. But `fastapi`, `uvicorn` and 10 other dependencies are not installed on
+the backend machine, so the service has never started and `/taint` and `/freeze`
+have only ever taken the cached-fallback path.
 
-**`recruits.json` is empty** — two bytes. `ml/README.md` says the recruiter is
-optional, and the endpoint reads the collection regardless, so this is consistent
-rather than broken. Worth knowing before anyone reads the recruits panel.
+**`recruits` is empty.** The ML side confirmed F10 fell back to a hand-weighted
+score rather than a true probability. Per TRD §7.8 the frontend must label it
+"risk score", not "probability" — that is agreed.
 
-**The fixture generator is now redundant.** `src/fixtures/generator.ts` was a
-stand-in while `ml/` was empty. With 14 real modules on disk it should be
-deleted, and `SEED_FIXTURES` defaulted to `false`, so that a missing
-`data/<profile>/` is an error rather than a silent substitution. Right now the
-substitution is exactly what is masking blocker 2.
+**Ring risk reads ~0.999 on all three rings.** The `risk_v2` scale bug is fixed
+(`_normalise_to_100` is no longer called), but the stored values are unchanged.
+Three bars at 99.9% reads as synthetic. See `PROJECT_STATUS.md` §Open issues.
 
 **No auth, no rate limiting.** Out of scope for the hackathon.
 
@@ -328,31 +301,41 @@ substitution is exactly what is masking blocker 2.
 ```bash
 cd server
 cp .env.example .env     # put your MONGO_URL in it
-npm install
-npm run seed
-npm start                # http://localhost:4000
+pnpm install
+pnpm start                # http://localhost:4000
 ```
 
 No schema step. Mongoose needs no generated client and MongoDB has no
-migrations — `npm run seed` creates the indexes it needs.
+migrations.
+
+**The ML team pushes directly to Atlas**, so there is normally nothing to seed —
+the server reads whatever is in the database. After they push a new dataset:
+
+```bash
+pnpm run db:indexes        # a direct push skips index creation
+pnpm start
+```
+
+Do **not** run `pnpm run seed` casually. It exists for the file-based path and
+would overwrite their data with fixtures.
 
 Frontend work with no database:
 
 ```bash
-USE_MOCKS=true npm start
+USE_MOCKS=true pnpm start
 ```
 
-Opens no database connection at all, which is what makes it usable while the
-pipeline does not exist yet.
+Opens no database connection at all, which is what makes it usable without the
+ML side running.
 
 | Command | Does |
 | --- | --- |
-| `npm run dev` | `tsx watch` |
-| `npm run build` | Compile to `dist/` |
-| `npm run typecheck` | Typecheck everything including tests |
-| `npm run seed` | Load `data/<profile>/`, or fixtures |
-| `npm run db:indexes` | Create declared indexes |
-| `npm test` | 103 checks; starts its own mongod if needed |
+| `pnpm run dev` | `tsx watch` |
+| `pnpm run build` | Compile to `dist/` |
+| `pnpm run typecheck` | Typecheck everything including tests |
+| `pnpm run db:indexes` | Create declared indexes. Run after an ML push |
+| `pnpm run seed` | Load `data/<profile>/`. File-based path only |
+| `pnpm test` | 114 checks; starts its own mongod if needed |
 
 ---
 

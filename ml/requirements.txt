@@ -1,0 +1,38 @@
+# Derived from the imports actually used in ml/*.py, 3 Oct 2026.
+#
+# There was no requirements.txt; this was reconstructed from the source. Two
+# entries the code guards with try/except are included anyway, because both are
+# needed for the reported PR-AUC and ring recall to be the real numbers rather
+# than a degraded fallback.
+#
+#   xgboost  — models.py falls back to a hand-weighted score without it
+#   shap     — models.py skips the "why flagged" signals without it, and
+#              signals is the explainability panel
+#
+# Install with:
+#   pip install -r ml/requirements.txt
+
+# Dataframes and numerics
+numpy>=1.26
+pandas>=2.0
+
+# Models
+scikit-learn>=1.4
+xgboost>=2.0
+
+# Explainability (SHAP contributions become accounts[].signals)
+shap>=0.44
+
+# Ring detection: Louvain community detection
+networkx>=3.0
+
+# HTTP service
+fastapi>=0.110
+uvicorn>=0.27
+pydantic>=2.5
+
+# Atlas push
+pymongo>=4.6
+
+# Tests
+pytest>=8.0

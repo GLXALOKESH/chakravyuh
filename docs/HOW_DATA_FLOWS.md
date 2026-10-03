@@ -3,6 +3,12 @@
 **For:** Member 3 (ML). Companion to `ML_INTEGRATION.md`, which specifies the
 file formats. This one explains what happens to your files after you write them.
 
+> **Superseded in part, 3 Oct 2026.** The pipeline now pushes directly to Atlas
+> via `mongo_pusher.py`, so the seeding flow below is the fallback path rather
+> than the normal one. What still holds and matters: what the server does with
+> your numbers, why `cached: true` appears, what silently looks wrong, and the
+> replay rules. `PROJECT_STATUS.md` has the current position.
+
 Read this if you want to know why a seed failed, what "cached" means, or what
 the server does with your numbers.
 
@@ -11,7 +17,7 @@ the server does with your numbers.
 ## The short version
 
 ```
-you write JSON          npm run seed              npm start
+you write JSON          pnpm run seed              pnpm start
      │                      │                         │
      ▼                      ▼                         ▼
 data/demo/*.json ──► read, validate, ──► MongoDB ──► REST API ──► dashboard
@@ -32,7 +38,7 @@ Two things to take from that:
 
 ---
 
-## 1. Seeding: `npm run seed`
+## 1. Seeding: `pnpm run seed`
 
 ### Order of operations
 
@@ -103,7 +109,7 @@ your files were not found. Check `SEED_PROFILE`.
 
 ---
 
-## 2. Serving: `npm start`
+## 2. Serving: `pnpm start`
 
 Startup does four things, in this order:
 
@@ -308,10 +314,10 @@ python ml/generate.py --profile demo
 python ml/pipeline.py --profile demo
 
 # 2. load — read the printed counts, they should match your generator
-cd server && npm run seed
+cd server && pnpm run seed
 
 # 3. serve
-npm start
+pnpm start
 
 # 4. check
 curl localhost:4000/health
