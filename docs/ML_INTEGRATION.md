@@ -396,7 +396,7 @@ interface Ring {
 ## 7. Checking your work without the server
 
 ```bash
-cd server && npm run seed
+cd server && pnpm run seed
 ```
 
 Prints what landed and fails loudly on a bad `channel` or a malformed document,
@@ -404,7 +404,7 @@ with the offending field named. Runs in a transaction, so a failed seed leaves
 your previous data intact — re-run it freely.
 
 ```bash
-cd server && npm start
+cd server && pnpm start
 # then, in another terminal:
 curl localhost:4000/api/rings/RING01 | jq
 curl -X POST localhost:4000/api/rings/RING01/freeze \

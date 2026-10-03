@@ -110,20 +110,47 @@ Current state: 103 checks, 8 files, nothing skipped. The suite catching zero
 tests is a bug — if a run reports 0 or a suspiciously low count, investigate
 rather than accepting it.
 
-## Two known blockers between the server and the pipeline
+## Current state and known issues
 
-Recorded 3 Oct 2026 so they are not rediscovered. **Both are on the ML side and
-neither is ours to fix** — report them, do not act on them.
+**`docs/PROJECT_STATUS.md` is the source of truth for what is true right now.**
+Read it before answering anything about progress. `docs/BACKEND_STATUS.md`
+explains the design; `docs/API_FOR_FRONTEND.md` is the endpoint reference;
+`docs/tests/` holds measured benchmarks and test reports.
 
-1. **`amount_paise` vs `amount`.** `ml/data/demo/transactions.json` uses
-   `amount_paise`; `server/src/models/transaction.model.ts` requires `amount`.
-   Every transaction is rejected. TRD §6 says rupees, `docs/BACKEND_INTERFACE.md`
-   says paise — needs a decision, not a guess.
-2. **Data directory mismatch.** `ml/config.py` writes to `<repo>/ml/data`, the
-   server reads `<repo>/data`. So `pnpm run seed` finds nothing and silently
-   falls back to `src/fixtures/`.
+As of 3 Oct 2026:
 
-That fallback is what hides blocker 1. If `pnpm run seed` prints
-`from src/fixtures`, the pipeline output is not being read.
+- Server: complete. 15 endpoints, 117 tests, passing against both Atlas and a
+  local MongoDB replica set.
+- ML pipeline: 17 modules, ~7,500 lines, 33 tests passing. The venv is
+  `ml/.venv/` with 38 packages installed from `ml/requirements.txt`.
+- **xgboost needs `brew install libomp`** — a system library, not a pip package.
+  Without it `ml/models.py` imports fine and then fails at `XGBClassifier.fit()`,
+  because the import is guarded by `try/except`.
+- The database is a **local replica set** (`rs0`, `server/.mongorc-local`).
+  Atlas credentials are preserved in `server/.env.atlas-backup`; restore with
+  `cp server/.env.atlas-backup server/.env`.
+- **Do not run `pnpm run seed`.** The ML team pushes directly to the database;
+  seeding would truncate their collections and load fixtures over the top. After
+  a push, run `pnpm run db:indexes` only.
+- Run ML tests from the **repo root**, not `ml/` — they import `from ml.x`.
+- `ml-fallback.test.ts`, `pipeline.test.ts` and `freeze-edge.test.ts` need the ML
+  service **stopped**; they assert the degraded path. The suite seeds
+  `chakravyuh_test` from fixtures while a running service loads the pipeline's
+  `data/demo`, and the two datasets share ring ids but nothing else.
 
-See `docs/BACKEND_STATUS.md` § Not done.
+## Unit conversions must not guess
+
+Fixed 3 Oct 2026 in `ml/run.py` and `ml/service.py`. Both converted paise to
+rupees using a magnitude threshold (`int(v) // 100 if int(v) > N else int(v)`),
+which split a single response across two currencies and broke TRD §7.6 taint
+conservation by up to 257,214.
+
+`trace()` is unconditionally paise, so the unit is known and the conversion must
+be unconditional. Both sites now share one `paise_to_rupees` that also rounds
+rather than truncates. **Never reintroduce a threshold on a unit conversion** —
+assert the unit is known and convert everything.
+
+`ml/tests/test_taint_conservation.py` guards this.
+
+Open issues are listed in `docs/PROJECT_STATUS.md` § Open issues. Most are on the
+ML side — report them, do not act on them.

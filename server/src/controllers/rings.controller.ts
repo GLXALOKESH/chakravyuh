@@ -122,6 +122,12 @@ export const postFreeze = async (req: Request, res: Response): Promise<void> => 
     secured,
     pct_stopped: pctStopped,
     cached: Boolean(payload.cached),
+    // at_risk_before is 0 when no tainted money has reached a cash-out point
+    // yet. That is a real analytical state, not a failure: the freeze optimiser
+    // correctly finds nothing to stop. Returning it as an indistinguishable
+    // `freeze: []` made the frontend's only options be "render an empty panel"
+    // or "render an error", and neither was true. This lets it say why.
+    nothing_at_risk: atRiskBefore === 0,
   });
 };
 

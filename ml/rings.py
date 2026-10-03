@@ -218,7 +218,18 @@ def discover_rings(accounts, transactions, identifiers, scored_df,
                     "account_ids": ring_overlap,
                 })
 
-        # Find victim transactions (external inflow to ring members)
+        # Find victim transactions (external inflow to ring members).
+        #
+        # The prefix match is deliberate and cannot be tightened to
+        # `VICTIM_{ring_id}`: ring_id here is assigned by community discovery
+        # order, not by which planted ring the community came from, so a
+        # discovered RING01 has no relationship to a planted RING01. Matching the
+        # label would leave every ring with zero victims.
+        #
+        # What matters is that the deposit lands on a member of THIS community,
+        # which the `to in comm` clause already guarantees. That is the invariant
+        # ml/tests/test_victim_ring_match.py asserts, rather than the label text,
+        # which is incidental.
         victim_txn_ids = []
         for t in transactions:
             if (t.get("is_fraud") and

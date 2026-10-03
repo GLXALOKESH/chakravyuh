@@ -5,6 +5,14 @@
 One document, both audiences. If you only read one section: frontend starts at
 §1, ML starts at §4.
 
+> **Read `PROJECT_STATUS.md` first for what is true right now.** It is newer than
+> this document on the data-flow question in particular: the ML pipeline now
+> pushes directly to the database via `mongo_pusher.py`, so `pnpm run seed` is
+> **not** part of the normal flow. See §4.
+>
+> Measured numbers live in [`tests/`](tests/) — start with
+> [`tests/02-FULL-STACK-TEST-REPORT.md`](tests/02-FULL-STACK-TEST-REPORT.md).
+
 Everything here is asserted by tests against real data and against mocks, so
 you can trust it without reading the server source.
 
@@ -23,13 +31,13 @@ breaks — you get `"cached": true` and stored default numbers.
 ## 1. Frontend: connecting
 
 ```bash
-cd server && npm start          # http://localhost:4000
+cd server && pnpm start          # http://localhost:4000
 ```
 
 No database, no Python, nothing else installed:
 
 ```bash
-cd server && USE_MOCKS=true npm start
+cd server && USE_MOCKS=true pnpm start
 ```
 
 Mock mode opens no database connection and serves contract-shaped payloads from
@@ -222,6 +230,24 @@ about 25 clock ticks. Transactions arrive in `ts` order — you do not need to s
 
 ## 4. ML: how your data reaches the server
 
+> **Changed 3 Oct 2026.** You now push straight to Atlas with
+> `mongo_pusher.py`. The server reads whatever is in the database, so the
+> JSON-file flow below is the *fallback*, not the normal path.
+>
+> After a push the server only needs:
+>
+> ```bash
+> cd server && pnpm run db:indexes    # a direct push skips index creation
+> ```
+>
+> **Do not run `pnpm run seed` unless you mean it.** It would truncate the
+> collections and load `src/fixtures` over your data. It exists for the case
+> where data arrives as files on the backend machine.
+>
+> Live data as of now: 926 accounts, 8,041 transactions, 3 rings, 3 alerts.
+> `/taint` and `/freeze` return `cached: false`, so Python is answering live.
+> last pushed `2026-10-02T23:47:25`.
+
 You write JSON. The server reads it once at seed time and serves from MongoDB
 after that. **Changing a file does nothing until you re-seed.**
 
@@ -239,7 +265,7 @@ data/demo/
 ```
 
 ```bash
-cd server && npm run seed     # prints what landed, fails loudly on bad data
+cd server && pnpm run seed     # prints what landed, fails loudly on bad data
 ```
 
 Field formats are in `ML_INTEGRATION.md`. What happens to your files afterwards
@@ -391,5 +417,5 @@ Reference fixture numbers, so you can tell whether the data you are looking at
 is the fallback generator or a real pipeline run: 600 accounts, 35 identifiers,
 4,972 transactions, 3 rings, 3 alerts.
 
-If `npm run seed` prints `from src/fixtures`, the pipeline's files were not
+If `pnpm run seed` prints `from src/fixtures`, the pipeline's files were not
 found. Check `SEED_PROFILE` and that `data/<profile>/` exists.

@@ -11,16 +11,20 @@ import { asyncHandler } from '../middlewares/error.middleware.js';
 import {
   EvidenceBodyDto,
   FreezeBodyDto,
+  PipelineRunBodyDto,
   ReplayStartBodyDto,
   ResourceIdDto,
   TaintQueryDto,
+  TransactionPageQueryDto,
 } from '../DTOClasses/index.js';
 import * as rings from '../controllers/rings.controller.js';
 import * as accounts from '../controllers/accounts.controller.js';
 import * as alerts from '../controllers/alerts.controller.js';
 import * as metrics from '../controllers/metrics.controller.js';
 import * as evidence from '../controllers/evidence.controller.js';
+import { listTransactions } from '../controllers/transactions.controller.js';
 import { replayRoutes } from '../controllers/replay.controller.js';
+import { pipelineRoutes } from '../controllers/pipeline.controller.js';
 import type { ReplayEngine } from '../services/replay.service.js';
 
 export const alertsRouter = Router();
@@ -28,6 +32,7 @@ export const ringsRouter = Router();
 export const accountsRouter = Router();
 export const metricsRouter = Router();
 export const evidenceRouter = Router();
+export const transactionsRouter = Router();
 
 /** :id is validated the same way for every ring subroute. */
 const resourceId = validateDto(ResourceIdDto, { from: 'params', target: 'resourceId' });
@@ -56,6 +61,14 @@ accountsRouter.get('/accounts/:id', ringId, asyncHandler(accounts.getAccount));
 
 metricsRouter.get('/metrics', asyncHandler(metrics.getMetrics));
 
+// Paginated ledger. Registered before evidenceRouter only for readability; the
+// paths cannot collide because this one is a static /transactions.
+transactionsRouter.get(
+  '/transactions',
+  validateDto(TransactionPageQueryDto, { from: 'query', target: 'queryDto' }),
+  asyncHandler(listTransactions),
+);
+
 evidenceRouter.post(
   '/rings/:id/evidence',
   ringId,
@@ -70,5 +83,20 @@ export const replayRouter = (engine: ReplayEngine): Router => {
   router.post('/replay/start', validateDto(ReplayStartBodyDto, { from: 'body', target: 'bodyDto' }), asyncHandler(controller.start));
   router.post('/replay/stop', asyncHandler(controller.stop));
   router.get('/replay/state', asyncHandler(controller.state));
+  return router;
+};
+
+/**
+ * TRD section 7.10. Triggers the Python pipeline and reseeds, so one call takes
+ * the data from "files changed on disk" to "serving".
+ */
+export const pipelineRouter = (): Router => {
+  const router = Router();
+  const controller = pipelineRoutes();
+  router.post(
+    '/pipeline/run',
+    validateDto(PipelineRunBodyDto, { from: 'body', target: 'bodyDto' }),
+    asyncHandler(controller.run),
+  );
   return router;
 };

@@ -15,8 +15,10 @@ import {
   alertsRouter,
   evidenceRouter,
   metricsRouter,
+  pipelineRouter,
   replayRouter,
   ringsRouter,
+  transactionsRouter,
 } from './routes/index.js';
 import mocksRouter from './mocks/mocks.routes.js';
 
@@ -29,6 +31,8 @@ const apiRouter = (engine: ReplayEngine) => {
   router.use(metricsRouter);
   router.use(evidenceRouter);
   router.use(replayRouter(engine));
+  router.use(pipelineRouter());
+  router.use(transactionsRouter);
   return router;
 };
 

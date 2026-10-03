@@ -18,7 +18,8 @@
     "seed:fixtures": "SEED_FIXTURES=1 tsx src/bin/seed.ts",
     "test": "vitest run",
     "test:watch": "vitest",
-    "clean": "rm -rf dist .tsbuildinfo"
+    "clean": "rm -rf dist .tsbuildinfo",
+    "loadtest": "tsx src/bin/loadtest.ts"
   },
   "dependencies": {
     "class-transformer": "^0.5.1",

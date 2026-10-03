@@ -46,6 +46,28 @@ export class TaintQueryDto {
   as_of?: string;
 }
 
+/** GET /transactions?page=&limit= */
+export class TransactionPageQueryDto {
+  /** 1-based. Out-of-range values clamp to the last page rather than 404ing. */
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt({ message: 'page must be a positive integer' })
+  @Min(1, { message: 'page must be a positive integer' })
+  page?: number;
+
+  /**
+   * Capped at 500. The pipeline writes several thousand rows and the dashboard
+   * renders a slice, so an unbounded limit is a way to ask the server to
+   * serialise the entire ledger into one response.
+   */
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt({ message: 'limit must be an integer between 1 and 500' })
+  @Min(1, { message: 'limit must be an integer between 1 and 500' })
+  @Max(500, { message: 'limit must be an integer between 1 and 500' })
+  limit?: number;
+}
+
 /** POST /rings/:id/freeze */
 export class FreezeBodyDto {
   /** How many accounts to recommend freezing. TRD section 8 default is 3. */
