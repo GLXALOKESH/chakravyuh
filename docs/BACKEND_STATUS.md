@@ -199,8 +199,8 @@ fields under `details.fields`.
 
 ## Tests
 
-145 checks across 13 files, **all passing with none skipped** in the latest run.
-That is 130 existing checks plus 15 new fund-flow checks; the older 103/117
+171 checks across 15 files, **all passing with none skipped** in the latest run.
+That is 145 existing checks plus 26 logging checks; the older 103/117
 figures describe earlier snapshots.
 
 | File | Checks | Covers |
@@ -218,6 +218,8 @@ figures describe earlier snapshots.
 | `freeze-edge.test.ts` | 3 | Nothing-at-risk and exclusion behavior |
 | `stream.service.test.ts` | 13 | Live streaming, retries, resynchronisation and lifecycle |
 | `fund_flows.test.ts` | 15 | File ingestion, summary/units, reseeding, missing/empty input, indexes and rollback |
+| `logging.test.ts` | 13 | HTTP/ML correlation, lifecycle, fallback, safe metadata and run summaries |
+| `db-logging.test.ts` | 13 | Query outcomes, execute-once semantics, sessions, retries and seed commit boundaries |
 
 With no `MONGO_URL`, `global-setup.ts` starts its own single-node replica set
 in-process, so `pnpm test` needs nothing. With a URL, it uses that, pointed at
@@ -406,7 +408,7 @@ ML side running.
 | `pnpm run typecheck` | Typecheck everything including tests |
 | `pnpm run db:indexes` | Create declared indexes. Run after an ML push |
 | `SEED_FIXTURES=false pnpm run seed demo` | Replace the dataset from `data/demo/`, including optional fund flows |
-| `pnpm test` | 145 checks; starts its own mongod if needed |
+| `pnpm test` | 171 checks; starts its own mongod if needed |
 
 ---
 
