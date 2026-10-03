@@ -10,6 +10,11 @@ frontend already consumes.
 
 Read §1 first. It is the part where the most important disagreement lives.
 
+**Added 3 Oct 2026:** the backend persists the optional
+`outputs/fund_flows.json` artifact through the existing file-based seed. See
+[§3.9](#39-outputsfund_flowsjson--optional-object) for its schema and storage
+rules. Its explicitly named paise fields retain their units.
+
 ---
 
 ## 1. Please read this: the server is on MongoDB, and the field names in the
@@ -61,9 +66,10 @@ That last one is the dangerous one. `channel` is validated by the schema, so a
 single `SALARY_CREDIT` anywhere in `transactions.json` fails the entire load
 rather than skipping one row.
 
-**Amounts are rupees, not paise.** TRD §6 shows `"amount": 48000`. If you
-convert, every figure on the dashboard is 100× wrong and it will look plausible.
-TRD §8 requires amounts as JSON numbers, so the server stores them as-is.
+**The existing account/transaction and public API amounts are rupees.** TRD §6
+shows `"amount": 48000`; the server stores that value as-is. The additional
+fund-flow artifact in §3.9 has explicitly named `*_paise` fields, which are
+stored in integer paise without conversion. These are separate contracts.
 
 ### 1.3 What the draft left out
 
@@ -101,16 +107,25 @@ data/demo/
     ├── rings.json
     ├── alerts.json
     ├── metrics.json
-    └── recruits.json          optional
+    ├── recruits.json          optional
+    └── fund_flows.json        optional; persisted as paths plus a summary
 ```
 
 `SEED_PROFILE` selects the directory; default `demo`. Extra files are ignored,
 and extra fields inside a file are ignored too, so you can carry whatever else
 you need.
 
-If `data/<profile>/` is absent the server falls back to a built-in fixture
-generator (`src/fixtures/generator.ts`) so the demo works before your code
-lands. That fallback is temporary and should be deleted once yours is in place.
+For an intentional file-based import, run from `server/`:
+
+```bash
+SEED_FIXTURES=false pnpm run seed demo
+```
+
+`SEED_FIXTURES=true` selects the built-in fixture generator even when the files
+exist; it does not import the fund-flow artifact. With fixtures disabled, a
+missing profile fails. This command replaces the whole registered dataset in
+one transaction, so use a complete exported profile rather than treating it as
+an import of just `fund_flows.json`.
 
 ---
 
@@ -253,6 +268,79 @@ built from, so they should be a real training run.
 Needed because `GET /api/rings/:id/recruits` is served from the database and
 never calls Python — TRD §3 permits only taint and freeze to do that.
 
+### 3.9 `outputs/fund_flows.json` — optional, object
+
+Implemented in the backend on 3 Oct 2026. This temporal-flow artifact is stored
+for later querying; API exposure is a separate task.
+
+```typescript
+interface FundFlowsArtifact {
+  summary: {
+    total_paths_identified: number;
+    avg_hop_latency_minutes: number;
+    fastest_path_minutes: number | null;
+    truncated: boolean;
+  };
+  paths: {
+    path_id: string;
+    hops: number;
+    start_time: string;             // ISO timestamp
+    end_time: string;               // ISO timestamp
+    duration_minutes: number;
+    initial_amount_paise: number;   // integer paise
+    final_amount_paise: number;     // integer paise
+    amount_decay_pct: number;
+    chain: {
+      step: number;                // integer
+      from_account: string;
+      to_account: string;
+      txn_id: string;
+      timestamp: string;           // ISO timestamp
+      amount_paise: number;        // integer paise
+      latency_from_prev_min: number | null;
+    }[];
+  }[];
+}
+```
+
+The source types live in `server/src/interfaces/fund_flow.interface.ts`.
+
+**MongoDB layout:**
+
+| Collection | Document |
+| --- | --- |
+| `fund_flow_paths` | One path per document, `_id = path_id`. Other path fields retain their names; the ordered `chain` is embedded within its path |
+| `fund_flow_summaries` | One document `{ _id: "main", profile: "demo", summary: { ... } }` for the current seed/profile |
+
+- All ids and account/transaction references are strings. Chain steps and the
+  embedded summary have no generated ObjectIds.
+- `start_time`, `end_time` and chain `timestamp` become MongoDB Dates.
+- All `*_paise` values remain integer paise. The schema validates safe integers
+  for amounts, `hops`, `step` and `total_paths_identified`; other numeric fields
+  must be finite, with null allowed for the two nullable latency fields.
+- **`amount_decay_pct` describes nominal transaction amount differences.** It
+  is preserved, including negative values. It is not actual money loss, taint,
+  or provenance. There are no inferred `ring_id` or role fields.
+- The summary is stored as supplied, including `truncated`. Its reported total
+  is not recomputed from `paths.length`.
+- Both collections participate in the same transaction, truncation and reseed
+  lifecycle as the existing collections. Switching profiles replaces the
+  previous summary rather than accumulating a history.
+
+**Optional-file behavior:** a missing file loads as `null` and both collections
+are empty after a successful reseed. An artifact with `paths: []` still stores
+its supplied summary. Malformed JSON uses the existing filename-prefixed loader
+error; document-validation failures roll back the seed, including earlier path
+batches and writes to existing collections.
+
+**Indexes:** the default unique `_id` index, plus separate ascending indexes on
+`start_time`, `chain.from_account`, `chain.to_account` and `chain.txn_id` for
+paths. Summaries have only the default `_id` index.
+
+Verification: [fund-flow persistence report](tests/04-FUND-FLOW-PERSISTENCE.md).
+The 15 new backend tests passed. The actual demo artifact was absent during
+verification, so its reported 1,000-path population remains unverified.
+
 ---
 
 ## 4. Live Python service
@@ -393,15 +481,19 @@ interface Ring {
 
 ---
 
-## 7. Checking your work without the server
+## 7. Checking your work without the API process
 
 ```bash
-cd server && pnpm run seed
+cd server
+SEED_FIXTURES=false pnpm run seed demo
 ```
 
-Prints what landed and fails loudly on a bad `channel` or a malformed document,
-with the offending field named. Runs in a transaction, so a failed seed leaves
-your previous data intact — re-run it freely.
+Loads the exported profile into the configured MongoDB replica set and fails
+loudly on a bad `channel` or malformed document, with the offending field named.
+A failed transaction preserves the previous dataset. A successful seed replaces
+all registered collections. The CLI's existing count output covers accounts,
+identifiers, transactions, rings and alerts; query the new collections to verify
+fund-flow counts and summary values (see the report linked in §3.9).
 
 ```bash
 cd server && pnpm start
