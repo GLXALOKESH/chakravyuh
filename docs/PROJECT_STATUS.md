@@ -5,8 +5,35 @@
 This supersedes the status sections in `BACKEND_STATUS.md`. Read this first for
 where things stand; read the others for how and why.
 
-Numbers here were read from the running code and the live database, not
-recalled.
+The latest backend verification is the fund-flow update below. Other service,
+live-integration and dataset observations are retained from the earlier snapshot;
+they were not remeasured during that update.
+
+## Latest backend update — fund-flow persistence
+
+**Implemented and regression-tested, 3 Oct 2026.** The file-based seeder now
+reads optional `data/<profile>/outputs/fund_flows.json` and persists:
+
+- `fund_flow_paths`: individual paths keyed by their string `path_id`.
+- `fund_flow_summaries`: one `{ _id: "main", profile, summary }` document.
+
+Both collections use the existing index registry, truncation and transaction.
+Amounts remain integer paise; `amount_decay_pct` remains a nominal transaction
+amount difference. The feature is persistence-only, with API exposure pending.
+
+**Verified:** typecheck clean; **145 tests passed across 13 files, none skipped**
+(130 existing + 15 new). Populated path/summary collections, `truncated`,
+idempotency, missing/empty files and rollback were verified with test artifacts.
+
+**Remaining verification:** `data/demo/outputs/fund_flows.json` was absent from
+this checkout. The real demo profile seeded twice in an isolated temporary
+replica set with identical counts: 926 accounts, 475 identifiers, 8,041
+transactions, 3 rings, 3 alerts and zero fund-flow documents. The actual ML
+artifact's path count and `truncated` value still need verification once the
+file is supplied.
+
+Contract: [ML_INTEGRATION.md §3.9](ML_INTEGRATION.md#39-outputsfund_flowsjson--optional-object).
+Evidence: [fund-flow persistence report](tests/04-FUND-FLOW-PERSISTENCE.md).
 
 **Measured evidence lives in [`tests/`](tests/):**
 
@@ -15,6 +42,7 @@ recalled.
 | [`tests/01-LOCAL-MONGO-SETUP-AND-BENCHMARK.md`](tests/01-LOCAL-MONGO-SETUP-AND-BENCHMARK.md) | 1M transactions in 2.45s, saturation ceilings, Atlas-vs-local matrix |
 | [`tests/02-FULL-STACK-TEST-REPORT.md`](tests/02-FULL-STACK-TEST-REPORT.md) | All three services tested together, venv setup, live Python |
 | [`tests/03-THROUGHPUT-STRATEGY.md`](tests/03-THROUGHPUT-STRATEGY.md) | The 1M-in-30-40s requirement and what each reading costs |
+| [`tests/04-FUND-FLOW-PERSISTENCE.md`](tests/04-FUND-FLOW-PERSISTENCE.md) | Additive fund-flow storage, 145 backend tests, two demo seeds, missing-artifact verification limit |
 
 ---
 
@@ -22,13 +50,14 @@ recalled.
 
 | Service | State | Blocker |
 | --- | --- | --- |
-| Server (`server/`) | **Complete.** 15 endpoints, 117 tests, verified live | none |
+| Server (`server/`) | Fund-flow persistence implemented; **145 tests passing** | Actual demo fund-flow artifact absent; population verification pending |
 | ML pipeline (`ml/`) | **Complete.** 17 modules, 7,521 LOC, 33 tests | none |
 | Frontend (`client/`) | In progress, not ours to assess | — |
 | Integration | **Live.** `/taint` and `/mincut` answered by real Python | none |
 
-Everything runs together. The last untested seam — live Python answering the
-server — is closed and verified.
+The earlier full-stack run verified live Python answering the server. The latest
+fund-flow run verified backend persistence and regressions on isolated replica
+sets; it did not rerun the ML suite or live Python integration.
 
 ---
 
@@ -36,14 +65,16 @@ server — is closed and verified.
 
 ```
 typecheck      clean
-tests          117 checks, 11 files, 0 skipped
-endpoints      15 registered
-models         7 Mongoose schemas
-repositories   9
-live           up on :4000 against local MongoDB 9.0 replica set
+tests          145 checks, 13 files, 0 skipped
+API            stored-data and live-streaming routes; fund flows are persistence-only
+models         10 registered Mongoose models, including seed_meta
+repositories   10
+verification   isolated local MongoDB replica sets
 ```
 
-### Endpoints
+### Stored-data endpoints
+
+The live-streaming routes are documented in [STREAMING.md](STREAMING.md).
 
 ```
 GET  /health                      POST /api/pipeline/run
@@ -56,7 +87,7 @@ GET  /api/rings/:id/recruits      GET  /api/metrics
 GET  /api/rings/:id/geo           POST /api/rings/:id/evidence
 ```
 
-Two added this session, neither in the original TRD §8 table:
+Two previously added endpoints, neither in the original TRD §8 table:
 
 - **`POST /api/pipeline/run`** — triggers the Python pipeline, then reseeds.
   Previously `runPipeline()` existed in `ml.service.ts` with no controller and no
@@ -69,7 +100,7 @@ Two added this session, neither in the original TRD §8 table:
   drop a transaction when several share a timestamp. There is a test asserting
   no overlap across a boundary.
 
-### Verified against a live database
+### Earlier live-database verification
 
 ```
 926 accounts · 9,391 transactions · 3 rings · 3 alerts
@@ -95,6 +126,12 @@ Verified on both Atlas and the local replica set. Throughput figures in
 | `evidence.test.ts` | 7 |
 | `pipeline.test.ts` | 4 |
 | `mongo-url.test.ts` | 5 |
+| `freeze-edge.test.ts` | 3 |
+| `stream.service.test.ts` | 13 |
+| `fund_flows.test.ts` | 15 |
+
+The latest full-suite run used an isolated replica set and an unreachable ML
+URL for the existing fallback checks. See report 04 for the exact command.
 
 Two real bugs were invisible until the database-backed tests could actually run:
 
@@ -179,7 +216,14 @@ TXN000276  amount=16835  channel=ATM  ts=Date object
 
 ## Open issues
 
-Ordered by how much they hurt the demo.
+### Fund-flow demo artifact pending
+
+Persistence is implemented, but the real `data/demo/outputs/fund_flows.json`
+was not available during verification. The demo seeds therefore exercised the
+missing-optional-file path. Populated collections and summary preservation are
+covered by backend tests; verification against the actual ML output is pending.
+
+The earlier demo issues below are retained from the previous snapshot.
 
 ### Fixed 3 Oct 2026 — in the ML code
 
@@ -284,6 +328,11 @@ TRD §6 verbatim, snake_case, no mapping layer.
 | `signals[]` | `{feature, label, weight}`; `label` is human-readable |
 | `default_taint` / `default_freeze` | real payloads, not `{}` — they are what the dashboard shows when Python is down |
 
+The additive fund-flow artifact has its own contract: `path_id` becomes the
+path document's string `_id`, its timestamps become Dates, and `*_paise` values
+remain integer paise. It has no ring/role fields or public API representation.
+See [ML_INTEGRATION.md §3.9](ML_INTEGRATION.md#39-outputsfund_flowsjson--optional-object).
+
 ---
 
 ## Data flow as it actually works
@@ -304,6 +353,12 @@ ml/run.py  →  ml/data/<profile>/*.json  →  mongo_pusher.py  →  MongoDB
 **`pnpm run seed` is not part of this flow.** It exists for the other path, where
 data arrives as files. Running it now would overwrite the ML team's data with
 fixtures.
+
+The new fund-flow ingestion belongs to that **file-based path**. An intentional
+full-profile import uses `SEED_FIXTURES=false pnpm run seed demo` from `server/`.
+It replaces all registered collections in one transaction. The existing direct
+ML push is a separate path; this backend change does not add fund-flow ingestion
+to that pusher.
 
 After a direct push, the only command needed is:
 

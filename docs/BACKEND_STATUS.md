@@ -17,15 +17,18 @@ done. Read `HOW_DATA_FLOWS.md` if you need to know how to feed it;
 
 ## Status
 
-Working and verified against **MongoDB Atlas** (`hackathon.gqtv7yg.mongodb.net`).
+Previously verified against **MongoDB Atlas**. The latest backend verification,
+including fund-flow persistence, used isolated local MongoDB replica sets:
 
 ```
-pnpm typecheck   clean
-pnpm test        117 passed, 0 failed, 0 skipped
+pnpm run typecheck   clean
+pnpm test            145 passed, 13 files, 0 failed, 0 skipped
 ```
 
-Serving the ML team's pushed dataset: 926 accounts, 8,041 transactions, 3 rings,
-3 alerts. All 15 endpoints return correct shapes.
+The demo file profile seeded twice with identical counts: 926 accounts, 8,041
+transactions, 3 rings and 3 alerts. `fund_flows.json` was absent, so actual demo
+fund-flow population remains pending. The 15 fund-flow tests verify populated
+collections, summaries, idempotency and rollback using isolated test artifacts.
 
 Stack: Express 4, TypeScript (strict), Mongoose 9, class-validator, Socket.IO,
 ~6,750 lines across `src/` and `test/`.
@@ -34,7 +37,7 @@ Stack: Express 4, TypeScript (strict), Mongoose 9, class-validator, Socket.IO,
 
 | Area | State |
 | --- | --- |
-| Server (`server/`) | Complete. 15 endpoints, 117 tests, verified live against Atlas |
+| Server (`server/`) | Fund-flow persistence implemented; 145 tests passed. Actual demo fund-flow artifact pending |
 | ML pipeline (`ml/`) | Complete. 17 modules, ~7,500 lines, 33 tests passing |
 | Frontend (`client/`) | In progress — Next.js, graph components landed on `main` |
 
@@ -85,6 +88,29 @@ resurrected by the merge.
 The `amount_paise` naming and the data-directory split date from this merge.
 See §Not done.
 
+### 7. Fund-flow persistence
+
+The optional `data/<profile>/outputs/fund_flows.json` now enters the existing
+file-based seed. Two collections keep it queryable without embedding every path
+in one large document:
+
+- `fund_flow_paths`: one document per path, deterministic string `_id = path_id`.
+- `fund_flow_summaries`: `{ _id: "main", profile, summary }` for the current seed.
+
+The new model, repository and artifact types use the existing backend layering.
+Registration in `ALL_MODELS` provides index creation and truncation; summary and
+batched path writes share the existing seed transaction. A later failure rolls
+back both fund flows and the earlier domain writes.
+
+Amounts stay in integer paise, dates are stored as Dates, and
+`amount_decay_pct` remains the nominal transaction amount difference. The
+implementation adds persistence only; API exposure is a separate task.
+
+See [the contract](ML_INTEGRATION.md#39-outputsfund_flowsjson--optional-object)
+for the schema, indexes and optional-file behavior, and
+[the verification report](tests/04-FUND-FLOW-PERSISTENCE.md) for the changed
+files, 15 new checks and demo seed results.
+
 ---
 
 ## Architecture
@@ -96,6 +122,9 @@ route → validate DTO → controller → repository → mapper → JSON
 Controllers never build queries. Repositories never shape responses. One
 direction of dependency only, which is why swapping the database twice did not
 touch the controllers.
+
+The original layering inventory below predates the live-streaming and fund-flow
+additions. See §7 above and [STREAMING.md](STREAMING.md) for those additions.
 
 | Folder | Files | Role |
 | --- | --- | --- |
@@ -151,7 +180,9 @@ fields under `details.fields`.
 
 ## Tests
 
-103 checks across 8 files, **all of them running every time**. Nothing skips.
+145 checks across 13 files, **all passing with none skipped** in the latest run.
+That is 130 existing checks plus 15 new fund-flow checks; the older 103/117
+figures describe earlier snapshots.
 
 | File | Checks | Covers |
 | --- | --- | --- |
@@ -163,6 +194,11 @@ fields under `details.fields`.
 | `ml-fallback.test.ts` | 11 | Every degraded path when Python is down |
 | `evidence.test.ts` | 7 | PDF validity |
 | `mongo-url.test.ts` | 5 | Connection string normalisation |
+| `transactions.test.ts` | 7 | Paginated ledger and stable page boundaries |
+| `pipeline.test.ts` | 4 | Pipeline-trigger validation and failure behavior |
+| `freeze-edge.test.ts` | 3 | Nothing-at-risk and exclusion behavior |
+| `stream.service.test.ts` | 13 | Live streaming, retries, resynchronisation and lifecycle |
+| `fund_flows.test.ts` | 15 | File ingestion, summary/units, reseeding, missing/empty input, indexes and rollback |
 
 With no `MONGO_URL`, `global-setup.ts` starts its own single-node replica set
 in-process, so `pnpm test` needs nothing. With a URL, it uses that, pointed at
@@ -330,8 +366,10 @@ pnpm run db:indexes        # a direct push skips index creation
 pnpm start
 ```
 
-Do **not** run `pnpm run seed` casually. It exists for the file-based path and
-would overwrite their data with fixtures.
+The default seed selects fixtures. For an intentional import of a complete
+exported profile, including its optional fund-flow artifact, use
+`SEED_FIXTURES=false pnpm run seed demo`. This replaces every registered
+collection; it is not a merge into the ML team's directly pushed dataset.
 
 Frontend work with no database:
 
@@ -348,8 +386,8 @@ ML side running.
 | `pnpm run build` | Compile to `dist/` |
 | `pnpm run typecheck` | Typecheck everything including tests |
 | `pnpm run db:indexes` | Create declared indexes. Run after an ML push |
-| `pnpm run seed` | Load `data/<profile>/`. File-based path only |
-| `pnpm test` | 117 checks; starts its own mongod if needed |
+| `SEED_FIXTURES=false pnpm run seed demo` | Replace the dataset from `data/demo/`, including optional fund flows |
+| `pnpm test` | 145 checks; starts its own mongod if needed |
 
 ---
 
@@ -364,6 +402,11 @@ documents and the resolution is a team decision.
    exist in the implementation but not in the PRD contract table.
 2. **Atlas instead of local MongoDB.** See Deviations above.
 3. **`accounts.role` as a string.** See Decisions above.
+4. **Fund-flow collections added.** The optional temporal-flow artifact is an
+   additive persistence contract beyond TRD §6. Its explicitly named
+   `*_paise` fields stay in paise, while existing account/transaction and public
+   API amounts remain in rupees. It has no public endpoint yet.
 
-Everything the server does follows TRD, which is the newer document. If the team
-prefers the PRD reading, that is a conversation, not a bug.
+TRD is the baseline for the original server contract. The additions above are
+recorded here so the team can track implementation drift without rewriting the
+shared PRD or TRD.

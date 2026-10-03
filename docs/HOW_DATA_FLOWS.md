@@ -9,6 +9,11 @@ file formats. This one explains what happens to your files after you write them.
 > your numbers, why `cached: true` appears, what silently looks wrong, and the
 > replay rules. `PROJECT_STATUS.md` has the current position.
 
+**Fund-flow addition, 3 Oct 2026:** the file-based seed now also consumes
+`data/<profile>/outputs/fund_flows.json`. Its path documents and current-profile
+summary are persisted in MongoDB. The schema and units are documented in
+[ML_INTEGRATION.md §3.9](ML_INTEGRATION.md#39-outputsfund_flowsjson--optional-object).
+
 Read this if you want to know why a seed failed, what "cached" means, or what
 the server does with your numbers.
 
@@ -40,6 +45,11 @@ Two things to take from that:
 
 ## 1. Seeding: `pnpm run seed`
 
+For a deliberate import of an exported profile, run
+`SEED_FIXTURES=false pnpm run seed demo` from `server/`. With
+`SEED_FIXTURES=true`, the existing seeder selects fixtures even if profile files
+exist. Seeding replaces the full registered dataset, not only a newly added file.
+
 ### Order of operations
 
 Indexes are created **before** the write, not after. A fresh database has none,
@@ -51,6 +61,7 @@ Then, inside **one transaction**:
 ```
 truncate  →  rings  →  accounts  →  identifiers  →  transactions
           →  alerts  →  recruits  →  metrics
+          →  fund_flow_summaries  →  fund_flow_paths   (when the artifact exists)
 ```
 
 Rings go first because `accounts.ring_id`, `alerts.ring_id` and
@@ -59,8 +70,28 @@ Rings go first because `accounts.ring_id`, `alerts.ring_id` and
 MongoDB gives no foreign keys, so nothing would stop you writing them in any
 order — this is about making the intent readable, not about a constraint.
 
-Finally `seed_meta` records what was loaded and when, so the dashboard can show
-data freshness.
+Finally `seed_meta` records what was loaded and when, after the transaction
+commits, so the dashboard can show data freshness.
+
+### Fund-flow persistence
+
+`ALL_MODELS` includes `FundFlowPath` and `FundFlowSummary`, so the existing
+`ensureIndexes()` and `truncateAll()` automatically include both collections.
+The repository writes the summary and inserts paths through `insertBatches`,
+using the same transaction session as every earlier write.
+
+- Each path is a document with `_id = path_id` and its own ordered chain.
+- The summary uses `_id: "main"` and records the current profile.
+- Reseeding clears both collections first, making repeated and smaller loads
+  deterministic and preventing stale paths from surviving.
+- A missing optional artifact leaves both collections empty after a successful
+  seed; an empty `paths` array still persists its supplied summary.
+- Money stays in integer paise. `amount_decay_pct` is the supplied nominal
+  transaction amount difference, not a taint or loss calculation.
+
+The existing CLI count output is unchanged; fund-flow counts and the summary
+are checked directly in MongoDB. See
+[the verification report](tests/04-FUND-FLOW-PERSISTENCE.md) for results and queries.
 
 ### Why one transaction matters to you
 
@@ -103,9 +134,10 @@ seeded demo from data/demo into hackathon.gqtv7yg.mongodb.net/chakravyuh
   victim transaction: TXN003975
 ```
 
-If `data/demo/` is missing you get a line saying it fell back to `src/fixtures`.
-That is the temporary built-in generator, not your work — if you see that line,
-your files were not found. Check `SEED_PROFILE`.
+If the output says `src/fixtures`, the fixture generator was selected. Check
+`SEED_FIXTURES` and `SEED_PROFILE`; file-based loading requires fixtures to be
+disabled. With fixtures disabled, a missing profile fails instead of substituting
+data.
 
 ---
 

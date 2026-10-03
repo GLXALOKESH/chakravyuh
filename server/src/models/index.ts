@@ -11,6 +11,7 @@
  */
 import { Account } from './account.model.js';
 import { Alert } from './alert.model.js';
+import { FundFlowPath, FundFlowSummary } from './fund_flow.model.js';
 import { Identifier } from './identifier.model.js';
 import { Metric, SeedMeta } from './metric.model.js';
 import { Recruit } from './recruit.model.js';
@@ -19,6 +20,7 @@ import { Transaction } from './transaction.model.js';
 
 export { Account } from './account.model.js';
 export { Alert } from './alert.model.js';
+export { FundFlowPath, FundFlowSummary, FUND_FLOW_SUMMARY_ID } from './fund_flow.model.js';
 export { Identifier } from './identifier.model.js';
 export { Metric, SeedMeta, METRICS_ID, SEED_META_ID } from './metric.model.js';
 export { Recruit } from './recruit.model.js';
@@ -26,6 +28,7 @@ export { Ring } from './ring.model.js';
 export { Transaction } from './transaction.model.js';
 export type { AccountDoc } from './account.model.js';
 export type { AlertDoc } from './alert.model.js';
+export type { FundFlowPathDoc, FundFlowSummaryDoc } from './fund_flow.model.js';
 export type { IdentifierDoc } from './identifier.model.js';
 export type { MetricDoc, SeedMetaDoc } from './metric.model.js';
 export type { RecruitDoc } from './recruit.model.js';
@@ -40,4 +43,4 @@ export type { TransactionDoc } from './transaction.model.js';
  * MongoDB has no foreign keys to enforce - so the order is a convention, and it
  * is written down here once rather than restated at each call site.
  */
-export const ALL_MODELS = [SeedMeta, Metric, Recruit, Alert, Transaction, Identifier, Account, Ring] as const;
+export const ALL_MODELS = [SeedMeta, FundFlowSummary, FundFlowPath, Metric, Recruit, Alert, Transaction, Identifier, Account, Ring] as const;
