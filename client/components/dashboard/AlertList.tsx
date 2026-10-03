@@ -63,7 +63,13 @@ function AlertCard({ alert }: { alert: Alert }) {
         </div>
         <p className="mt-2 text-base leading-snug text-on-stone-2">{alert.reason}</p>
         <div className="mt-1.5 flex items-center justify-between gap-2 text-base text-on-stone-2">
-          <Countdown alert={alert} />
+          {alert.before_cashout !== undefined ? (
+            <span className={`font-semibold ${alert.before_cashout ? "text-stage" : ""}`}>
+              {alert.before_cashout ? "Caught before any cash left" : "Found after a cash-out"}
+            </span>
+          ) : (
+            <Countdown alert={alert} />
+          )}
           <span className="ml-auto text-stage">
             <ArrowIcon className="size-5 transition-transform duration-200 group-hover:translate-x-0.5" />
             <span className="sr-only">Open ring</span>

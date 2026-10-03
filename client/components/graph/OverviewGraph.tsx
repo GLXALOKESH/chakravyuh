@@ -6,6 +6,7 @@ import { ArrowIcon, FitIcon, MinusIcon, PlayIcon, PlusIcon } from "@/components/
 import { ringHref, ringLabel, ROLES } from "@/lib/constants";
 import { count, inr, pct } from "@/lib/format";
 import { history, play } from "@/lib/replay";
+import { riskOf, startLive } from "@/lib/stream";
 import { socket } from "@/lib/socket";
 import { useDashboard } from "@/lib/store";
 import { FormationGlyph } from "./FormationGlyph";
@@ -25,6 +26,8 @@ export function OverviewGraph() {
   const status = useDashboard((s) => s.status);
   const view = useDashboard((s) => s.view);
   const focusRing = useDashboard((s) => s.focusRing);
+  const mode = useDashboard((s) => s.mode);
+  const liveRate = useDashboard((s) => s.liveRate);
   const setFocusRing = useDashboard((s) => s.setFocusRing);
 
   useEffect(() => {
@@ -45,6 +48,7 @@ export function OverviewGraph() {
     // Catch up with a replay that started before this graph was mounted.
     for (const t of history.txns) s.addTxn(t, true);
     for (const ring of Object.values(useDashboard.getState().rings)) s.addRing(ring, true);
+    s.setRisk([...riskOf.values()]);
 
     const observer = new ResizeObserver(() => s.resize(el.clientWidth, el.clientHeight));
     observer.observe(el);
@@ -62,10 +66,17 @@ export function OverviewGraph() {
       socket.on("txn", (t) => s.addTxn(t)),
       socket.on("replay:reset", () => s.reset()),
       socket.on("replay:end", () => s.fit()),
-      // A ring is drawn when its detail arrives, a moment after its alert.
+      socket.on("stream:end", () => s.fit()),
+      // Live mode: the model's latest risk for each account, as it changes.
+      socket.on("stream:scores", ({ scores }) => s.setRisk(scores)),
+      // A ring is drawn when its detail arrives, a moment after its alert; a
+      // live ring is drawn again when a new version changes its shape.
       useDashboard.subscribe((state) => {
         s.setFocus(state.focusRing);
-        for (const ring of Object.values(state.rings)) if (!s.hasRing(ring.id)) s.addRing(ring);
+        for (const ring of Object.values(state.rings)) {
+          if (!s.hasRing(ring.id)) s.addRing(ring);
+          else if (ring.version !== undefined) s.updateRing(ring);
+        }
       }),
     ];
     return () => {
@@ -252,13 +263,18 @@ export function OverviewGraph() {
               <>
                 <button
                   type="button"
-                  onClick={play}
+                  onClick={mode === "live" ? () => startLive(liveRate) : play}
                   className="grid size-24 place-items-center rounded-full bg-turmeric text-ink shadow-[0_14px_40px_-12px_rgb(0_0_0/0.7)] transition-transform duration-300 ease-out-expo hover:scale-105 active:scale-95"
                 >
                   <PlayIcon className="size-11 translate-x-0.5" />
-                  <span className="sr-only">Start replay</span>
+                  <span className="sr-only">{mode === "live" ? "Start a live run" : "Start replay"}</span>
                 </button>
-                <p className="text-xl font-semibold text-on-stage">Start the replay</p>
+                <p className="text-xl font-semibold text-on-stage">{mode === "live" ? "Start a live run" : "Start the replay"}</p>
+                {mode === "live" && (
+                  <p className="-mt-3 max-w-sm text-base text-on-stage-2">
+                    Synthetic transactions are generated, scored by the model and grouped into rings as they happen. Nothing is known in advance.
+                  </p>
+                )}
               </>
             )}
           </div>

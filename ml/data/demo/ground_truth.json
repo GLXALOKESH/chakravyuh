@@ -14,8 +14,8 @@
       "ACC1008",
       "ACC1009"
     ],
-    "victim_txn_id": "TXN002188",
-    "victim_amount_paise": 100584900,
+    "victim_txn_id": "TXN003556",
+    "victim_amount_paise": 50489900,
     "victim_account_id": "VICTIM_RING01",
     "roles": {
       "ACC1000": "source",
@@ -37,18 +37,16 @@
       "ACC1030",
       "ACC1031",
       "ACC1032",
-      "ACC1033",
-      "ACC1034"
+      "ACC1033"
     ],
-    "victim_txn_id": "TXN003415",
-    "victim_amount_paise": 77167000,
+    "victim_txn_id": "TXN002189",
+    "victim_amount_paise": 63194800,
     "victim_account_id": "VICTIM_RING02",
     "roles": {
       "ACC1030": "source",
       "ACC1031": "relay",
       "ACC1032": "relay",
-      "ACC1033": "relay",
-      "ACC1034": "cashout"
+      "ACC1033": "cashout"
     }
   },
   {
@@ -63,11 +61,10 @@
       "ACC1065",
       "ACC1066",
       "ACC1067",
-      "ACC1068",
-      "ACC1069"
+      "ACC1068"
     ],
-    "victim_txn_id": "TXN002276",
-    "victim_amount_paise": 1732100,
+    "victim_txn_id": "TXN002885",
+    "victim_amount_paise": 1552300,
     "victim_account_id": "VICTIM_RING03",
     "roles": {
       "ACC1060": "coordinator",
@@ -78,8 +75,7 @@
       "ACC1065": "mule",
       "ACC1066": "mule",
       "ACC1067": "mule",
-      "ACC1068": "mule",
-      "ACC1069": "cashout"
+      "ACC1068": "cashout"
     }
   }
 ]

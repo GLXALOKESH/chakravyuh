@@ -21,6 +21,8 @@ yarn-error.log*
 __pycache__/
 *.py[cod]
 .venv/
+# The live predictor trains these on first start (ml/online.py); about 3 s.
+ml/saved_models/online/
 venv/
 env/
 .pytest_cache/

@@ -1,1 +1,304 @@
-[]
+[
+  {
+    "id": "ACC0012",
+    "score": 50,
+    "ring_id": "RING01",
+    "reasons": [
+      "Shares device with ring member ACC1030",
+      "Shares phone number with ring member ACC1031"
+    ],
+    "age_days": 217.2
+  },
+  {
+    "id": "ACC0500",
+    "score": 38,
+    "ring_id": "RING01",
+    "reasons": [
+      "Shares device with ring member ACC1032",
+      "Shares IP address with a ring member"
+    ],
+    "age_days": 235.2
+  },
+  {
+    "id": "ACC0687",
+    "score": 38,
+    "ring_id": "RING01",
+    "reasons": [
+      "Shares device with ring member ACC1033",
+      "Account is 13 days old (recently opened)"
+    ],
+    "age_days": 13.2
+  },
+  {
+    "id": "ACC0315",
+    "score": 61,
+    "ring_id": "RING02",
+    "reasons": [
+      "Shares device with ring member ACC1190",
+      "Shares phone number with ring member ACC1003",
+      "Shares IP address with a ring member"
+    ],
+    "age_days": 68.2
+  },
+  {
+    "id": "ACC0350",
+    "score": 50,
+    "ring_id": "RING02",
+    "reasons": [
+      "Shares device with ring member ACC1009",
+      "Shares phone number with ring member ACC1000"
+    ],
+    "age_days": 135.2
+  },
+  {
+    "id": "ACC1066",
+    "score": 44,
+    "ring_id": "RING02",
+    "reasons": [
+      "Shares phone number with ring member ACC1004",
+      "Shares IP address with a ring member",
+      "Account is 13 days old (recently opened)"
+    ],
+    "age_days": 13.2
+  },
+  {
+    "id": "ACC0005",
+    "score": 38,
+    "ring_id": "RING02",
+    "reasons": [
+      "Shares device with ring member ACC1001",
+      "Shares IP address with a ring member"
+    ],
+    "age_days": 53.2
+  },
+  {
+    "id": "ACC0208",
+    "score": 38,
+    "ring_id": "RING02",
+    "reasons": [
+      "Shares device with ring member ACC1002",
+      "Shares IP address with a ring member"
+    ],
+    "age_days": 326.2
+  },
+  {
+    "id": "ACC0392",
+    "score": 38,
+    "ring_id": "RING02",
+    "reasons": [
+      "Shares device with ring member ACC1003",
+      "Shares IP address with a ring member"
+    ],
+    "age_days": 69.2
+  },
+  {
+    "id": "ACC0746",
+    "score": 38,
+    "ring_id": "RING02",
+    "reasons": [
+      "Shares device with ring member ACC1004",
+      "Shares IP address with a ring member"
+    ],
+    "age_days": 328.2
+  },
+  {
+    "id": "ACC0038",
+    "score": 33,
+    "ring_id": "RING02",
+    "reasons": [
+      "Shares phone number with ring member ACC1002",
+      "Shares IP address with a ring member"
+    ],
+    "age_days": 364.2
+  },
+  {
+    "id": "ACC0283",
+    "score": 33,
+    "ring_id": "RING02",
+    "reasons": [
+      "Shares phone number with ring member ACC1004",
+      "Shares IP address with a ring member"
+    ],
+    "age_days": 358.2
+  },
+  {
+    "id": "ACC0376",
+    "score": 33,
+    "ring_id": "RING02",
+    "reasons": [
+      "Shares phone number with ring member ACC1000",
+      "Shares IP address with a ring member"
+    ],
+    "age_days": 38.2
+  },
+  {
+    "id": "ACC0427",
+    "score": 33,
+    "ring_id": "RING02",
+    "reasons": [
+      "Shares phone number with ring member ACC1002",
+      "Shares IP address with a ring member"
+    ],
+    "age_days": 122.2
+  },
+  {
+    "id": "ACC0465",
+    "score": 33,
+    "ring_id": "RING02",
+    "reasons": [
+      "Shares phone number with ring member ACC1003",
+      "Shares IP address with a ring member"
+    ],
+    "age_days": 352.2
+  },
+  {
+    "id": "ACC0702",
+    "score": 33,
+    "ring_id": "RING02",
+    "reasons": [
+      "Shares phone number with ring member ACC1005",
+      "Shares IP address with a ring member"
+    ],
+    "age_days": 294.2
+  },
+  {
+    "id": "ACC0399",
+    "score": 50,
+    "ring_id": "RING03",
+    "reasons": [
+      "Shares device with ring member ACC1062",
+      "Shares phone number with ring member ACC1064"
+    ],
+    "age_days": 68.2
+  },
+  {
+    "id": "ACC0668",
+    "score": 50,
+    "ring_id": "RING03",
+    "reasons": [
+      "Shares device with ring member ACC1062",
+      "Shares phone number with ring member ACC1060"
+    ],
+    "age_days": 327.2
+  },
+  {
+    "id": "ACC0031",
+    "score": 38,
+    "ring_id": "RING03",
+    "reasons": [
+      "Shares device with ring member ACC1068",
+      "Shares IP address with a ring member"
+    ],
+    "age_days": 284.2
+  },
+  {
+    "id": "ACC0238",
+    "score": 38,
+    "ring_id": "RING03",
+    "reasons": [
+      "Shares device with ring member ACC1066",
+      "Shares IP address with a ring member"
+    ],
+    "age_days": 87.2
+  },
+  {
+    "id": "ACC0478",
+    "score": 38,
+    "ring_id": "RING03",
+    "reasons": [
+      "Shares device with ring member ACC1061",
+      "Shares IP address with a ring member"
+    ],
+    "age_days": 323.2
+  },
+  {
+    "id": "ACC0503",
+    "score": 38,
+    "ring_id": "RING03",
+    "reasons": [
+      "Shares device with ring member ACC0098",
+      "Shares IP address with a ring member"
+    ],
+    "age_days": 45.2
+  },
+  {
+    "id": "ACC0056",
+    "score": 33,
+    "ring_id": "RING03",
+    "reasons": [
+      "Shares phone number with ring member ACC1062",
+      "Shares IP address with a ring member"
+    ],
+    "age_days": 256.2
+  },
+  {
+    "id": "ACC0083",
+    "score": 33,
+    "ring_id": "RING03",
+    "reasons": [
+      "Shares phone number with ring member ACC1065",
+      "Shares IP address with a ring member"
+    ],
+    "age_days": 193.2
+  },
+  {
+    "id": "ACC0190",
+    "score": 33,
+    "ring_id": "RING03",
+    "reasons": [
+      "Shares phone number with ring member ACC1067",
+      "Shares IP address with a ring member"
+    ],
+    "age_days": 253.2
+  },
+  {
+    "id": "ACC0655",
+    "score": 33,
+    "ring_id": "RING03",
+    "reasons": [
+      "Shares phone number with ring member ACC1065",
+      "Shares IP address with a ring member"
+    ],
+    "age_days": 76.2
+  },
+  {
+    "id": "ACC0733",
+    "score": 33,
+    "ring_id": "RING03",
+    "reasons": [
+      "Shares phone number with ring member ACC1060",
+      "Shares IP address with a ring member"
+    ],
+    "age_days": 145.2
+  },
+  {
+    "id": "ACC0818",
+    "score": 33,
+    "ring_id": "RING03",
+    "reasons": [
+      "Shares phone number with ring member ACC1066",
+      "Shares IP address with a ring member"
+    ],
+    "age_days": 238.2
+  },
+  {
+    "id": "ACC0871",
+    "score": 33,
+    "ring_id": "RING03",
+    "reasons": [
+      "Shares phone number with ring member ACC1064",
+      "Shares IP address with a ring member"
+    ],
+    "age_days": 320.2
+  },
+  {
+    "id": "ACC1005",
+    "score": 33,
+    "ring_id": "RING03",
+    "reasons": [
+      "Shares phone number with ring member ACC1061",
+      "Shares IP address with a ring member"
+    ],
+    "age_days": 15.2
+  }
+]

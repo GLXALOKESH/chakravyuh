@@ -8,11 +8,15 @@ import 'reflect-metadata';
 import { Server as SocketServer } from 'socket.io';
 import { config, hasDatabase } from '../configs/env.js';
 import { connect, describeDatabase, disconnect } from '../configs/mongoose.js';
-import { createApp } from '../app.js';
+import { createApp, isStreamOnly } from '../app.js';
+import { STREAM_EVENTS } from '../constants/index.js';
 import { ReplayEngine, REPLAY_EVENTS } from '../services/replay.service.js';
+import { StreamService } from '../services/stream.service.js';
 
-const app = createApp();
-const server = http.createServer(app);
+// The app is attached once it exists, below: the engines it is built with
+// emit through the Socket.IO server, which needs the HTTP server first.
+const server = http.createServer();
+
 
 const io = new SocketServer(server, {
   // The dashboard runs on a different port in development (Vite, 5173).
@@ -20,15 +24,48 @@ const io = new SocketServer(server, {
 });
 
 // One engine instance shared by the REST and socket layers, so a presenter can
-// start replay with either.
+// start replay with either. It is handed to createApp for that reason: the
+// REST routes used to get an engine of their own, which never loaded a script.
 const engine = new ReplayEngine({
   emit: (event, payload) => {
     io.emit(event, payload);
   },
 });
 
+// Live mode (docs/STREAMING.md). One mode at a time: starting a live run
+// stops the replay, and starting the replay stops a live run.
+const stream = new StreamService({
+  emit: (event, payload) => {
+    io.emit(event, payload);
+  },
+  onStart: () => {
+    engine.stop();
+  },
+});
+const replayStart = engine.start.bind(engine);
+engine.start = (options) => {
+  stream.stop('replay started');
+  return replayStart(options);
+};
+
+const app = createApp({ engine, stream });
+server.on('request', app);
+
 io.on('connection', (socket) => {
   socket.emit(REPLAY_EVENTS.STATE, engine.state());
+  socket.emit(STREAM_EVENTS.STATE, stream.state());
+  // A dashboard that opens mid-run draws everything so far from one message.
+  if (stream.store.runId) socket.emit(STREAM_EVENTS.SNAPSHOT, stream.snapshot());
+
+  socket.on(STREAM_EVENTS.START, (payload: { seed?: number; rate?: number } | undefined) => {
+    const rate = Number.isInteger(payload?.rate) && payload!.rate! >= 1 && payload!.rate! <= 3600 ? payload!.rate : undefined;
+    const seed = Number.isInteger(payload?.seed) && payload!.seed! >= 0 ? payload!.seed : undefined;
+    socket.emit(STREAM_EVENTS.STATE, { ...stream.state(), ...stream.start({ seed, rate }) });
+  });
+
+  socket.on(STREAM_EVENTS.STOP, () => {
+    stream.stop();
+  });
 
   // TRD section 8 socket table: replay:start { speed } and replay:stop.
   socket.on(REPLAY_EVENTS.START, (payload: { speed?: number } | undefined) => {
@@ -52,6 +89,8 @@ const main = async (): Promise<void> => {
   let script = { transactions: 0, alerts: 0 };
   if (config.useMocks) {
     console.log('mock mode: no database connection will be opened');
+  } else if (isStreamOnly()) {
+    console.log('STREAM_ONLY: no database; live mode only, replay and the stored-data routes are off');
   } else if (!hasDatabase()) {
     // Fail here with the actionable message rather than as a driver stack trace
     // from three frames down.
@@ -80,8 +119,11 @@ const main = async (): Promise<void> => {
     console.log(
       config.useMocks
         ? '  replay     mocked'
-        : `  replay     ${script.transactions} transactions, ${script.alerts} alerts ready`,
+        : isStreamOnly()
+          ? '  replay     off (STREAM_ONLY)'
+          : `  replay     ${script.transactions} transactions, ${script.alerts} alerts ready`,
     );
+    console.log(`  live       ${config.stream.pythonBin} ${config.stream.generatorScript}`);
   });
 };
 
@@ -94,6 +136,7 @@ const describeHost = (): string => {
 const shutdown = async (signal: string): Promise<void> => {
   console.log(`\n${signal} received, closing`);
   engine.stop();
+  stream.stop('server shutting down');
   io.close();
   server.close();
   await disconnect().catch(() => {});

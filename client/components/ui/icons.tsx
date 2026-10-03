@@ -21,6 +21,12 @@ export const PauseIcon = (p: SVGProps<SVGSVGElement>) => (
   </Icon>
 );
 
+export const StopIcon = (p: SVGProps<SVGSVGElement>) => (
+  <Icon {...p}>
+    <rect x="5" y="5" width="14" height="14" rx="1.5" />
+  </Icon>
+);
+
 export const RestartIcon = (p: SVGProps<SVGSVGElement>) => (
   <Icon fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...p}>
     <path d="M4 12a8 8 0 1 0 2.6-5.9" />

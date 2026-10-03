@@ -11,6 +11,11 @@
 // accounts leave the crowd and line up in a panel of their own as a flow
 // diagram, victim on the left and cash on the right, which opens at the edge
 // of the graph and pushes the other accounts out of its way.
+//
+// In live mode a ring is found while it is still forming, and grows: when it
+// gains an account or a new route for the money, its panel is drawn again in
+// place. Ordinary accounts also take on the live model's opinion of them: the
+// higher their risk, the hotter and larger they are drawn (setRisk).
 
 import gsap from "gsap";
 import * as THREE from "three";
@@ -101,7 +106,17 @@ interface RingVis {
   links: THREE.Line<THREE.BufferGeometry, THREE.LineDashedMaterial>[];
   materials: THREE.Material[];
   state: { dim: number };
+  version: number;
+  /** Members and money routes, to tell a change that needs a new panel from one that does not. */
+  shape: string;
 }
+
+/** What a ring's panel is drawn from: its accounts and the routes between them. */
+const shapeOf = (detail: RingDetail) =>
+  [
+    detail.nodes.filter((n) => n.type === "account" || n.type === "victim").map((n) => n.id).sort().join(","),
+    detail.edges.filter((e) => e.kind === "txn").map((e) => `${e.source}>${e.target}`).sort().join(","),
+  ].join("|");
 
 function flatMaterial(color: string, opacity: number) {
   const m = new THREE.MeshBasicMaterial({
@@ -123,7 +138,7 @@ export class FormationScene {
   private rings = new Map<string, RingVis>();
   private nodeRing = new Map<string, RingVis>();
   /** Rings whose alert has arrived but whose accounts the layout has not placed yet. */
-  private waiting: { detail: RingDetail; instant: boolean }[] = [];
+  private waiting: { detail: RingDetail; instant: boolean; at?: { x: number; y: number } }[] = [];
   private tweens = new Set<gsap.core.Tween>();
   private frame = 0;
   private lastTime = 0;
@@ -150,6 +165,10 @@ export class FormationScene {
   private crowdIds: string[] = [];
   private crowdPos = new Float32Array(MAX_NODES * 3);
   private crowdHeat = new Float32Array(MAX_NODES);
+  /** The live model's risk for each account, 0 to 1 (setRisk). */
+  private crowdRisk = new Float32Array(MAX_NODES);
+  /** Risk for accounts not on the graph yet. */
+  private pendingRisk = new Map<string, number>();
   private crowdSize = new Float32Array(MAX_NODES);
   private crowdDegree = new Uint16Array(MAX_NODES);
   /** 1 for an account that has left the crowd to stand in a formation. */
@@ -206,6 +225,7 @@ export class FormationScene {
     const crowdGeometry = new THREE.BufferGeometry();
     crowdGeometry.setAttribute("position", new THREE.BufferAttribute(this.crowdPos, 3));
     crowdGeometry.setAttribute("aHeat", new THREE.BufferAttribute(this.crowdHeat, 1));
+    crowdGeometry.setAttribute("aRisk", new THREE.BufferAttribute(this.crowdRisk, 1));
     crowdGeometry.setAttribute("aSize", new THREE.BufferAttribute(this.crowdSize, 1));
     crowdGeometry.setDrawRange(0, 0);
     this.crowd = new THREE.Points(
@@ -220,31 +240,39 @@ export class FormationScene {
           uDim: { value: 1 },
           uColor: { value: new THREE.Color(COLORS.crowd) },
           uHot: { value: new THREE.Color(COLORS.crowdHot) },
+          uRisk: { value: new THREE.Color(COLORS.risk) },
         },
         vertexShader: `
           attribute float aHeat;
           attribute float aSize;
+          attribute float aRisk;
           uniform float uScale;
           uniform float uMin;
           uniform float uMax;
           varying float vHeat;
           varying float vShow;
+          varying float vRisk;
           void main() {
             vHeat = aHeat;
             vShow = step(0.001, aSize);
+            // Below 0.3 an account is drawn as ordinary; from there it warms to full at 0.9.
+            vRisk = smoothstep(0.3, 0.9, aRisk);
             gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-            gl_PointSize = clamp(aSize * uScale, uMin, uMax * (0.6 + 0.4 * aSize)) * (1.0 + aHeat * 0.9) * vShow;
+            gl_PointSize = clamp(aSize * uScale, uMin, uMax * (0.6 + 0.4 * aSize)) * (1.0 + aHeat * 0.9) * (1.0 + vRisk * 0.8) * vShow;
           }`,
         fragmentShader: `
           uniform vec3 uColor;
           uniform vec3 uHot;
+          uniform vec3 uRisk;
           uniform float uDim;
           varying float vHeat;
           varying float vShow;
+          varying float vRisk;
           void main() {
             float d = length(gl_PointCoord - 0.5);
             float disc = smoothstep(0.5, 0.38, d);
-            gl_FragColor = vec4(mix(uColor, uHot, vHeat), disc * uDim * vShow * (0.82 + 0.18 * vHeat));
+            vec3 base = mix(uColor, uRisk, vRisk);
+            gl_FragColor = vec4(mix(base, uHot, vHeat), disc * uDim * vShow * (0.82 + 0.18 * max(vHeat, vRisk)));
           }`,
       }),
     );
@@ -414,6 +442,79 @@ export class FormationScene {
     return this.rings.has(id) || this.waiting.some((w) => w.detail.id === id);
   }
 
+  /**
+   * A live ring has a new version. A new account or a new route for the money
+   * redraws its panel where it stands; anything else (a role settling, more
+   * money on a known route) is shown without redrawing.
+   */
+  updateRing(detail: RingDetail) {
+    const ring = this.rings.get(detail.id);
+    if (!ring) {
+      const queued = this.waiting.find((w) => w.detail.id === detail.id);
+      if (queued) queued.detail = detail;
+      else this.addRing(detail);
+      return;
+    }
+    if (detail.version === undefined || detail.version === ring.version) return;
+    ring.version = detail.version;
+    if (shapeOf(detail) === ring.shape) {
+      for (const n of detail.nodes) {
+        const vis = ring.nodes.get(n.id);
+        if (!vis || n.type !== "account" || !n.role || vis.role === n.role) continue;
+        vis.role = n.role;
+        vis.mesh.material.color.set(ROLES[n.role].color);
+        vis.mesh.geometry = n.role === "member" ? this.hollow : this.circle;
+      }
+      return;
+    }
+    const keep = new Set(detail.nodes.filter((n) => n.type === "account" || n.type === "victim").map((n) => n.id));
+    this.removeRing(ring, keep);
+    for (const n of detail.nodes) {
+      if (n.type === "account" || n.type === "victim") this.node(n.id, true);
+    }
+    this.waiting.push({ detail, instant: false, at: { x: ring.site.x, y: ring.site.y } });
+  }
+
+  /** Takes a ring's panel down. Its accounts in `keep` stay off the crowd, as they are about to be placed again. */
+  private removeRing(ring: RingVis, keep: Set<string>) {
+    this.world.remove(ring.group);
+    ring.group.traverse((o) => {
+      const mesh = o as THREE.Mesh;
+      if (mesh.geometry && mesh.geometry !== this.circle && mesh.geometry !== this.diamond && mesh.geometry !== this.triangle && mesh.geometry !== this.hollow && mesh.geometry !== this.plane) {
+        mesh.geometry.dispose();
+      }
+    });
+    this.rings.delete(ring.id);
+    const released: number[] = [];
+    const members = new Set<number>();
+    for (const id of ring.nodes.keys()) {
+      const i = this.crowdIndex.get(id);
+      if (i === undefined) continue;
+      members.add(i);
+      this.nodeRing.delete(id);
+      released.push(i);
+      if (!keep.has(id)) {
+        this.crowdGone[i] = 0;
+        this.crowdSize[i] = POINT_RADIUS * 2 * Math.sqrt(1 + 0.3 * Math.max(0, this.crowdDegree[i] - 1));
+      }
+    }
+    for (let l = 0; l < this.linkCount; l++) {
+      if (members.has(this.linkEnds[l * 2]) && members.has(this.linkEnds[l * 2 + 1])) this.linkGone[l] = 0;
+    }
+    this.crowd.geometry.attributes.aSize.needsUpdate = true;
+    this.post({ type: "unring", site: ring.site, pins: released });
+  }
+
+  /** The live model's latest risk per account, 0 to 1. */
+  setRisk(updates: { id: string; risk_v2: number }[]) {
+    for (const u of updates) {
+      const i = this.crowdIndex.get(u.id);
+      if (i === undefined) this.pendingRisk.set(u.id, u.risk_v2);
+      else this.crowdRisk[i] = u.risk_v2;
+    }
+    this.crowd.geometry.attributes.aRisk.needsUpdate = true;
+  }
+
   setFocus(ringId: string | null) {
     if (this.focus === ringId) return;
     this.focus = ringId;
@@ -437,6 +538,9 @@ export class FormationScene {
     this.crowdIndex.clear();
     this.crowdIds = [];
     this.crowdHeat.fill(0);
+    this.crowdRisk.fill(0);
+    this.pendingRisk.clear();
+    this.crowd.geometry.attributes.aRisk.needsUpdate = true;
     this.crowdDegree.fill(0);
     this.crowdGone.fill(0);
     this.placed = 0;
@@ -464,9 +568,13 @@ export class FormationScene {
    * of any panel already there, wherever leaves the whole graph largest on the
    * stage. Opening it in the middle would crush the ordinary accounts.
    */
+  /** Half the width and height of a formation's panel, in world units. */
+  private sizeFor(formation: Formation) {
+    return { hw: (formation.width * RING_SCALE_X) / 2 + PANEL_PAD, hh: (formation.height * RING_SCALE_Y) / 2 + PANEL_PAD };
+  }
+
   private siteFor(formation: Formation): Site {
-    const hw = (formation.width * RING_SCALE_X) / 2 + PANEL_PAD;
-    const hh = (formation.height * RING_SCALE_Y) / 2 + PANEL_PAD;
+    const { hw, hh } = this.sizeFor(formation);
 
     // How far the crowd reaches from the middle (the layout pulls it toward the origin).
     let reach = 0;
@@ -535,10 +643,12 @@ export class FormationScene {
     return path;
   }
 
-  private formRing(detail: RingDetail, instant: boolean) {
+  private formRing(detail: RingDetail, instant: boolean, at?: { x: number; y: number }) {
     const quick = instant || this.reducedMotion;
+    // Drawn again because a live ring grew: no fade-in and no trip to it, just the change.
+    const again = !!at;
     const formation = buildFormation(detail);
-    const site = this.siteFor(formation);
+    const site = at ? { ...this.sizeFor(formation), x: at.x, y: at.y } : this.siteFor(formation);
     const group = new THREE.Group();
     group.position.set(site.x, site.y, 0);
     const ring: RingVis = {
@@ -551,6 +661,8 @@ export class FormationScene {
       links: [],
       materials: [],
       state: { dim: this.focus && this.focus !== detail.id ? 0.16 : 1 },
+      version: detail.version ?? 0,
+      shape: shapeOf(detail),
     };
 
     // The panel: a darker ground with a turmeric outline.
@@ -562,8 +674,8 @@ export class FormationScene {
     border.renderOrder = 3;
     group.add(ground, border);
     ring.materials.push(ground.material, border.material);
-    this.fade(ground.material, 0.82, quick ? 0 : 0.7);
-    this.fade(border.material, 0.9, quick ? 0 : 0.7, quick ? 0 : 0.5);
+    this.fade(ground.material, 0.82, quick || again ? 0 : 0.7);
+    this.fade(border.material, 0.9, quick || again ? 0 : 0.7, quick || again ? 0 : 0.5);
 
     // Each account leaves the crowd and walks to its place, taking its role colour.
     const pins: number[] = [];
@@ -573,7 +685,7 @@ export class FormationScene {
       const r = n.type === "account" ? 8 + n.risk * 4 : 10;
       const color = n.type === "account" && n.role ? ROLES[n.role].color : n.type === "cash" ? COLORS.turmeric : COLORS.stone;
       const shape = n.type !== "account" ? this.diamond : n.role === "member" ? this.hollow : this.circle;
-      const mesh = new THREE.Mesh(shape, flatMaterial(quick ? color : COLORS.crowd, 1));
+      const mesh = new THREE.Mesh(shape, flatMaterial(quick || again ? color : COLORS.crowd, 1));
       if (n.type === "cash") mesh.rotation.z = Math.PI / 4;
       mesh.renderOrder = 6;
       group.add(mesh);
@@ -609,7 +721,7 @@ export class FormationScene {
       this.track(gsap.to(mesh.position, { x: p.x, y: p.y, duration: 0.9, ease: "power3.inOut" }));
       this.track(gsap.to(mesh.scale, { x: r, y: r, duration: 0.9, ease: "power3.inOut" }));
       this.track(
-        gsap.to(mesh.material.color, { r: target.r, g: target.g, b: target.b, duration: 0.5, delay: 0.9 + order * 0.05 }),
+        gsap.to(mesh.material.color, { r: target.r, g: target.g, b: target.b, duration: again ? 0 : 0.5, delay: again ? 0 : 0.9 + order * 0.05 }),
       );
     });
     this.crowd.geometry.attributes.aSize.needsUpdate = true;
@@ -693,7 +805,7 @@ export class FormationScene {
 
     // Go to the ring that was just caught, then pull back out to the whole
     // graph, unless the person is steering.
-    if (!instant && performance.now() - this.lastHandled > 4000) {
+    if (!instant && !again && performance.now() - this.lastHandled > 4000) {
       this.flyTo(detail.id);
       const flownAt = performance.now();
       this.track(
@@ -855,6 +967,12 @@ export class FormationScene {
       this.crowdIndex.set(account, i);
       this.crowdIds.push(account);
       this.crowdSize[i] = POINT_RADIUS * 2;
+      const risk = this.pendingRisk.get(account);
+      if (risk !== undefined) {
+        this.crowdRisk[i] = risk;
+        this.pendingRisk.delete(account);
+        this.crowd.geometry.attributes.aRisk.needsUpdate = true;
+      }
     }
     if (!quiet && !this.crowdGone[i]) this.crowdHeat[i] = 1;
     return i;
@@ -884,7 +1002,7 @@ export class FormationScene {
         );
       const now = this.waiting.filter(ready);
       this.waiting = this.waiting.filter((w) => !ready(w));
-      for (const w of now) this.formRing(w.detail, w.instant);
+      for (const w of now) this.formRing(w.detail, w.instant, w.at);
     }
 
     for (const ring of this.rings.values()) {

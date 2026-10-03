@@ -61,8 +61,10 @@ export function FreezeTab({
       <div className="border-r border-stone-lo p-5">
         {!result ? (
           <p className="text-on-stone-2">Working out the freeze set…</p>
-        ) : result.at_risk_before <= 0 ? (
-          <p>No tainted money can still reach cash at this point, so there is nothing to freeze.</p>
+        ) : result.nothing_at_risk || result.at_risk_before <= 0 ? (
+          <p className="text-lg leading-snug">
+            No tainted funds have reached a cash-out point yet, so there is nothing at risk to freeze.
+          </p>
         ) : (
           <div className={`transition-opacity ${busy ? "opacity-50" : ""}`} aria-live="polite">
             <p className="fig text-[3.25rem] leading-none text-stage">{pct(result.pct_stopped)}</p>

@@ -29,7 +29,8 @@ let recruits = [];
 try {
   recruits = read("recruits.json");
 } catch {
-  // The recruitment model is optional.
+  // The recruitment model is optional. It writes a 0-100 `score`; the API's
+  // `probability` is 0 to 1.
 }
 
 const demo = {
@@ -62,7 +63,7 @@ const demo = {
     victim_txn_ids: r.victim_txn_ids,
   })),
   recruits: Object.fromEntries(
-    rings.map((r) => [r._id, recruits.filter((x) => x.ring_id === r._id).map((x) => ({ id: x.account_id ?? x.id, probability: x.probability, reasons: x.reasons ?? [] }))]),
+    rings.map((r) => [r._id, recruits.filter((x) => x.ring_id === r._id).map((x) => ({ id: x.account_id ?? x.id, probability: x.probability ?? (x.score ?? 0) / 100, reasons: x.reasons ?? [] }))]),
   ),
   identifiers: identifiers.map((i) => ({ id: i._id, type: i.type, account_ids: i.account_ids })),
   accounts: accounts.map((a) => ({

@@ -20,6 +20,27 @@ export function SyntheticBadge() {
   );
 }
 
+/** Where the data is coming from, so a presenter knows before pressing play. */
+function SourceChip() {
+  const source = useDashboard((s) => s.source);
+  const connected = useDashboard((s) => s.connected);
+  if (!source) return null;
+  const lost = source === "live" && connected === false;
+  const label = source === "mock" ? "Built-in demo" : lost ? "Server disconnected" : "Live server";
+  const title =
+    source === "mock"
+      ? "The server did not answer, so the dashboard is running on the demo data built into the page."
+      : lost
+        ? "The replay socket lost the server. It reconnects by itself."
+        : "Data and replay come from the Express server.";
+  return (
+    <span title={title} className="inline-flex h-8 items-center gap-2 rounded-full bg-ink-hi px-3 text-sm font-semibold text-on-ink-2 ring-1 ring-ink-line">
+      <span aria-hidden="true" className={`size-2 rounded-full ${lost ? "bg-stage-line" : source === "live" ? "bg-turmeric" : "bg-on-ink-2"}`} />
+      {label}
+    </span>
+  );
+}
+
 /** `compact` drops the Latin name on a phone, where the nav has no room for both scripts. */
 export function Wordmark({ compact = false }: { compact?: boolean }) {
   return (
@@ -42,6 +63,7 @@ export function TopBar() {
       <div className="flex items-center gap-5">
         <Wordmark />
         <SyntheticBadge />
+        <SourceChip />
       </div>
       <div className="flex items-center gap-2.5">
         <P2Chip tone="ink" />

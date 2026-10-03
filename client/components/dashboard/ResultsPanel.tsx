@@ -55,7 +55,7 @@ function Results() {
       ) : (
         <>
           {/* Kept against the heading so the figures never show without what they were measured on. */}
-          <p className="mt-1 leading-snug text-on-stone-2">{metrics.note}.</p>
+          <p className="mt-1 leading-snug text-on-stone-2">{metrics.note.replace(/\.?$/, ".")}</p>
           <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-0.5 text-on-stone-2">
             {metrics.rows.map((row, i) => (
               <li key={row.model} className="flex items-center gap-2">
@@ -111,11 +111,56 @@ function Results() {
   );
 }
 
+/**
+ * Live mode: the model against the rings the generator planted. Only the
+ * server knows which those are; it scores the predictor and sends the sums.
+ */
+function LiveResults() {
+  const metrics = useDashboard((s) => s.liveMetrics);
+  const live = useDashboard((s) => s.live);
+  const rows: [string, string, boolean?][] = metrics
+    ? [
+        ["Rings planted so far", count(metrics.planted)],
+        ["Found by the model", count(metrics.caught), true],
+        ["Missed", count(metrics.missed)],
+        ["Found but not planted", count(metrics.false_rings)],
+        ["Median time to alert", metrics.median_minutes_to_alert === null ? "—" : `${count(metrics.median_minutes_to_alert)} min`],
+        ["Caught before any cash left", `${count(metrics.caught_before_cashout)} of ${count(metrics.caught)}`, true],
+        ["Accounts flagged, in a planted ring", `${count(metrics.flagged_in_rings)} of ${count(metrics.flagged_accounts)}`],
+      ]
+    : [];
+  return (
+    <section aria-labelledby="live-results-heading" className="flex min-h-0 flex-1 flex-col px-5 pb-3 pt-4">
+      <h2 id="live-results-heading" className="text-xl font-bold">
+        Model against the planted rings
+      </h2>
+      <p className="mt-1 leading-snug text-on-stone-2">
+        {metrics
+          ? "Scored as the run plays, against rings the generator planted. The model never sees which they are."
+          : live?.running
+            ? "Waiting for the first ring to be planted."
+            : "Start a live run to see how the model does on data it has never seen."}
+      </p>
+      {metrics && (
+        <dl className="mt-2 divide-y divide-stone-lo">
+          {rows.map(([label, value, strong]) => (
+            <div key={label} className="flex items-baseline justify-between gap-3 py-1">
+              <dt className="text-on-stone-2">{label}</dt>
+              <dd className={`fig text-xl ${strong ? "text-stage" : ""}`}>{value}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+    </section>
+  );
+}
+
 export function ResultsPanel() {
+  const mode = useDashboard((s) => s.mode);
   return (
     <>
       <LiveCounts />
-      <Results />
+      {mode === "live" ? <LiveResults /> : <Results />}
     </>
   );
 }

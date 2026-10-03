@@ -11,8 +11,11 @@
  */
 import { Transform, Type } from 'class-transformer';
 import {
+  ArrayMaxSize,
   IsArray,
+  IsBoolean,
   IsIn,
+  IsObject,
   IsInt,
   IsISO8601,
   IsOptional,
@@ -131,6 +134,42 @@ export class ReplayStartBodyDto {
   @IsInt({ message: 'speed must be a positive integer' })
   @Min(1)
   speed?: number;
+}
+
+/** POST /stream/start: a new live run (docs/STREAMING.md). */
+export class StreamStartBodyDto {
+  /** Leave out for a fresh random run; give one to repeat a run exactly. */
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt({ message: 'seed must be a non-negative integer' })
+  @Min(0)
+  @Max(4_294_967_295)
+  seed?: number;
+
+  /** Simulated seconds per real second. */
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt({ message: 'rate must be an integer between 1 and 3600' })
+  @Min(1)
+  @Max(3600)
+  rate?: number;
+
+  /** No generator is started; events arrive on POST /stream/ingest. */
+  @IsOptional()
+  @IsBoolean()
+  external?: boolean;
+}
+
+/**
+ * POST /stream/ingest: generator lines from a generator the server did not
+ * start. Each line is checked field by field as it is taken in, so the DTO
+ * only bounds the batch.
+ */
+export class StreamIngestBodyDto {
+  @IsArray()
+  @ArrayMaxSize(20_000)
+  @IsObject({ each: true })
+  events!: Record<string, unknown>[];
 }
 
 /** POST /pipeline/run, the manual pipeline trigger. */
