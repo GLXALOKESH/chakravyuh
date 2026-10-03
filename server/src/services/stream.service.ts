@@ -227,6 +227,31 @@ export class StreamService {
     return { ok: true };
   }
 
+  /**
+   * Throws the run away: stops it if it is going, then empties everything it
+   * left behind, so a dashboard that reloads finds nothing to restore. The
+   * predictor is left alone; the next run resets it.
+   */
+  clear(): { ok: true } {
+    if (this.running || this.draining) this.stop('cleared');
+    this.store.reset(null);
+    this.queue = [];
+    this.outbox = [];
+    this.cursor = 0;
+    this.seq = 0;
+    this.pending = null;
+    this.predictorReady = false;
+    this.predictorStatus = 'idle';
+    this.lastError = null;
+    this.tookMs = null;
+    this.predictorStats = {};
+    this.ended = null;
+    this.lastClockSent = null;
+    this.generatorStatus = 'idle';
+    this.emitState(true);
+    return { ok: true };
+  }
+
   /** The generator is done: deliver what the predictor has not seen yet, then end. */
   private finish(reason: string): void {
     this.killGenerator();

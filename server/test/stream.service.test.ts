@@ -318,6 +318,23 @@ describe('stream service', () => {
     expect(first.ok).toBe(true);
   });
 
+  it('clears a run, running or not, so nothing is left to restore', async () => {
+    const t = setup();
+    t.service.start({});
+    t.send(...opening(), txn('T2', 'ACC0001', 'ACC0002', 100, 2));
+    await t.service.pump();
+    t.service.clear();
+    expect(t.killed()).toBe(1);
+    expect(t.of(STREAM_EVENTS.END).at(-1)).toMatchObject({ reason: 'cleared' });
+    const state = t.service.state();
+    expect(state).toMatchObject({ mode: 'idle', running: false, run_id: null, ended: null });
+    expect(state.counts).toEqual({ txns: 0, accounts: 0, scored: 0, high_risk: 0, rings: 0, alerts: 0 });
+    expect(t.service.store.txns).toHaveLength(0);
+    expect(t.service.store.accounts.size).toBe(0);
+    // Clearing again, with nothing there, is harmless.
+    expect(t.service.clear()).toEqual({ ok: true });
+  });
+
   it('scores the predictor against the planted rings', async () => {
     const t = setup(
       fakePredictor([

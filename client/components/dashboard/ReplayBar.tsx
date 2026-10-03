@@ -4,7 +4,7 @@ import { PauseIcon, PlayIcon, RestartIcon, StopIcon } from "@/components/ui/icon
 import { SPEEDS } from "@/lib/constants";
 import { clockDate, clockTime, count, shortDate, shortTime } from "@/lib/format";
 import { pause, play, restart, setSpeed } from "@/lib/replay";
-import { LIVE_RATES, setMode, startLive, stopLive } from "@/lib/stream";
+import { clearLive, LIVE_RATES, setMode, startLive, stopLive } from "@/lib/stream";
 import { useDashboard } from "@/lib/store";
 import { TickStrip } from "./TickStrip";
 
@@ -142,6 +142,16 @@ function LiveControls() {
       >
         {running ? <StopIcon className="size-5" /> : <PlayIcon className="size-6 translate-x-px" />}
         <span className="sr-only">{running ? "Stop the live run" : "Start a live run with a new random seed"}</span>
+      </button>
+      <button
+        type="button"
+        disabled={!ready || !state?.run_id}
+        onClick={clearLive}
+        title="Stop the run and clear everything it found"
+        className="grid size-10 shrink-0 place-items-center rounded-full text-on-ink-2 ring-1 ring-ink-line transition-colors hover:text-on-ink disabled:opacity-40"
+      >
+        <RestartIcon className="size-5" />
+        <span className="sr-only">Reset: stop the run and clear its data</span>
       </button>
 
       <div

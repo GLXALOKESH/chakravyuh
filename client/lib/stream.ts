@@ -85,7 +85,16 @@ function setScores(scores: ScoreUpdate[]) {
   for (const s of scores) riskOf.set(s.id, s);
 }
 
+/** Back to an empty dashboard: the run was cleared on the server. */
+function emptyRun() {
+  currentRun = null;
+  riskOf.clear();
+  socket.dispatch("replay:reset", undefined);
+  useDashboard.setState({ status: "idle", window: null, clock: null, liveMetrics: null, liveNotice: null });
+}
+
 function applyState(state: StreamState) {
+  if (!state.run_id && currentRun && useDashboard.getState().mode === "live") emptyRun();
   if (state.run_id && state.run_id !== currentRun && (state.running || useDashboard.getState().mode === "live")) beginRun(state);
   const { mode } = useDashboard.getState();
   const patch: Partial<ReturnType<typeof useDashboard.getState>> = { live: state };
@@ -153,6 +162,12 @@ export function startLive(rate: number, seed?: number) {
 
 export function stopLive() {
   socket.emit("stream:stop");
+}
+
+/** Stops the run if it is going and throws its data away, here and on the server. */
+export function clearLive() {
+  socket.emit("stream:clear");
+  emptyRun();
 }
 
 /** Switches what the dashboard plays. Whatever was playing stops and the views start clean. */

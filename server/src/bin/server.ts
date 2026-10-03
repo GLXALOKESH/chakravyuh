@@ -44,7 +44,9 @@ const stream = new StreamService({
 });
 const replayStart = engine.start.bind(engine);
 engine.start = (options) => {
-  stream.stop('replay started');
+  // Only a replay that can actually play ends a live run: with no stored
+  // data (STREAM_ONLY) the start below fails, and the live run carries on.
+  if (engine.state().queued > 0) stream.stop('replay started');
   return replayStart(options);
 };
 
@@ -65,6 +67,10 @@ io.on('connection', (socket) => {
 
   socket.on(STREAM_EVENTS.STOP, () => {
     stream.stop();
+  });
+
+  socket.on(STREAM_EVENTS.CLEAR, () => {
+    stream.clear();
   });
 
   // TRD section 8 socket table: replay:start { speed } and replay:stop.

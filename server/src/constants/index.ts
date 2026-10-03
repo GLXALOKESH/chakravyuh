@@ -58,6 +58,8 @@ export type ReplayEventName = (typeof REPLAY_EVENTS)[keyof typeof REPLAY_EVENTS]
 export const STREAM_EVENTS = {
   START: 'stream:start',
   STOP: 'stream:stop',
+  /** Stop the run if it is going and throw its data away. */
+  CLEAR: 'stream:clear',
   STATE: 'stream:state',
   SNAPSHOT: 'stream:snapshot',
   TXNS: 'stream:txns',
