@@ -57,19 +57,56 @@ Atlas holds `amount`. The document predates that fix.
 
 ## Running the stack
 
+One command starts everything with prefixed, interleaved logs:
+
 ```bash
-# local MongoDB (replica set is required for the seeder's transaction)
-brew tap mongodb/brew && brew trust mongodb/brew
-brew install mongodb-community@9.0
-cd server && nohup mongod --config .mongorc-local &
-mongosh --eval 'rs.initiate({_id:"rs0",members:[{_id:0,host:"127.0.0.1:27017"}]})'
-
-# ML
-ml/.venv/bin/python ml/service.py          # :8000
-
-# server
-cd server && pnpm install && pnpm run db:indexes && pnpm start    # :4000
+./dev.sh
 ```
+
+```
+[mongo]  replica set already initialised
+[ml]     Uvicorn running on http://0.0.0.0:8000
+[api]    chakravyuh api on http://localhost:4000
+         database   mongodb 127.0.0.1:27017/chakravyuh
+         replay     8041 transactions, 3 alerts ready
+
+── ready ──
+  ● API          http://localhost:4000
+  ● ML service   http://localhost:8000
+  ● MongoDB      http://localhost:27017
+```
+
+| Flag | Does |
+| --- | --- |
+| `./dev.sh` | mongod + ML service + API |
+| `./dev.sh --no-ml` | API only — use when testing the cached fallback |
+| `./dev.sh --seed` | Reseed first |
+| `./dev.sh --stop` | Stop whatever it started |
+
+Ctrl-C stops everything. Without that, orphaned mongod processes keep port 27017
+and the next run reports a conflict that looks like a different problem.
+
+Verify the ML service is answering rather than serving a stored default:
+
+```bash
+curl localhost:4000/api/rings/RING01/taint | grep cached
+```
+
+`"cached": false` means live Python. `true` means fallback.
+
+### One-time setup
+
+```bash
+brew tap mongodb/brew && brew trust mongodb/brew
+brew install mongodb-community@9.0        # replica set required, see below
+brew install libomp                       # xgboost's native dep
+python3 -m venv ml/.venv
+ml/.venv/bin/pip install -r ml/requirements.txt
+cd server && pnpm install
+```
+
+A **replica set is mandatory** — the seeder wraps its load in a transaction and
+MongoDB only permits transactions on one. `dev.sh` initiates `rs0` on first run.
 
 **Do not run `pnpm run seed`.** The ML team pushes directly to the database;
 seeding would truncate their collections and load fixtures over the top.
