@@ -317,7 +317,8 @@ The source types live in `server/src/interfaces/fund_flow.interface.ts`.
 - `start_time`, `end_time` and chain `timestamp` become MongoDB Dates.
 - All `*_paise` values remain integer paise. The schema validates safe integers
   for amounts, `hops`, `step` and `total_paths_identified`; other numeric fields
-  must be finite, with null allowed for the two nullable latency fields.
+  must be finite, with null allowed for `fastest_path_minutes` and
+  `latency_from_prev_min`.
 - **`amount_decay_pct` describes nominal transaction amount differences.** It
   is preserved, including negative values. It is not actual money loss, taint,
   or provenance. There are no inferred `ring_id` or role fields.

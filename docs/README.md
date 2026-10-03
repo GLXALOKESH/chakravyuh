@@ -6,7 +6,7 @@ Contracts, status and design for the three services. **Start with
 ## Current state
 
 ```
-server/   Member 1  Express + TypeScript + Mongoose 9    complete, 117 tests
+server/   Member 1  Express + TypeScript + Mongoose 9    145 tests passing
 ml/       Member 3  Python pipeline, 17 modules          complete, 33 tests
 client/   Member 2  Next.js dashboard                    in progress
 docs/     this folder
@@ -15,7 +15,16 @@ docs/     this folder
 The three work together against a local MongoDB 9.0 replica set or MongoDB Atlas.
 `ml/service.py` answers `/taint` and `/mincut` live — responses carry
 `"cached": false`, meaning Python is computing rather than serving a stored
-default. Everything else is served from the database.
+default. Stored-data views are served from the database; [STREAMING.md](STREAMING.md)
+describes the separate in-memory live mode.
+
+**Latest backend addition:** optional `outputs/fund_flows.json` is now persisted
+as individual `fund_flow_paths` documents and a current-profile
+`fund_flow_summaries` document, within the existing seed transaction. See the
+[artifact contract](ML_INTEGRATION.md#39-outputsfund_flowsjson--optional-object)
+and [verification report](tests/04-FUND-FLOW-PERSISTENCE.md). Its 15 new tests
+passed; population from the real demo artifact is pending because that file was
+absent from the checkout.
 
 ## Read this first
 
@@ -34,6 +43,7 @@ default. Everything else is served from the database.
 | **[ML_PIPELINE_FLOW.md](ML_PIPELINE_FLOW.md)** | Member 3 | The Python pipeline step by step |
 | **[HOW_DATA_FLOWS.md](HOW_DATA_FLOWS.md)** | Member 3 | What the server does after the seed |
 | **[QUESTIONS_FOR_ML.md](QUESTIONS_FOR_ML.md)** | Member 3 | Open questions, with what was already answered |
+| **[STREAMING.md](STREAMING.md)** | everyone | Generator, predictor and dashboard contracts for live mode |
 
 ## Design and decisions
 
@@ -108,7 +118,10 @@ cd server && pnpm install
 A **replica set is mandatory** — the seeder wraps its load in a transaction and
 MongoDB only permits transactions on one. `dev.sh` initiates `rs0` on first run.
 
-**Do not run `pnpm run seed`.** The ML team pushes directly to the database;
-seeding would truncate their collections and load fixtures over the top.
+The ML team's direct-push workflow needs only index creation on the server.
+The default seed selects fixtures and replaces registered collections. For an
+intentional import of a complete exported profile, including optional fund flows,
+use `SEED_FIXTURES=false pnpm run seed demo` from `server/`. This is a full
+dataset replacement, not a single-artifact merge.
 
 Frontend without a database: `USE_MOCKS=true pnpm start` — identical shapes.
