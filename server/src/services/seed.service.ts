@@ -15,6 +15,7 @@
  *   data/<profile>/outputs/alerts.json
  *   data/<profile>/outputs/metrics.json
  *   data/<profile>/outputs/recruits.json
+ *   data/<profile>/outputs/fund_flows.json        optional
  *
  * If data/<profile>/ is missing and SEED_FIXTURES is on, the dev fixture
  * generator supplies a contract-shaped dataset instead. See its header.
@@ -25,6 +26,7 @@ import { config } from '../configs/env.js';
 import { ensureIndexes, withTransaction } from '../configs/mongoose.js';
 import * as accounts from '../repositories/accounts.repository.js';
 import * as alerts from '../repositories/alerts.repository.js';
+import * as fundFlows from '../repositories/fund_flows.repository.js';
 import * as identifiers from '../repositories/identifiers.repository.js';
 import * as metrics from '../repositories/metrics.repository.js';
 import * as recruits from '../repositories/recruits.repository.js';
@@ -42,6 +44,7 @@ import type {
   FixtureTransaction,
 } from '../fixtures/types.js';
 import type { GroundTruth } from '../interfaces/domain.interface.js';
+import type { FundFlowsArtifact } from '../interfaces/fund_flow.interface.js';
 import type { TransactionWrite } from '../interfaces/repository.interface.js';
 
 export interface ProfileData {
@@ -54,6 +57,7 @@ export interface ProfileData {
   alerts: FixtureAlert[];
   metrics: FixtureMetrics | null;
   recruits: FixtureRecruitEntry[];
+  fund_flows: FundFlowsArtifact | null;
 }
 
 export interface SeedResult {
@@ -90,7 +94,7 @@ export const loadProfile = async (profile: string): Promise<ProfileData | null> 
     return null;
   }
 
-  const [accountsFile, identifiersFile, transactionsFile, groundTruth, ringsFile, alertsFile, metricsFile, recruitsFile] =
+  const [accountsFile, identifiersFile, transactionsFile, groundTruth, ringsFile, alertsFile, metricsFile, recruitsFile, fundFlowsFile] =
     await Promise.all([
       readJson(path.join(dir, 'accounts.json')),
       readJson(path.join(dir, 'identifiers.json')),
@@ -100,6 +104,7 @@ export const loadProfile = async (profile: string): Promise<ProfileData | null> 
       readJson(path.join(outputs, 'alerts.json')),
       readJson(path.join(outputs, 'metrics.json')),
       readJson(path.join(outputs, 'recruits.json')),
+      readJson(path.join(outputs, 'fund_flows.json')),
     ]);
 
   if (!accountsFile && !transactionsFile) return null;
@@ -126,6 +131,7 @@ export const loadProfile = async (profile: string): Promise<ProfileData | null> 
     alerts: asArray<Record<string, unknown>>(alertsFile).map((r) => normalise(r) as unknown as FixtureAlert),
     metrics: metricDoc ? { rows: asArray(metricDoc.rows), note: metricDoc.note ?? metrics.DEFAULT_NOTE } : null,
     recruits: asArray<Record<string, unknown>>(recruitsFile).map((r) => r as unknown as FixtureRecruitEntry),
+    fund_flows: (fundFlowsFile as FundFlowsArtifact | null) ?? null,
   };
 };
 
@@ -147,7 +153,7 @@ export const seed = async (profile: string = config.seedProfile, options: SeedOp
       );
     }
     const built = buildFixtures({ seed: FIXTURE_SEED });
-    data = { source: 'src/fixtures', ...built };
+    data = { source: 'src/fixtures', ...built, fund_flows: null };
     source = 'src/fixtures (dev generator)';
   }
 
@@ -168,6 +174,10 @@ export const seed = async (profile: string = config.seedProfile, options: SeedOp
     await alerts.insertMany(data!.alerts, tx);
     await recruits.insertMany(data!.recruits, tx);
     if (data!.metrics) await metrics.set({ rows: data!.metrics.rows, note: data!.metrics.note }, tx);
+    if (data!.fund_flows) {
+      await fundFlows.setSummary(profile, data!.fund_flows.summary, tx);
+      await fundFlows.insertMany(data!.fund_flows.paths, tx);
+    }
   });
 
   const counts: Record<string, number> = {
