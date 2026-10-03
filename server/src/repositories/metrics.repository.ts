@@ -1,5 +1,6 @@
 /** The single metrics document (TRD section 6, "metrics (single document)"). */
 import { Metric, METRICS_ID } from '../models/metric.model.js';
+import { logQuery } from '../utilities/db-log.util.js';
 import { asArray } from '../utilities/serialize.util.js';
 import type { Writer } from '../interfaces/repository.interface.js';
 import type { MetricRow, Metrics } from '../interfaces/domain.interface.js';
@@ -13,7 +14,7 @@ export { METRICS_ID };
 export const DEFAULT_NOTE = 'Synthetic data, rings planted by the team';
 
 export const get = async (): Promise<Metrics> => {
-  const row = await Metric.findById(METRICS_ID).lean().exec();
+  const row = await logQuery(Metric.findById(METRICS_ID).lean());
   return {
     rows: asArray<MetricRow>(row?.rows, []),
     note: row?.note ?? DEFAULT_NOTE,
@@ -28,9 +29,9 @@ export const get = async (): Promise<Metrics> => {
  * no second query, just the one write.
  */
 export const set = async (value: { rows: MetricRow[]; note?: string | null }, tx?: Writer): Promise<void> => {
-  await Metric.findOneAndUpdate(
+  await logQuery(Metric.findOneAndUpdate(
     { _id: METRICS_ID },
     { $set: { rows: value.rows ?? [], note: value.note ?? DEFAULT_NOTE } },
     { upsert: true, returnDocument: 'after', session: tx },
-  ).exec();
+  ));
 };

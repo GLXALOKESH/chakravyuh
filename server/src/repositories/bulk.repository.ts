@@ -9,6 +9,9 @@ import type { ClientSession } from 'mongoose';
 import { chunk } from '../utilities/serialize.util.js';
 import { INSERT_BATCH_SIZE } from '../constants/index.js';
 import type { Writer } from '../interfaces/repository.interface.js';
+import { validateDbWrite, withDbLog } from '../utilities/db-log.util.js';
+import { logEvent } from '../services/logger.service.js';
+import { config } from '../configs/env.js';
 
 /** MongoDB's duplicate-key error, which the write path treats as a no-op. */
 const DUPLICATE_KEY = 11000;
@@ -29,6 +32,7 @@ const isDuplicateKey = (err: unknown): boolean => {
  * that loosens, and it only widens what is accepted, never what is returned.
  */
 interface BulkTarget {
+  collection: { collectionName: string };
   /** Validates a plain object against the schema, throwing on the first problem. */
   validate(doc: unknown): Promise<unknown>;
   insertMany(docs: unknown[], options: { session?: ClientSession; ordered: boolean }): Promise<unknown>;
@@ -57,17 +61,46 @@ interface BulkTarget {
 export const insertBatches = async (Model: BulkTarget, docs: unknown[], tx?: Writer): Promise<void> => {
   if (!docs.length) return;
 
-  for (const batch of chunk(docs, INSERT_BATCH_SIZE)) {
-    if (!batch.length) continue;
+  const collection = Model.collection.collectionName;
+  let attempted = 0;
+  let inserted = 0;
+  let completed = 0;
+  let unknown = 0;
+  let lastSummary = performance.now();
+  const summary = (): void => {
+    if (config.logging.dbEnabled) logEvent('info', 'db.batch.summary', {
+      collection, operation: 'insertMany', batches_completed: completed,
+      attempted_count: attempted, counts: { known_inserted: inserted, batches_with_unknown_count: unknown },
+      commit_state: tx?.inTransaction() ? 'pending' : 'not_in_transaction', direction: 'internal',
+    });
+    lastSummary = performance.now();
+  };
 
-    for (const doc of batch) await Model.validate(doc);
+  try {
+    for (const batch of chunk(docs, INSERT_BATCH_SIZE)) {
+      if (!batch.length) continue;
 
-    try {
-      // ordered: false lets the server take the whole batch even when one key
-      // repeats, instead of stopping at the first one.
-      await Model.insertMany(batch, { session: tx, ordered: false });
-    } catch (err) {
-      if (!isDuplicateKey(err)) throw err;
+      await validateDbWrite(collection, async () => {
+        for (const doc of batch) await Model.validate(doc);
+      });
+
+      attempted += batch.length;
+      try {
+        // ordered: false lets the server take the whole batch even when one key
+        // repeats, instead of stopping at the first one.
+        const result = await withDbLog({ collection, operation: 'insertMany', attempted_count: batch.length, batch: completed + 1 },
+          () => Model.insertMany(batch, { session: tx, ordered: false }));
+        if (Array.isArray(result)) inserted += result.length;
+        else unknown += 1;
+      } catch (err) {
+        unknown += 1;
+        if (!isDuplicateKey(err)) throw err;
+        if (config.logging.dbEnabled) logEvent('warn', 'db.duplicate_skipped', { collection, error_code: DUPLICATE_KEY, attempted_count: batch.length, direction: 'internal' });
+      }
+      completed += 1;
+      if (performance.now() - lastSummary >= config.logging.streamIntervalMs) summary();
     }
+  } finally {
+    summary();
   }
 };

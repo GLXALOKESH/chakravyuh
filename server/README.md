@@ -81,6 +81,11 @@ Copy `.env.example` to `.env`. Every value has a working default except
 | `SEED_FIXTURES` | `true` | Allow the dev fixtures when `data/` is missing. |
 | `REPLAY_DEFAULT_SPEED` | `60` | Replay seconds per real second. |
 | `REPLAY_TICK_MS` | `250` | Clock cadence, per TRD section 9. |
+| `LOG_LEVEL` | `info` (`silent` in tests) | `debug`, `info`, `warn`, `error`, `silent`. |
+| `LOG_FORMAT` | `json` | `.env.example` uses `pretty` locally; requires pino-pretty. |
+| `LOG_DB_ENABLED` | `true` | Observe repository reads/writes and DB lifecycle. |
+| `LOG_DB_SLOW_MS` | `200` | Application-side slow-operation threshold. |
+| `LOG_STREAM_INTERVAL_MS` | `1000` | Minimum interval for activity summaries, driven by existing ticks. |
 
 `.env.example` ships a placeholder connection string. Anything containing
 `placeholder`, `changeme` or `YOUR_` is reported as "no database", which is what
@@ -97,6 +102,24 @@ MONGO_URL="mongodb+srv://USER:PASSWORD@cluster0.abcde.mongodb.net/chakravyuh?ret
 ```
 
 ## Commands
+
+### Real-time activity logs
+
+```bash
+LOG_LEVEL=info LOG_FORMAT=pretty LOG_DB_ENABLED=true pnpm run dev
+```
+
+Follow `request_id` across HTTP → MongoDB → Python → response. Background
+replay/predictor work uses `run_id`. `LOG_LEVEL=debug` includes health/state
+polling and individual seed operations; `LOG_FORMAT=json` provides structured
+stdout for tools. The log includes timings, result counts, failure categories,
+cached fallbacks and seed commit outcomes.
+
+Configuration and event reference:
+[`docs/REALTIME_BACKEND_LOGGING_PLAN.md`](../docs/REALTIME_BACKEND_LOGGING_PLAN.md).
+Verification: [`docs/tests/05-BACKEND-LOGGING.md`](../docs/tests/05-BACKEND-LOGGING.md).
+
+### Scripts
 
 | Command | Does |
 | --- | --- |

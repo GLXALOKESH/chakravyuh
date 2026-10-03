@@ -159,8 +159,7 @@ export const liveRouter = (stream: StreamService): Router => {
       const query = dto<TaintQueryDto>(req, 'queryDto');
       const ring = requireRing(id);
       const request = { ring_id: id, victim_txn_id: query.txn ?? ring.victim_txn_ids[0] ?? null, as_of: query.as_of ?? null, run_id: store.runId ?? undefined };
-      const { payload, cached, error } = await ml.taint(request, store.taintCache.get(id) ?? null);
-      if (error) console.warn(`GET /live/rings/${id}/taint served from cache: ${error}`);
+      const { payload, cached } = await ml.taint(request, store.taintCache.get(id) ?? null);
       if (!cached) store.taintCache.set(id, payload);
       res.json({
         victim_amount: payload.victim_amount ?? 0,
@@ -190,8 +189,7 @@ export const liveRouter = (stream: StreamService): Router => {
         exclude,
         run_id: store.runId ?? undefined,
       };
-      const { payload, cached, error } = await ml.freeze(request, store.freezeCache.get(id) ?? null);
-      if (error) console.warn(`POST /live/rings/${id}/freeze served from cache: ${error}`);
+      const { payload, cached } = await ml.freeze(request, store.freezeCache.get(id) ?? null);
       if (!cached && exclude.length === 0) store.freezeCache.set(id, payload);
       const freeze = (payload.freeze ?? []).filter((a) => !exclude.includes(a)).slice(0, k);
       let atRisk = payload.at_risk_before ?? 0;

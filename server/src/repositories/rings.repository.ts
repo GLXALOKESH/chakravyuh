@@ -7,18 +7,19 @@
  * truth: when Python answers, the live response wins.
  */
 import { Ring } from '../models/index.js';
+import { logQuery } from '../utilities/db-log.util.js';
 import { toRing, type RingRow } from '../mappers/row.mapper.js';
 import { insertBatches } from './bulk.repository.js';
 import type { RingWrite, Writer } from '../interfaces/repository.interface.js';
 import type { Ring as RingDomain, RingSummary } from '../interfaces/domain.interface.js';
 
 export const getById = async (id: string): Promise<RingDomain | null> => {
-  const row = await Ring.findById(id).lean().exec();
+  const row = await logQuery(Ring.findById(id).lean());
   return row ? toRing(row as unknown as RingRow) : null;
 };
 
 export const list = async (): Promise<RingDomain[]> => {
-  const rows = await Ring.find().sort({ _id: 1 }).lean().exec();
+  const rows = await logQuery(Ring.find().sort({ _id: 1 }).lean());
   return (rows as unknown as RingRow[]).map(toRing);
 };
 
@@ -29,11 +30,10 @@ export const list = async (): Promise<RingDomain[]> => {
  * just its length.
  */
 export const listSummaries = async (): Promise<RingSummary[]> => {
-  const rows = await Ring.find()
+  const rows = await logQuery(Ring.find()
     .select('_id risk volume member_ids')
     .sort({ _id: 1 })
-    .lean()
-    .exec();
+    .lean());
   return (rows as { _id: string; risk: number | null; volume: number | null; member_ids: string[] }[]).map((r) => ({
     id: r._id,
     risk: r.risk ?? 0,
@@ -42,7 +42,7 @@ export const listSummaries = async (): Promise<RingSummary[]> => {
   }));
 };
 
-export const count = async (): Promise<number> => Ring.countDocuments({}).exec();
+export const count = async (): Promise<number> => logQuery(Ring.countDocuments({}));
 
 export const insertMany = async (rows: RingWrite[], tx?: Writer): Promise<void> => {
   await insertBatches(

@@ -5,11 +5,32 @@
 This supersedes the status sections in `BACKEND_STATUS.md`. Read this first for
 where things stand; read the others for how and why.
 
-The latest backend verification is the fund-flow update below. Other service,
+The latest backend verification is the logging update below. Other service,
 live-integration and dataset observations are retained from the earlier snapshot;
 they were not remeasured during that update.
 
-## Latest backend update — fund-flow persistence
+## Latest backend update — real-time activity logging
+
+**Implemented and regression-tested, 3 Oct 2026.** Pino logs now correlate HTTP
+requests, MongoDB operations/results, Python calls and cached fallbacks. Seed
+attempts, commit outcomes, connection transitions, Socket.IO commands, and
+replay/live-run summaries are visible in the server terminal.
+
+**Verified:** typecheck clean; **171 tests passed across 15 files, none skipped**
+(145 existing + 26 logging checks). JSON output and local pretty output were
+checked; load-test measurements and limitations are in
+[report 05](tests/05-BACKEND-LOGGING.md).
+
+Run from `server/`:
+
+```bash
+LOG_LEVEL=info LOG_FORMAT=pretty LOG_DB_ENABLED=true pnpm run dev
+```
+
+Configuration, event fields and correlation:
+[logging implementation guide](REALTIME_BACKEND_LOGGING_PLAN.md).
+
+## Previous backend update — fund-flow persistence
 
 **Implemented and regression-tested, 3 Oct 2026.** The file-based seeder now
 reads optional `data/<profile>/outputs/fund_flows.json` and persists:
@@ -43,6 +64,7 @@ Evidence: [fund-flow persistence report](tests/04-FUND-FLOW-PERSISTENCE.md).
 | [`tests/02-FULL-STACK-TEST-REPORT.md`](tests/02-FULL-STACK-TEST-REPORT.md) | All three services tested together, venv setup, live Python |
 | [`tests/03-THROUGHPUT-STRATEGY.md`](tests/03-THROUGHPUT-STRATEGY.md) | The 1M-in-30-40s requirement and what each reading costs |
 | [`tests/04-FUND-FLOW-PERSISTENCE.md`](tests/04-FUND-FLOW-PERSISTENCE.md) | Additive fund-flow storage, 145 backend tests, two demo seeds, missing-artifact verification limit |
+| [`tests/05-BACKEND-LOGGING.md`](tests/05-BACKEND-LOGGING.md) | Correlated HTTP/DB/ML/run logs, 171 backend tests, JSON/pretty checks and silent-vs-info load comparison |
 
 ---
 
@@ -50,14 +72,14 @@ Evidence: [fund-flow persistence report](tests/04-FUND-FLOW-PERSISTENCE.md).
 
 | Service | State | Blocker |
 | --- | --- | --- |
-| Server (`server/`) | Fund-flow persistence implemented; **145 tests passing** | Actual demo fund-flow artifact absent; population verification pending |
+| Server (`server/`) | Fund-flow persistence and activity logging implemented; **171 tests passing** | Actual demo fund-flow artifact absent; population verification pending |
 | ML pipeline (`ml/`) | **Complete.** 17 modules, 7,521 LOC, 33 tests | none |
 | Frontend (`client/`) | In progress, not ours to assess | — |
 | Integration | **Live.** `/taint` and `/mincut` answered by real Python | none |
 
 The earlier full-stack run verified live Python answering the server. The latest
-fund-flow run verified backend persistence and regressions on isolated replica
-sets; it did not rerun the ML suite or live Python integration.
+logging run verified backend regressions on isolated replica sets with mocked or
+unreachable Python; it did not rerun the ML suite or live Python integration.
 
 ---
 
@@ -65,7 +87,7 @@ sets; it did not rerun the ML suite or live Python integration.
 
 ```
 typecheck      clean
-tests          145 checks, 13 files, 0 skipped
+tests          171 checks, 15 files, 0 skipped
 API            stored-data and live-streaming routes; fund flows are persistence-only
 models         10 registered Mongoose models, including seed_meta
 repositories   10
@@ -129,9 +151,11 @@ Verified on both Atlas and the local replica set. Throughput figures in
 | `freeze-edge.test.ts` | 3 |
 | `stream.service.test.ts` | 13 |
 | `fund_flows.test.ts` | 15 |
+| `logging.test.ts` | 13 |
+| `db-logging.test.ts` | 13 |
 
 The latest full-suite run used an isolated replica set and an unreachable ML
-URL for the existing fallback checks. See report 04 for the exact command.
+URL for the existing fallback checks. See report 05 for the exact command.
 
 Two real bugs were invisible until the database-backed tests could actually run:
 

@@ -6,19 +6,9 @@
  * collections are cleared first.
  */
 import { config } from '../configs/env.js';
-import { connect, describeDatabase, disconnect } from '../configs/mongoose.js';
+import { connect, disconnect } from '../configs/mongoose.js';
 import { seed } from '../services/seed.service.js';
-import type { GroundTruth } from '../interfaces/domain.interface.js';
-
-/** Ring recovery against the generator's ground truth, for the build log. */
-const reportGroundTruth = (groundTruth: GroundTruth | null): void => {
-  const rings = groundTruth?.ring_members;
-  if (!rings) return;
-  const populated = Object.values(rings).filter((members) => (members?.length ?? 0) >= 3).length;
-  console.log(`  ground truth rings: ${Object.keys(rings).length}, populated: ${populated}`);
-  if (groundTruth?.victim_txn_id) console.log(`  victim transaction: ${groundTruth.victim_txn_id}`);
-  if (groundTruth?.account_e) console.log(`  account E: ${groundTruth.account_e}`);
-};
+import { errorFields, flushLogs, logEvent } from '../services/logger.service.js';
 
 const main = async (): Promise<void> => {
   // Fail here with a readable message rather than as a driver stack trace from
@@ -26,23 +16,18 @@ const main = async (): Promise<void> => {
   await connect();
 
   const profile = process.argv[2] ?? config.seedProfile;
-  const result = await seed(profile);
-  const database = describeDatabase();
-
-  console.log(`seeded ${profile} from ${result.source} into ${database.host}/${database.database}`);
-  for (const [collection, n] of Object.entries(result.counts)) {
-    console.log(`  ${collection.padEnd(13)} ${n}`);
-  }
-  reportGroundTruth(result.groundTruth);
+  await seed(profile);
 };
 
 main()
   .then(async () => {
     await disconnect();
+    await flushLogs();
     process.exit(0);
   })
   .catch(async (err: unknown) => {
-    console.error('seed failed:', (err as Error).message);
+    logEvent('error', 'seed.cli_failed', { ...errorFields(err), direction: 'internal' });
     await disconnect().catch(() => {});
+    await flushLogs();
     process.exit(1);
   });

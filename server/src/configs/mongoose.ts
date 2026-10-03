@@ -13,6 +13,9 @@
 import mongoose, { type ClientSession } from 'mongoose';
 import { config, hasDatabase } from './env.js';
 import { ALL_MODELS } from '../models/index.js';
+import { elapsedMs, errorFields, logEvent } from '../services/logger.service.js';
+import { currentLogContext, logId, withLogContext } from '../utilities/log-context.util.js';
+import { withDbLog } from '../utilities/db-log.util.js';
 
 // Connection options only. Query strictness is a schema option in Mongoose 9,
 // set per collection in models/common.ts.
@@ -30,6 +33,25 @@ const OPTIONS = {
 
 /** The live connection. Repositories do not normally need this. */
 export const db = (): mongoose.Connection => mongoose.connection;
+
+const observed = new WeakSet<mongoose.Connection>();
+let closing = false;
+const watchConnection = (connection: mongoose.Connection): void => {
+  if (observed.has(connection)) return;
+  observed.add(connection);
+  let connectedBefore = false;
+  const report = (event: string, level: 'info' | 'warn' | 'error', fields = {}) => {
+    if (config.logging.dbEnabled) withLogContext({}, () => logEvent(level, event, {
+      direction: 'internal', peer: 'mongodb', database: connection.name, host: connection.host, ...fields,
+    }), { replace: true });
+  };
+  connection.on('connected', () => {
+    report(connectedBefore ? 'db.reconnected' : 'db.connected', 'info');
+    connectedBefore = true;
+  });
+  connection.on('disconnected', () => report('db.disconnected', closing ? 'info' : 'warn', { expected: closing }));
+  connection.on('error', (error) => report('db.connection_error', 'error', errorFields(error)));
+};
 
 /**
  * Opens the connection, or returns the open one.
@@ -54,13 +76,21 @@ export const connect = async (override?: string): Promise<mongoose.Connection> =
 
   if (mongoose.connection.readyState === 1) return mongoose.connection;
 
-  await mongoose.connect(url, OPTIONS);
+  closing = false;
+  watchConnection(mongoose.connection);
+  if (config.logging.dbEnabled) logEvent('info', 'db.connecting', { direction: 'out', peer: 'mongodb' });
+  try { await mongoose.connect(url, OPTIONS); }
+  catch (error) {
+    if (config.logging.dbEnabled) logEvent('error', 'db.connect_failed', { direction: 'internal', peer: 'mongodb', ...errorFields(error) });
+    throw error;
+  }
   return mongoose.connection;
 };
 
 /** Closes the connection so the process can exit instead of waiting on it. */
 export const disconnect = async (): Promise<void> => {
   if (mongoose.connection.readyState === 0) return;
+  closing = true;
   await mongoose.disconnect();
 };
 
@@ -74,7 +104,28 @@ export const disconnect = async (): Promise<void> => {
  * --replSet and run rs.initiate() once. See the server README.
  */
 export const withTransaction = <T>(fn: (session: ClientSession) => Promise<T>): Promise<T> =>
-  db().transaction(fn);
+  withLogContext({ transaction_id: logId() }, async () => {
+    const start = performance.now();
+    const prefix = currentLogContext().seed_id ? 'seed.transaction' : 'db.transaction';
+    const enabled = prefix.startsWith('seed') || config.logging.dbEnabled;
+    let attempt = 0;
+    try {
+      const result = await db().transaction((session) => {
+        attempt += 1;
+        return withLogContext({ attempt }, async () => {
+          if (enabled) logEvent('info', `${prefix}_started`, { direction: 'internal', database: db().name, commit_state: 'pending' });
+          return fn(session);
+        });
+      });
+      if (enabled) logEvent('info', `${prefix}_committed`, { attempt, duration_ms: elapsedMs(start), commit_state: 'committed', direction: 'internal' });
+      return result;
+    } catch (error) {
+      const e = error as { hasErrorLabel?: (label: string) => boolean };
+      const outcome = e?.hasErrorLabel?.('UnknownTransactionCommitResult') ? 'unknown' : 'aborted';
+      if (enabled) logEvent('error', `${prefix}_failed`, { attempt, duration_ms: elapsedMs(start), commit_state: outcome, direction: 'internal', ...errorFields(error) });
+      throw error;
+    }
+  });
 
 /**
  * Creates the indexes declared on the schemas.
@@ -90,7 +141,7 @@ export const withTransaction = <T>(fn: (session: ClientSession) => Promise<T>): 
  */
 export const ensureIndexes = async (override?: string): Promise<number> => {
   await connect(override);
-  for (const model of ALL_MODELS) await model.createIndexes();
+  for (const model of ALL_MODELS) await withDbLog({ collection: model.collection.collectionName, operation: 'createIndexes' }, () => model.createIndexes());
   return ALL_MODELS.length;
 };
 

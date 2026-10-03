@@ -6,13 +6,14 @@
  * device" but "which accounts share this device" - and that is the array itself.
  */
 import { Identifier } from '../models/index.js';
+import { logQuery } from '../utilities/db-log.util.js';
 import { toIdentifier, type IdentifierRow } from '../mappers/row.mapper.js';
 import { insertBatches } from './bulk.repository.js';
 import type { Writer } from '../interfaces/repository.interface.js';
 import type { Identifier as IdentifierDomain } from '../interfaces/domain.interface.js';
 
 export const getById = async (id: string): Promise<IdentifierDomain | null> => {
-  const row = await Identifier.findById(id).lean().exec();
+  const row = await logQuery(Identifier.findById(id).lean());
   return row ? toIdentifier(row as unknown as IdentifierRow) : null;
 };
 
@@ -24,17 +25,17 @@ export const getById = async (id: string): Promise<IdentifierDomain | null> => {
  */
 export const listForAccounts = async (accountIds: string[]): Promise<IdentifierDomain[]> => {
   if (!accountIds.length) return [];
-  const rows = await Identifier.find({ account_ids: { $in: accountIds } }).sort({ _id: 1 }).lean().exec();
+  const rows = await logQuery(Identifier.find({ account_ids: { $in: accountIds } }).sort({ _id: 1 }).lean());
   return (rows as unknown as IdentifierRow[]).map(toIdentifier);
 };
 
 /** Identifier ids linked to one account. */
 export const listForAccount = async (accountId: string): Promise<IdentifierDomain[]> => {
-  const rows = await Identifier.find({ account_ids: accountId }).sort({ _id: 1 }).lean().exec();
+  const rows = await logQuery(Identifier.find({ account_ids: accountId }).sort({ _id: 1 }).lean());
   return (rows as unknown as IdentifierRow[]).map(toIdentifier);
 };
 
-export const count = async (): Promise<number> => Identifier.countDocuments({}).exec();
+export const count = async (): Promise<number> => logQuery(Identifier.countDocuments({}));
 
 export const insertMany = async (
   rows: { id: string; type: string; account_ids: string[] }[],

@@ -14,6 +14,9 @@
  */
 import { config } from '../configs/env.js';
 import type { FreezePayload, TaintPayload } from '../interfaces/domain.interface.js';
+import { withMlLog } from '../utilities/ml-log.util.js';
+import { currentLogContext, setLogContext } from '../utilities/log-context.util.js';
+import { logEvent } from './logger.service.js';
 
 /** Control-flow signal for a failed call. Never reaches a client. */
 class MlCallError extends Error {
@@ -49,27 +52,35 @@ export interface FreezeRequest extends TaintRequest {
 /** One POST with a hard deadline. AbortSignal.timeout covers the timeout case. */
 const postJson = async (route: string, body: unknown, timeoutMs = config.mlTimeoutMs): Promise<Record<string, unknown>> => {
   const url = `${config.mlUrl.replace(/\/$/, '')}${route}`;
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(body),
-    signal: AbortSignal.timeout(timeoutMs),
+  const input = body as Partial<TaintRequest>;
+  return withMlLog({ path: route, method: 'POST', timeout_ms: timeoutMs, ring_id: input.ring_id, run_id: input.run_id }, async (receivedStatus) => {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+    receivedStatus(response.status);
+    if (!response.ok) throw new MlCallError(route, `HTTP ${response.status}`);
+    return (await response.json()) as Record<string, unknown>;
   });
-  if (!response.ok) throw new MlCallError(route, `HTTP ${response.status}`);
-  return (await response.json()) as Record<string, unknown>;
 };
 
 export const health = async (): Promise<Record<string, unknown>> => {
   const url = `${config.mlUrl.replace(/\/$/, '')}/health`;
-  const response = await fetch(url, { signal: AbortSignal.timeout(config.mlTimeoutMs) });
-  if (!response.ok) throw new MlCallError('/health', `HTTP ${response.status}`);
-  return (await response.json()) as Record<string, unknown>;
+  return withMlLog({ path: '/health', method: 'GET', timeout_ms: config.mlTimeoutMs }, async (receivedStatus) => {
+    const response = await fetch(url, { signal: AbortSignal.timeout(config.mlTimeoutMs) });
+    receivedStatus(response.status);
+    if (!response.ok) throw new MlCallError('/health', `HTTP ${response.status}`);
+    return (await response.json()) as Record<string, unknown>;
+  });
 };
 
 /** POST /taint (TRD section 7.10). */
 export const taint = async (request: TaintRequest, fallback: TaintPayload | null): Promise<MlResult<TaintPayload>> => {
   try {
     const payload = await postJson('/taint', request);
+    setLogContext({ cached: currentLogContext().cached ?? false });
     return { payload: { ...(payload as unknown as TaintPayload), cached: false }, cached: false };
   } catch (err) {
     // `cached` is set to false here only to satisfy the shape; withFallback
@@ -81,7 +92,7 @@ export const taint = async (request: TaintRequest, fallback: TaintPayload | null
       lost_to_cash: 0,
       links: [],
       cached: false,
-    });
+    }, Boolean(request.run_id));
   }
 };
 
@@ -89,6 +100,7 @@ export const taint = async (request: TaintRequest, fallback: TaintPayload | null
 export const freeze = async (request: FreezeRequest, fallback: FreezePayload | null): Promise<MlResult<FreezePayload>> => {
   try {
     const payload = await postJson('/mincut', request);
+    setLogContext({ cached: currentLogContext().cached ?? false });
     return { payload: { ...(payload as unknown as FreezePayload), cached: false }, cached: false };
   } catch (err) {
     // As above: the flag is meaningless on the failure path because
@@ -99,7 +111,7 @@ export const freeze = async (request: FreezeRequest, fallback: FreezePayload | n
       secured: 0,
       pct_stopped: 0,
       cached: false,
-    });
+    }, Boolean(request.run_id));
   }
 };
 
@@ -113,9 +125,12 @@ export const runPipeline = async (profile: string): Promise<unknown> => postJson
  * Builds the response for the degraded path. `cached` is always true, so the
  * dashboard can label the answer as precomputed rather than live.
  */
-const withFallback = <T>(fallback: T | null, route: string, err: unknown, empty: T): MlResult<T> => {
+const withFallback = <T>(fallback: T | null, route: string, err: unknown, empty: T, live = false): MlResult<T> => {
   const source = fallback ?? empty;
   const reason = err instanceof MlCallError ? err.reason : ((err as Error)?.message ?? 'unknown error');
+  const fallbackSource = fallback === null ? 'empty' : live ? 'live_cache' : 'stored_default';
+  setLogContext({ cached: true, fallback_source: fallbackSource });
+  logEvent('warn', 'ml.fallback', { direction: 'internal', peer: 'ml', path: route, cached: true, fallback_source: fallbackSource });
   return {
     payload: { ...source, cached: true } as T,
     cached: true,

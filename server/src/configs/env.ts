@@ -48,6 +48,13 @@ export interface AppConfig {
   readonly dataDir: string;
   readonly replayDefaultSpeed: number;
   readonly replayTickMs: number;
+  readonly logging: {
+    readonly level: 'debug' | 'info' | 'warn' | 'error' | 'silent';
+    readonly format: 'json' | 'pretty';
+    readonly dbEnabled: boolean;
+    readonly dbSlowMs: number;
+    readonly streamIntervalMs: number;
+  };
   /** Live mode (docs/STREAMING.md). */
   readonly stream: {
     /** Serve live mode with no database: replay and the stored-data routes are switched off. */
@@ -124,6 +131,16 @@ export const config: AppConfig = {
   /** Replay defaults, from the socket table in TRD section 8. */
   replayDefaultSpeed: int(process.env.REPLAY_DEFAULT_SPEED, 60),
   replayTickMs: int(process.env.REPLAY_TICK_MS, 250),
+
+  logging: {
+    level: (['debug', 'info', 'warn', 'error', 'silent'].includes(process.env.LOG_LEVEL ?? '')
+      ? process.env.LOG_LEVEL
+      : process.env.NODE_ENV === 'test' ? 'silent' : 'info') as AppConfig['logging']['level'],
+    format: process.env.LOG_FORMAT === 'pretty' ? 'pretty' : 'json',
+    dbEnabled: bool(process.env.LOG_DB_ENABLED, true),
+    dbSlowMs: Math.max(0, int(process.env.LOG_DB_SLOW_MS, 200)),
+    streamIntervalMs: Math.max(100, int(process.env.LOG_STREAM_INTERVAL_MS, 1000)),
+  },
 
   stream: {
     only: bool(process.env.STREAM_ONLY, false),

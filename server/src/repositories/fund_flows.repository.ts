@@ -1,6 +1,7 @@
 /** Persistence for outputs/fund_flows.json; all writes use the seed's session. */
 import { FundFlowPath, FundFlowSummary, FUND_FLOW_SUMMARY_ID } from '../models/index.js';
 import { insertBatches } from './bulk.repository.js';
+import { logQuery, validateDbWrite } from '../utilities/db-log.util.js';
 import type { FundFlowPath as PathWrite, FundFlowSummary as SummaryWrite } from '../interfaces/fund_flow.interface.js';
 import type { Writer } from '../interfaces/repository.interface.js';
 
@@ -33,10 +34,10 @@ export const insertMany = async (paths: PathWrite[], tx?: Writer): Promise<void>
 /** One summary for the current seed, including when the artifact has no paths. */
 export const setSummary = async (profile: string, summary: SummaryWrite, tx?: Writer): Promise<void> => {
   const doc = { _id: FUND_FLOW_SUMMARY_ID, profile, summary };
-  await FundFlowSummary.validate(doc);
-  await FundFlowSummary.findOneAndUpdate(
+  await validateDbWrite('fund_flow_summaries', () => FundFlowSummary.validate(doc));
+  await logQuery(FundFlowSummary.findOneAndUpdate(
     { _id: FUND_FLOW_SUMMARY_ID },
     { $set: { profile, summary } },
     { upsert: true, returnDocument: 'after', runValidators: true, session: tx },
-  ).exec();
+  ));
 };

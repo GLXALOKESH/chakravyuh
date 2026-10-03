@@ -10,25 +10,29 @@
  */
 import { connect, disconnect, ensureIndexes } from '../configs/mongoose.js';
 import { ALL_MODELS } from '../models/index.js';
+import { errorFields, flushLogs, logEvent } from '../services/logger.service.js';
+import { withDbLog } from '../utilities/db-log.util.js';
 
 const main = async (): Promise<void> => {
   await connect();
   const created = await ensureIndexes();
 
-  console.log(`indexes ready on ${created} collections`);
+  logEvent('info', 'db.indexes_ready', { counts: { collections: created }, direction: 'internal' });
   for (const model of ALL_MODELS) {
-    const indexes = await model.listIndexes();
-    console.log(`  ${model.collection.collectionName.padEnd(13)} ${indexes.length}`);
+    const indexes = await withDbLog({ collection: model.collection.collectionName, operation: 'listIndexes' }, () => model.listIndexes());
+    logEvent('info', 'db.indexes', { collection: model.collection.collectionName, counts: { indexes: indexes.length }, direction: 'internal' });
   }
 };
 
 main()
   .then(async () => {
     await disconnect();
+    await flushLogs();
     process.exit(0);
   })
   .catch(async (err: unknown) => {
-    console.error('index setup failed:', (err as Error).message);
+    logEvent('error', 'db.indexes_failed', { ...errorFields(err), direction: 'internal' });
     await disconnect().catch(() => {});
+    await flushLogs();
     process.exit(1);
   });

@@ -23,6 +23,7 @@ import {
   transactionsRouter,
 } from './routes/index.js';
 import mocksRouter from './mocks/mocks.routes.js';
+import { requestLog } from './middlewares/request-log.middleware.js';
 
 /** The real API. Replaced wholesale by the mock router when USE_MOCKS is on. */
 const apiRouter = (engine: ReplayEngine) => {
@@ -53,6 +54,7 @@ export const createApp = ({ engine, stream }: CreateAppOptions = {}): Express =>
   const replayEngine = engine ?? new ReplayEngine({ emit: () => {} });
   const streamService = stream ?? new StreamService({ emit: () => {} });
   const streamOnly = isStreamOnly();
+  app.use(requestLog);
 
   // CORS, as docs/API_FOR_FRONTEND.md promises: the dashboard runs on its own
   // port (Next.js on 3000) and calls this server directly. Socket.IO has its

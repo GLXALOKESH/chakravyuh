@@ -10,6 +10,7 @@
 import { spawn } from 'node:child_process';
 import readline from 'node:readline';
 import { config } from '../configs/env.js';
+import { errorFields, logEvent } from './logger.service.js';
 
 export interface GeneratorOptions {
   seed?: number;
@@ -33,6 +34,7 @@ export const spawnGenerator: SpawnGenerator = ({ seed, rate, onEvent, onExit }) 
     env: { ...process.env, PYTHONUNBUFFERED: '1', PYTHONIOENCODING: 'utf-8' },
     windowsHide: true,
   });
+  logEvent('info', 'generator.started', { pid: child.pid, rate, seed, direction: 'internal' });
 
   // readline copes with lines split across reads.
   const lines = readline.createInterface({ input: child.stdout });
@@ -41,15 +43,18 @@ export const spawnGenerator: SpawnGenerator = ({ seed, rate, onEvent, onExit }) 
     try {
       onEvent(JSON.parse(line) as Record<string, unknown>);
     } catch {
-      console.warn(`stream generator: skipped a line that is not JSON: ${line.slice(0, 120)}`);
+      logEvent('warn', 'generator.invalid_line', { direction: 'in', peer: 'generator', bytes: Buffer.byteLength(line) });
     }
   });
-  child.stderr.on('data', (chunk: Buffer) => process.stderr.write(`[generator] ${chunk}`));
+  // Python stderr is unstructured and may contain data. Report its presence,
+  // not raw text, so stdout stays parseable and credentials/documents cannot leak.
+  child.stderr.on('data', (chunk: Buffer) => logEvent('debug', 'generator.stderr', { direction: 'in', peer: 'generator', bytes: chunk.length }));
   child.on('error', (err) => {
-    console.error(`stream generator failed to start (${config.stream.pythonBin}): ${err.message}`);
+    logEvent('error', 'generator.start_failed', { direction: 'internal', ...errorFields(err) });
     onExit(null);
   });
   child.on('exit', (code) => {
+    logEvent(code === 0 || child.killed ? 'info' : 'warn', 'generator.exited', { exit_code: code, expected: child.killed, direction: 'internal' });
     lines.close();
     onExit(code);
   });
