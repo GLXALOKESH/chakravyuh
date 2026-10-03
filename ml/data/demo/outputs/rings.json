@@ -3,6 +3,503 @@
     "_id": "RING01",
     "ring_id": "RING01",
     "member_ids": [
+      "ACC1030",
+      "ACC1031",
+      "ACC1032",
+      "ACC1033",
+      "ACC1034"
+    ],
+    "edges": [
+      {
+        "from": "ACC1030",
+        "to": "ACC1031",
+        "amount": 70345700,
+        "count": 1
+      },
+      {
+        "from": "ACC1031",
+        "to": "ACC1032",
+        "amount": 65015900,
+        "count": 1
+      },
+      {
+        "from": "ACC1032",
+        "to": "ACC1033",
+        "amount": 62249100,
+        "count": 1
+      },
+      {
+        "from": "ACC1033",
+        "to": "ACC1034",
+        "amount": 60257700,
+        "count": 1
+      }
+    ],
+    "identity_links": [
+      {
+        "identifier": "DEV1980",
+        "type": "device",
+        "account_ids": [
+          "ACC1030",
+          "ACC1031",
+          "ACC1032",
+          "ACC1033",
+          "ACC1034"
+        ]
+      },
+      {
+        "identifier": "PHN1980",
+        "type": "phone",
+        "account_ids": [
+          "ACC1030",
+          "ACC1031",
+          "ACC1032",
+          "ACC1033",
+          "ACC1034"
+        ]
+      }
+    ],
+    "volume": 257868400,
+    "risk": 0.9999,
+    "geo_spread_km": 0,
+    "victim_txn_ids": [
+      "TXN003415"
+    ],
+    "default_taint": {
+      "victim_amount": 77167000,
+      "victim_txn_id": "TXN003415",
+      "accounts": [
+        {
+          "id": "ACC1030",
+          "balance": 7077700,
+          "tainted": 7054262,
+          "lien": 7054262
+        },
+        {
+          "id": "ACC1031",
+          "balance": 5420300,
+          "tainted": 5395409,
+          "lien": 5395409
+        },
+        {
+          "id": "ACC1032",
+          "balance": 3094600,
+          "tainted": 3064936,
+          "lien": 3064936
+        },
+        {
+          "id": "ACC1033",
+          "balance": 2123500,
+          "tainted": 2098691,
+          "lien": 2098691
+        },
+        {
+          "id": "ACC1034",
+          "balance": 6459800,
+          "tainted": 6331853,
+          "lien": 6331853
+        }
+      ],
+      "lost_to_cash": 53221849,
+      "links": [
+        {
+          "source": "ACC1030",
+          "target": "ACC1031",
+          "value": 70112738
+        },
+        {
+          "source": "ACC1031",
+          "target": "ACC1032",
+          "value": 64717329
+        },
+        {
+          "source": "ACC1032",
+          "target": "ACC1033",
+          "value": 61652393
+        },
+        {
+          "source": "ACC1033",
+          "target": "ACC1034",
+          "value": 59553702
+        },
+        {
+          "source": "ACC1034",
+          "target": "CASH",
+          "value": 53221849
+        }
+      ]
+    },
+    "default_freeze": {
+      "freeze": [
+        "ACC1034"
+      ],
+      "at_risk_before": 23945151,
+      "secured": 23945151,
+      "pct_stopped": 1.0
+    },
+    "roles": {
+      "ACC1030": {
+        "role": "source",
+        "role_reason": "Receives majority of inflow from outside the ring and is the earliest active member"
+      },
+      "ACC1034": {
+        "role": "cash-out",
+        "role_reason": "100% of outflow goes to ATM cash-out"
+      },
+      "ACC1031": {
+        "role": "mule",
+        "role_reason": "Receives from source, forwards 92%, holds only 6 min"
+      },
+      "ACC1032": {
+        "role": "relay",
+        "role_reason": "Both senders and receivers are ring members"
+      },
+      "ACC1033": {
+        "role": "relay",
+        "role_reason": "Both senders and receivers are ring members"
+      }
+    }
+  },
+  {
+    "_id": "RING02",
+    "ring_id": "RING02",
+    "member_ids": [
+      "ACC1000",
+      "ACC1001",
+      "ACC1002",
+      "ACC1003",
+      "ACC1004",
+      "ACC1005",
+      "ACC1006",
+      "ACC1007",
+      "ACC1008",
+      "ACC1009",
+      "ACC1190"
+    ],
+    "edges": [
+      {
+        "from": "ACC1000",
+        "to": "ACC1001",
+        "amount": 11813300,
+        "count": 1
+      },
+      {
+        "from": "ACC1000",
+        "to": "ACC1007",
+        "amount": 4229800,
+        "count": 1
+      },
+      {
+        "from": "ACC1000",
+        "to": "ACC1003",
+        "amount": 17870800,
+        "count": 1
+      },
+      {
+        "from": "ACC1000",
+        "to": "ACC1006",
+        "amount": 14146400,
+        "count": 1
+      },
+      {
+        "from": "ACC1000",
+        "to": "ACC1002",
+        "amount": 11942000,
+        "count": 1
+      },
+      {
+        "from": "ACC1001",
+        "to": "ACC1008",
+        "amount": 10959500,
+        "count": 1
+      },
+      {
+        "from": "ACC1002",
+        "to": "ACC1009",
+        "amount": 11131900,
+        "count": 1
+      },
+      {
+        "from": "ACC1003",
+        "to": "ACC1008",
+        "amount": 17022000,
+        "count": 1
+      },
+      {
+        "from": "ACC1000",
+        "to": "ACC1004",
+        "amount": 20873100,
+        "count": 1
+      },
+      {
+        "from": "ACC1004",
+        "to": "ACC1008",
+        "amount": 18828100,
+        "count": 1
+      },
+      {
+        "from": "ACC1005",
+        "to": "ACC1008",
+        "amount": 19469500,
+        "count": 1
+      },
+      {
+        "from": "ACC1000",
+        "to": "ACC1005",
+        "amount": 19709500,
+        "count": 1
+      },
+      {
+        "from": "ACC1006",
+        "to": "ACC1009",
+        "amount": 13136300,
+        "count": 1
+      },
+      {
+        "from": "ACC1007",
+        "to": "ACC1009",
+        "amount": 3958100,
+        "count": 1
+      }
+    ],
+    "identity_links": [
+      {
+        "identifier": "DEV1900",
+        "type": "device",
+        "account_ids": [
+          "ACC1000",
+          "ACC1001",
+          "ACC1002"
+        ]
+      },
+      {
+        "identifier": "PHN1900",
+        "type": "phone",
+        "account_ids": [
+          "ACC1000",
+          "ACC1001",
+          "ACC1002"
+        ]
+      },
+      {
+        "identifier": "DEV2185",
+        "type": "device",
+        "account_ids": [
+          "ACC1005",
+          "ACC1190"
+        ]
+      }
+    ],
+    "volume": 195090300,
+    "risk": 0.9992,
+    "geo_spread_km": 0,
+    "victim_txn_ids": [
+      "TXN002188"
+    ],
+    "default_taint": {
+      "victim_amount": 100584900,
+      "victim_txn_id": "TXN002188",
+      "accounts": [
+        {
+          "id": "ACC1000",
+          "balance": 73700,
+          "tainted": 73647,
+          "lien": 73647
+        },
+        {
+          "id": "ACC1001",
+          "balance": 963300,
+          "tainted": 953755,
+          "lien": 953755
+        },
+        {
+          "id": "ACC1002",
+          "balance": 1070200,
+          "tainted": 1046621,
+          "lien": 1046621
+        },
+        {
+          "id": "ACC1003",
+          "balance": 1107600,
+          "tainted": 1090990,
+          "lien": 1090990
+        },
+        {
+          "id": "ACC1004",
+          "balance": 2539000,
+          "tainted": 2478484,
+          "lien": 2478484
+        },
+        {
+          "id": "ACC1005",
+          "balance": 19709600,
+          "tainted": 19695069,
+          "lien": 19695069
+        },
+        {
+          "id": "ACC1006",
+          "balance": 1266100,
+          "tainted": 1242685,
+          "lien": 1242685
+        },
+        {
+          "id": "ACC1007",
+          "balance": 730200,
+          "tainted": 658307,
+          "lien": 658307
+        },
+        {
+          "id": "ACC1008",
+          "balance": 8664800,
+          "tainted": 5969091,
+          "lien": 5969091
+        },
+        {
+          "id": "ACC1009",
+          "balance": 17094500,
+          "tainted": 16461792,
+          "lien": 16461792
+        }
+      ],
+      "lost_to_cash": 50914459,
+      "links": [
+        {
+          "source": "ACC1000",
+          "target": "ACC1001",
+          "value": 11804650
+        },
+        {
+          "source": "ACC1000",
+          "target": "ACC1002",
+          "value": 11933256
+        },
+        {
+          "source": "ACC1000",
+          "target": "ACC1003",
+          "value": 17857715
+        },
+        {
+          "source": "ACC1000",
+          "target": "ACC1004",
+          "value": 20857818
+        },
+        {
+          "source": "ACC1000",
+          "target": "ACC1005",
+          "value": 19695069
+        },
+        {
+          "source": "ACC1000",
+          "target": "ACC1006",
+          "value": 14136042
+        },
+        {
+          "source": "ACC1000",
+          "target": "ACC1007",
+          "value": 4226703
+        },
+        {
+          "source": "ACC1001",
+          "target": "ACC1008",
+          "value": 10850895
+        },
+        {
+          "source": "ACC1002",
+          "target": "ACC1009",
+          "value": 10886635
+        },
+        {
+          "source": "ACC1003",
+          "target": "ACC1008",
+          "value": 16766725
+        },
+        {
+          "source": "ACC1004",
+          "target": "ACC1008",
+          "value": 18379334
+        },
+        {
+          "source": "ACC1006",
+          "target": "ACC1009",
+          "value": 12893357
+        },
+        {
+          "source": "ACC1007",
+          "target": "ACC1009",
+          "value": 3568396
+        },
+        {
+          "source": "ACC1008",
+          "target": "CASH",
+          "value": 40027863
+        },
+        {
+          "source": "ACC1009",
+          "target": "CASH",
+          "value": 10886596
+        }
+      ]
+    },
+    "default_freeze": {
+      "freeze": [
+        "ACC1008",
+        "ACC1009"
+      ],
+      "at_risk_before": 49670441,
+      "secured": 49670441,
+      "pct_stopped": 1.0
+    },
+    "roles": {
+      "ACC1001": {
+        "role": "coordinator",
+        "role_reason": "Shares identifiers with 4 ring members, carries only 6% of ring volume"
+      },
+      "ACC1002": {
+        "role": "coordinator",
+        "role_reason": "Shares identifiers with 4 ring members, carries only 6% of ring volume"
+      },
+      "ACC1000": {
+        "role": "source",
+        "role_reason": "Receives majority of inflow from outside the ring and is the earliest active member"
+      },
+      "ACC1008": {
+        "role": "cash-out",
+        "role_reason": "100% of outflow goes to ATM cash-out"
+      },
+      "ACC1009": {
+        "role": "cash-out",
+        "role_reason": "100% of outflow goes to ATM cash-out"
+      },
+      "ACC1003": {
+        "role": "mule",
+        "role_reason": "Receives from source, forwards 95%, holds only 17 min"
+      },
+      "ACC1004": {
+        "role": "mule",
+        "role_reason": "Receives from source, forwards 90%, holds only 4 min"
+      },
+      "ACC1005": {
+        "role": "relay",
+        "role_reason": "Both senders and receivers are ring members"
+      },
+      "ACC1006": {
+        "role": "relay",
+        "role_reason": "Both senders and receivers are ring members"
+      },
+      "ACC1007": {
+        "role": "relay",
+        "role_reason": "Both senders and receivers are ring members"
+      },
+      "ACC1190": {
+        "role": "member",
+        "role_reason": "Connected to ring but role not clearly determined"
+      }
+    }
+  },
+  {
+    "_id": "RING03",
+    "ring_id": "RING03",
+    "member_ids": [
       "ACC1060",
       "ACC1061",
       "ACC1062",
@@ -341,503 +838,6 @@
       "ACC1068": {
         "role": "relay",
         "role_reason": "Both senders and receivers are ring members"
-      }
-    }
-  },
-  {
-    "_id": "RING02",
-    "ring_id": "RING02",
-    "member_ids": [
-      "ACC1030",
-      "ACC1031",
-      "ACC1032",
-      "ACC1033",
-      "ACC1034"
-    ],
-    "edges": [
-      {
-        "from": "ACC1030",
-        "to": "ACC1031",
-        "amount": 70345700,
-        "count": 1
-      },
-      {
-        "from": "ACC1031",
-        "to": "ACC1032",
-        "amount": 65015900,
-        "count": 1
-      },
-      {
-        "from": "ACC1032",
-        "to": "ACC1033",
-        "amount": 62249100,
-        "count": 1
-      },
-      {
-        "from": "ACC1033",
-        "to": "ACC1034",
-        "amount": 60257700,
-        "count": 1
-      }
-    ],
-    "identity_links": [
-      {
-        "identifier": "DEV1980",
-        "type": "device",
-        "account_ids": [
-          "ACC1030",
-          "ACC1031",
-          "ACC1032",
-          "ACC1033",
-          "ACC1034"
-        ]
-      },
-      {
-        "identifier": "PHN1980",
-        "type": "phone",
-        "account_ids": [
-          "ACC1030",
-          "ACC1031",
-          "ACC1032",
-          "ACC1033",
-          "ACC1034"
-        ]
-      }
-    ],
-    "volume": 257868400,
-    "risk": 0.9999,
-    "geo_spread_km": 0,
-    "victim_txn_ids": [
-      "TXN003415"
-    ],
-    "default_taint": {
-      "victim_amount": 77167000,
-      "victim_txn_id": "TXN003415",
-      "accounts": [
-        {
-          "id": "ACC1030",
-          "balance": 7077700,
-          "tainted": 7054262,
-          "lien": 7054262
-        },
-        {
-          "id": "ACC1031",
-          "balance": 5420300,
-          "tainted": 5395409,
-          "lien": 5395409
-        },
-        {
-          "id": "ACC1032",
-          "balance": 3094600,
-          "tainted": 3064936,
-          "lien": 3064936
-        },
-        {
-          "id": "ACC1033",
-          "balance": 2123500,
-          "tainted": 2098691,
-          "lien": 2098691
-        },
-        {
-          "id": "ACC1034",
-          "balance": 6459800,
-          "tainted": 6331853,
-          "lien": 6331853
-        }
-      ],
-      "lost_to_cash": 53221849,
-      "links": [
-        {
-          "source": "ACC1030",
-          "target": "ACC1031",
-          "value": 70112738
-        },
-        {
-          "source": "ACC1031",
-          "target": "ACC1032",
-          "value": 64717329
-        },
-        {
-          "source": "ACC1032",
-          "target": "ACC1033",
-          "value": 61652393
-        },
-        {
-          "source": "ACC1033",
-          "target": "ACC1034",
-          "value": 59553702
-        },
-        {
-          "source": "ACC1034",
-          "target": "CASH",
-          "value": 53221849
-        }
-      ]
-    },
-    "default_freeze": {
-      "freeze": [
-        "ACC1034"
-      ],
-      "at_risk_before": 23945151,
-      "secured": 23945151,
-      "pct_stopped": 1.0
-    },
-    "roles": {
-      "ACC1030": {
-        "role": "source",
-        "role_reason": "Receives majority of inflow from outside the ring and is the earliest active member"
-      },
-      "ACC1034": {
-        "role": "cash-out",
-        "role_reason": "100% of outflow goes to ATM cash-out"
-      },
-      "ACC1031": {
-        "role": "mule",
-        "role_reason": "Receives from source, forwards 92%, holds only 6 min"
-      },
-      "ACC1032": {
-        "role": "relay",
-        "role_reason": "Both senders and receivers are ring members"
-      },
-      "ACC1033": {
-        "role": "relay",
-        "role_reason": "Both senders and receivers are ring members"
-      }
-    }
-  },
-  {
-    "_id": "RING03",
-    "ring_id": "RING03",
-    "member_ids": [
-      "ACC1000",
-      "ACC1001",
-      "ACC1002",
-      "ACC1003",
-      "ACC1004",
-      "ACC1005",
-      "ACC1006",
-      "ACC1007",
-      "ACC1008",
-      "ACC1009",
-      "ACC1190"
-    ],
-    "edges": [
-      {
-        "from": "ACC1000",
-        "to": "ACC1001",
-        "amount": 11813300,
-        "count": 1
-      },
-      {
-        "from": "ACC1000",
-        "to": "ACC1007",
-        "amount": 4229800,
-        "count": 1
-      },
-      {
-        "from": "ACC1000",
-        "to": "ACC1003",
-        "amount": 17870800,
-        "count": 1
-      },
-      {
-        "from": "ACC1000",
-        "to": "ACC1006",
-        "amount": 14146400,
-        "count": 1
-      },
-      {
-        "from": "ACC1000",
-        "to": "ACC1002",
-        "amount": 11942000,
-        "count": 1
-      },
-      {
-        "from": "ACC1001",
-        "to": "ACC1008",
-        "amount": 10959500,
-        "count": 1
-      },
-      {
-        "from": "ACC1002",
-        "to": "ACC1009",
-        "amount": 11131900,
-        "count": 1
-      },
-      {
-        "from": "ACC1003",
-        "to": "ACC1008",
-        "amount": 17022000,
-        "count": 1
-      },
-      {
-        "from": "ACC1000",
-        "to": "ACC1004",
-        "amount": 20873100,
-        "count": 1
-      },
-      {
-        "from": "ACC1004",
-        "to": "ACC1008",
-        "amount": 18828100,
-        "count": 1
-      },
-      {
-        "from": "ACC1005",
-        "to": "ACC1008",
-        "amount": 19469500,
-        "count": 1
-      },
-      {
-        "from": "ACC1000",
-        "to": "ACC1005",
-        "amount": 19709500,
-        "count": 1
-      },
-      {
-        "from": "ACC1006",
-        "to": "ACC1009",
-        "amount": 13136300,
-        "count": 1
-      },
-      {
-        "from": "ACC1007",
-        "to": "ACC1009",
-        "amount": 3958100,
-        "count": 1
-      }
-    ],
-    "identity_links": [
-      {
-        "identifier": "DEV1900",
-        "type": "device",
-        "account_ids": [
-          "ACC1000",
-          "ACC1001",
-          "ACC1002"
-        ]
-      },
-      {
-        "identifier": "PHN1900",
-        "type": "phone",
-        "account_ids": [
-          "ACC1000",
-          "ACC1001",
-          "ACC1002"
-        ]
-      },
-      {
-        "identifier": "DEV2185",
-        "type": "device",
-        "account_ids": [
-          "ACC1005",
-          "ACC1190"
-        ]
-      }
-    ],
-    "volume": 195090300,
-    "risk": 0.9992,
-    "geo_spread_km": 0,
-    "victim_txn_ids": [
-      "TXN002188"
-    ],
-    "default_taint": {
-      "victim_amount": 100584900,
-      "victim_txn_id": "TXN002188",
-      "accounts": [
-        {
-          "id": "ACC1000",
-          "balance": 73700,
-          "tainted": 73647,
-          "lien": 73647
-        },
-        {
-          "id": "ACC1001",
-          "balance": 963300,
-          "tainted": 953755,
-          "lien": 953755
-        },
-        {
-          "id": "ACC1002",
-          "balance": 1070200,
-          "tainted": 1046621,
-          "lien": 1046621
-        },
-        {
-          "id": "ACC1003",
-          "balance": 1107600,
-          "tainted": 1090990,
-          "lien": 1090990
-        },
-        {
-          "id": "ACC1004",
-          "balance": 2539000,
-          "tainted": 2478484,
-          "lien": 2478484
-        },
-        {
-          "id": "ACC1005",
-          "balance": 19709600,
-          "tainted": 19695069,
-          "lien": 19695069
-        },
-        {
-          "id": "ACC1006",
-          "balance": 1266100,
-          "tainted": 1242685,
-          "lien": 1242685
-        },
-        {
-          "id": "ACC1007",
-          "balance": 730200,
-          "tainted": 658307,
-          "lien": 658307
-        },
-        {
-          "id": "ACC1008",
-          "balance": 8664800,
-          "tainted": 5969091,
-          "lien": 5969091
-        },
-        {
-          "id": "ACC1009",
-          "balance": 17094500,
-          "tainted": 16461792,
-          "lien": 16461792
-        }
-      ],
-      "lost_to_cash": 50914459,
-      "links": [
-        {
-          "source": "ACC1000",
-          "target": "ACC1001",
-          "value": 11804650
-        },
-        {
-          "source": "ACC1000",
-          "target": "ACC1002",
-          "value": 11933256
-        },
-        {
-          "source": "ACC1000",
-          "target": "ACC1003",
-          "value": 17857715
-        },
-        {
-          "source": "ACC1000",
-          "target": "ACC1004",
-          "value": 20857818
-        },
-        {
-          "source": "ACC1000",
-          "target": "ACC1005",
-          "value": 19695069
-        },
-        {
-          "source": "ACC1000",
-          "target": "ACC1006",
-          "value": 14136042
-        },
-        {
-          "source": "ACC1000",
-          "target": "ACC1007",
-          "value": 4226703
-        },
-        {
-          "source": "ACC1001",
-          "target": "ACC1008",
-          "value": 10850895
-        },
-        {
-          "source": "ACC1002",
-          "target": "ACC1009",
-          "value": 10886635
-        },
-        {
-          "source": "ACC1003",
-          "target": "ACC1008",
-          "value": 16766725
-        },
-        {
-          "source": "ACC1004",
-          "target": "ACC1008",
-          "value": 18379334
-        },
-        {
-          "source": "ACC1006",
-          "target": "ACC1009",
-          "value": 12893357
-        },
-        {
-          "source": "ACC1007",
-          "target": "ACC1009",
-          "value": 3568396
-        },
-        {
-          "source": "ACC1008",
-          "target": "CASH",
-          "value": 40027863
-        },
-        {
-          "source": "ACC1009",
-          "target": "CASH",
-          "value": 10886596
-        }
-      ]
-    },
-    "default_freeze": {
-      "freeze": [
-        "ACC1008",
-        "ACC1009"
-      ],
-      "at_risk_before": 49670441,
-      "secured": 49670441,
-      "pct_stopped": 1.0
-    },
-    "roles": {
-      "ACC1001": {
-        "role": "coordinator",
-        "role_reason": "Shares identifiers with 4 ring members, carries only 6% of ring volume"
-      },
-      "ACC1002": {
-        "role": "coordinator",
-        "role_reason": "Shares identifiers with 4 ring members, carries only 6% of ring volume"
-      },
-      "ACC1000": {
-        "role": "source",
-        "role_reason": "Receives majority of inflow from outside the ring and is the earliest active member"
-      },
-      "ACC1008": {
-        "role": "cash-out",
-        "role_reason": "100% of outflow goes to ATM cash-out"
-      },
-      "ACC1009": {
-        "role": "cash-out",
-        "role_reason": "100% of outflow goes to ATM cash-out"
-      },
-      "ACC1003": {
-        "role": "mule",
-        "role_reason": "Receives from source, forwards 95%, holds only 17 min"
-      },
-      "ACC1004": {
-        "role": "mule",
-        "role_reason": "Receives from source, forwards 90%, holds only 4 min"
-      },
-      "ACC1005": {
-        "role": "relay",
-        "role_reason": "Both senders and receivers are ring members"
-      },
-      "ACC1006": {
-        "role": "relay",
-        "role_reason": "Both senders and receivers are ring members"
-      },
-      "ACC1007": {
-        "role": "relay",
-        "role_reason": "Both senders and receivers are ring members"
-      },
-      "ACC1190": {
-        "role": "member",
-        "role_reason": "Connected to ring but role not clearly determined"
       }
     }
   }

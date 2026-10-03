@@ -209,7 +209,8 @@ def run_ouroboros(n_rounds: int = 3, profile: str = "demo",
 
         # ── EVALUATE: missed vs detected ──────────────────────
 
-        threshold = 50   # risk_v2 threshold for "detected"
+        max_v = adv_scored_df["risk_v2"].max() if "risk_v2" in adv_scored_df.columns and len(adv_scored_df) > 0 else 1.0
+        threshold = 0.50 if max_v <= 1.0 else 50   # risk_v2 threshold for "detected"
         detected_adv = set()
         missed_adv = set()
 

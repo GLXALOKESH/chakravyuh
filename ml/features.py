@@ -69,7 +69,7 @@ def _build_txn_index(transactions):
                 atm_txns[frm].append((ts, amt, loc))
 
         if to not in ("SALARY", "CASH") and not to.startswith("VICTIM"):
-            credits[to].append((ts, amt))
+            credits[to].append((ts, amt, frm))
 
     # Sort
     for aid in credits:
@@ -111,7 +111,7 @@ def _compute_core(acc, credits, debits, atm_txns) -> dict:
     debs  = debits.get(aid, [])
     atms  = atm_txns.get(aid, [])
 
-    amount_in  = sum(a for _, a in creds)
+    amount_in  = sum(a for _, a, *_ in creds)
     amount_out = sum(a for _, a, _ in debs)
     txn_in     = len(creds)
     txn_out    = len(debs)
@@ -120,7 +120,7 @@ def _compute_core(acc, credits, debits, atm_txns) -> dict:
 
     # Median hold time
     hold_mins = []
-    cred_times = sorted(ts for ts, _ in creds)
+    cred_times = sorted(ts for ts, *_ in creds)
     deb_times  = sorted(ts for ts, _, _ in debs)
     ci = di = 0
     while ci < len(cred_times) and di < len(deb_times):
@@ -133,7 +133,7 @@ def _compute_core(acc, credits, debits, atm_txns) -> dict:
     median_hold_min = float(np.median(hold_mins)) if hold_mins else 0.0
 
     # Velocity
-    all_ts = sorted([ts for ts, _ in creds] + [ts for ts, _, _ in debs])
+    all_ts = sorted([ts for ts, *_ in creds] + [ts for ts, _, _ in debs])
     if len(all_ts) >= 2:
         span_hr = (all_ts[-1] - all_ts[0]).total_seconds() / 3600
         velocity_per_hr = len(all_ts) / max(span_hr, 1.0)
@@ -151,16 +151,15 @@ def _compute_core(acc, credits, debits, atm_txns) -> dict:
         burst_10min = 0
 
     # Counterparty diversity
-    senders   = {t for t in transactions_from_meta(acc["_id"], credits)}
-    receivers = {to for _, _, to in debs}
+    senders   = {frm for _, _, frm in creds if frm}
+    receivers = {to for _, _, to in debs if to}
     all_counterparties = senders | receivers
     txn_count = txn_in + txn_out
     counterparty_div = len(all_counterparties) / max(txn_count, 1)
 
     # Unique senders and receivers
-    # (we don't store sender in credits index, so approximate)
-    in_degree  = txn_in
-    out_degree = len(set(to for _, _, to in debs))
+    in_degree  = len(senders)
+    out_degree = len(receivers)
 
     # Account age at first transaction
     try:
@@ -368,7 +367,7 @@ def compute_features(accounts: list, transactions: list, identifiers: list,
         debs  = debits.get(aid, [])
         atms  = atm_txns.get(aid, [])
 
-        amount_in  = sum(a for _, a in creds)
+        amount_in  = sum(a for _, a, *_ in creds)
         amount_out = sum(a for _, a, _ in debs)
         txn_in     = len(creds)
         txn_out    = len(debs)
@@ -377,7 +376,7 @@ def compute_features(accounts: list, transactions: list, identifiers: list,
 
         # Median hold time (minutes between credit and next debit)
         hold_mins = []
-        cred_times = sorted(ts for ts, _ in creds)
+        cred_times = sorted(ts for ts, *_ in creds)
         deb_times  = sorted(ts for ts, _, _ in debs)
         ci = di = 0
         while ci < len(cred_times) and di < len(deb_times):
@@ -390,7 +389,7 @@ def compute_features(accounts: list, transactions: list, identifiers: list,
         median_hold_min = float(np.median(hold_mins)) if hold_mins else 9999.0
 
         # Transaction velocity
-        all_ts = sorted([ts for ts, _ in creds] + [ts for ts, _, _ in debs])
+        all_ts = sorted([ts for ts, *_ in creds] + [ts for ts, _, _ in debs])
         if len(all_ts) >= 2:
             span_hr = max((all_ts[-1] - all_ts[0]).total_seconds() / 3600, 0.0167)
             velocity_per_hr = len(all_ts) / span_hr

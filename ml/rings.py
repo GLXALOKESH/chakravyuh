@@ -102,14 +102,18 @@ def discover_rings(accounts, transactions, identifiers, scored_df,
     if "prob_v2" in scored_df.columns:
         high_risk = set(scored_df[scored_df["prob_v2"] >= risk_threshold].index)
     else:
-        high_risk = set(scored_df[scored_df["risk_v2"] >= risk_threshold * 100].index)
+        max_r = scored_df["risk_v2"].max() if "risk_v2" in scored_df.columns and len(scored_df) > 0 else 1.0
+        thresh = risk_threshold if max_r <= 1.0 else risk_threshold * 100
+        high_risk = set(scored_df[scored_df["risk_v2"] >= thresh].index)
 
     if not high_risk:
         print("  [rings] No high-risk accounts found. Lowering threshold to 0.3...")
         if "prob_v2" in scored_df.columns:
             high_risk = set(scored_df[scored_df["prob_v2"] >= 0.3].index)
         else:
-            high_risk = set(scored_df[scored_df["risk_v2"] >= 30].index)
+            max_r = scored_df["risk_v2"].max() if "risk_v2" in scored_df.columns and len(scored_df) > 0 else 1.0
+            thresh = 0.3 if max_r <= 1.0 else 30
+            high_risk = set(scored_df[scored_df["risk_v2"] >= thresh].index)
 
     print(f"  [rings] {len(high_risk)} high-risk seed accounts")
 

@@ -32,6 +32,7 @@ from models import (train_models, score_accounts, evaluate, get_signals,
 from rings import discover_rings, classify_roles
 from taint import compute_default_taint
 from freeze import compute_default_freeze
+from temporal import analyze_temporal_fund_flows
 
 
 # ─────────────────────────────────────────────────────────────────
@@ -224,7 +225,7 @@ def run_pipeline(profile: str, geo: bool = False, train_profile: str = "train",
 
     # ── 11. COMPUTE RECRUITMENT RISK ─────────────────────────
 
-    print(f"\n  [11/12] Computing recruitment risk...")
+    print(f"\n  [11/13] Computing recruitment risk...")
     all_recruits = []
     for ring in rings:
         ring_member_ids = set(ring["member_ids"])
@@ -234,9 +235,31 @@ def run_pipeline(profile: str, geo: bool = False, train_profile: str = "train",
         )
         all_recruits.extend(recruits)
 
-    # ── 12. BUILD OUTPUT ─────────────────────────────────────
+    # ── 12. TEMPORAL FUND-FLOW INTELLIGENCE ───────────────────
 
-    print(f"\n  [12/12] Writing output files...")
+    print(f"\n  [12/13] Analyzing temporal fund flows...")
+    try:
+        fund_flows = analyze_temporal_fund_flows(
+            transactions,
+            rings=rings,
+            accounts=accounts,
+            scored_df=scored_df,
+        )
+    except Exception as e:
+        print(f"  WARNING: Temporal fund-flow analysis failed: {e}")
+        fund_flows = {
+            "summary": {
+                "total_paths_identified": 0,
+                "avg_hop_latency_minutes": 0.0,
+                "fastest_path_minutes": None,
+                "truncated": False,
+            },
+            "paths": [],
+        }
+
+    # ── 13. BUILD OUTPUT ─────────────────────────────────────
+
+    print(f"\n  [13/13] Writing output files...")
     out_dir = profile_dir / "outputs"
     out_dir.mkdir(parents=True, exist_ok=True)
     root_profile_dir = DATA_DIR / profile
@@ -303,6 +326,7 @@ def run_pipeline(profile: str, geo: bool = False, train_profile: str = "train",
     save_json(alerts,       out_dir / "alerts.json")
     save_json(metrics_doc,  out_dir / "metrics.json")
     save_json(all_recruits, out_dir / "recruits.json")
+    save_json(fund_flows,   out_dir / "fund_flows.json")
 
     # Also save to root data/<profile>/ for direct Express server consumption
     save_json(accounts,     root_profile_dir / "accounts.json")
@@ -313,6 +337,7 @@ def run_pipeline(profile: str, geo: bool = False, train_profile: str = "train",
     save_json(alerts,       root_out_dir / "alerts.json")
     save_json(metrics_doc,  root_out_dir / "metrics.json")
     save_json(all_recruits, root_out_dir / "recruits.json")
+    save_json(fund_flows,   root_out_dir / "fund_flows.json")
 
     elapsed = time.time() - t0
     print(f"\n{'='*60}")
@@ -321,6 +346,7 @@ def run_pipeline(profile: str, geo: bool = False, train_profile: str = "train",
     print(f"  Rings: {len(rings)}")
     print(f"  Alerts: {len(alerts)}")
     print(f"  Recruits: {len(all_recruits)}")
+    print(f"  Fund Flows: {fund_flows.get('summary', {}).get('total_paths_identified', 0)}")
     print(f"  Output: {out_dir}")
     print(f"{'='*60}\n")
 
@@ -330,6 +356,7 @@ def run_pipeline(profile: str, geo: bool = False, train_profile: str = "train",
         "rings": len(rings),
         "alerts": len(alerts),
         "recruits": len(all_recruits),
+        "fund_flows": fund_flows.get("summary", {}).get("total_paths_identified", 0),
         "metrics": metrics,
     }
 

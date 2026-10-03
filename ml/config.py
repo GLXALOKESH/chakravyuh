@@ -59,7 +59,7 @@ OUROBOROS_DEFAULTS = {
     "n_rounds": 3,
     "amount_sigma": 0.10,        # Gaussian σ as fraction of amount
     "temporal_lambda": 15.0,     # Poisson λ in minutes
-    "detection_threshold": 50,   # risk_v2 threshold for "detected"
+    "detection_threshold": 0.50,  # risk_v2 threshold for "detected" (0.0-1.0 scale)
     "profile": "demo",
 }
 
