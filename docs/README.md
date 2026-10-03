@@ -6,7 +6,7 @@ Contracts, status and design for the three services. **Start with
 ## Current state
 
 ```
-server/   Member 1  Express + TypeScript + Mongoose 9    145 tests passing
+server/   Member 1  Express + TypeScript + Mongoose 9    171 tests passing
 ml/       Member 3  Python pipeline, 17 modules          complete, 33 tests
 client/   Member 2  Next.js dashboard                    in progress
 docs/     this folder
@@ -18,7 +18,13 @@ The three work together against a local MongoDB 9.0 replica set or MongoDB Atlas
 default. Stored-data views are served from the database; [STREAMING.md](STREAMING.md)
 describes the separate in-memory live mode.
 
-**Latest backend addition:** optional `outputs/fund_flows.json` is now persisted
+**Latest backend addition:** correlated HTTP, MongoDB and Python logs, cached
+fallback visibility, seed commit outcomes and replay/live-run summaries. Start
+with `LOG_LEVEL=info LOG_FORMAT=pretty LOG_DB_ENABLED=true pnpm run dev` from
+`server/`. See the [logging guide](REALTIME_BACKEND_LOGGING_PLAN.md) and
+[verification report](tests/05-BACKEND-LOGGING.md).
+
+**Previous addition:** optional `outputs/fund_flows.json` is now persisted
 as individual `fund_flow_paths` documents and a current-profile
 `fund_flow_summaries` document, within the existing seed transaction. See the
 [artifact contract](ML_INTEGRATION.md#39-outputsfund_flowsjson--optional-object)
@@ -50,6 +56,7 @@ absent from the checkout.
 | Document | What |
 | --- | --- |
 | **[BACKEND_STATUS.md](BACKEND_STATUS.md)** | Why the server is built the way it is |
+| **[REALTIME_BACKEND_LOGGING_PLAN.md](REALTIME_BACKEND_LOGGING_PLAN.md)** | Implemented HTTP, ML and MongoDB logs: startup/configuration, correlation fields, slow-operation timing, seed and live-run lifecycle |
 
 ## From the ML team
 
@@ -76,15 +83,16 @@ One command starts everything with prefixed, interleaved logs:
 ```
 [mongo]  replica set already initialised
 [ml]     Uvicorn running on http://0.0.0.0:8000
-[api]    chakravyuh api on http://localhost:4000
-         database   mongodb 127.0.0.1:27017/chakravyuh
-         replay     8041 transactions, 3 alerts ready
+[api]    … server.ready … port=4000 mode=database …
 
 ── ready ──
   ● API          http://localhost:4000
   ● ML service   http://localhost:8000
   ● MongoDB      http://localhost:27017
 ```
+
+The API line above is abbreviated; its actual output is structured JSON or
+pretty metadata depending on `LOG_FORMAT`.
 
 | Flag | Does |
 | --- | --- |

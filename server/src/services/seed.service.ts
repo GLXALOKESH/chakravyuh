@@ -10,7 +10,7 @@
  *   data/<profile>/accounts.json
  *   data/<profile>/identifiers.json
  *   data/<profile>/transactions.json
- *   data/<profile>/ground_truth.json          optional, logged only
+ *   data/<profile>/ground_truth.json          optional, never logged
  *   data/<profile>/outputs/rings.json
  *   data/<profile>/outputs/alerts.json
  *   data/<profile>/outputs/metrics.json
@@ -46,6 +46,8 @@ import type {
 import type { GroundTruth } from '../interfaces/domain.interface.js';
 import type { FundFlowsArtifact } from '../interfaces/fund_flow.interface.js';
 import type { TransactionWrite } from '../interfaces/repository.interface.js';
+import { elapsedMs, errorFields, logEvent } from './logger.service.js';
+import { logId, withLogContext } from '../utilities/log-context.util.js';
 
 export interface ProfileData {
   source: string;
@@ -140,55 +142,80 @@ export interface SeedOptions {
   forceFixtures?: boolean;
 }
 
-export const seed = async (profile: string = config.seedProfile, options: SeedOptions = {}): Promise<SeedResult> => {
-  const forceFixtures = options.forceFixtures ?? config.seedFixtures;
+export const seed = (profile: string = config.seedProfile, options: SeedOptions = {}): Promise<SeedResult> =>
+  withLogContext({ seed_id: logId() }, async () => {
+    const started = performance.now();
+    let stage = 'load';
+    let committed = false;
+    logEvent('info', 'seed.started', { profile, direction: 'internal' });
+    try {
+      const forceFixtures = options.forceFixtures ?? config.seedFixtures;
 
-  let data = forceFixtures ? null : await loadProfile(profile);
-  let source = `data/${profile}`;
+      let data = forceFixtures ? null : await loadProfile(profile);
+      let source = `data/${profile}`;
 
-  if (!data) {
-    if (!forceFixtures) {
-      throw new Error(
-        `no data/${profile}/ found. Run ml/generate.py and ml/pipeline.py first, or set SEED_FIXTURES=1.`,
-      );
-    }
-    const built = buildFixtures({ seed: FIXTURE_SEED });
-    data = { source: 'src/fixtures', ...built, fund_flows: null };
-    source = 'src/fixtures (dev generator)';
-  }
+      if (!data) {
+        if (!forceFixtures) {
+          throw new Error(
+            `no data/${profile}/ found. Run ml/generate.py and ml/pipeline.py first, or set SEED_FIXTURES=1.`,
+          );
+        }
+        const built = buildFixtures({ seed: FIXTURE_SEED });
+        data = { source: 'src/fixtures', ...built, fund_flows: null };
+        source = 'src/fixtures (dev generator)';
+      }
 
-  // Indexes before the write rather than after: a fresh database has none, and
-  // a bulk insert into an unindexed collection leaves a window where every
-  // query does a collection scan.
-  await ensureIndexes();
+      logEvent('info', 'seed.profile_loaded', {
+        profile, source, direction: 'internal', fund_flows_present: data.fund_flows !== null,
+        truncated: data.fund_flows?.summary?.truncated,
+        counts: { accounts_input: data.accounts.length, transactions_input: data.transactions.length,
+          fund_flow_paths_input: data.fund_flows?.paths?.length ?? 0 },
+      });
+      stage = 'indexes';
+      // Indexes before the write rather than after: a fresh database has none, and
+      // a bulk insert into an unindexed collection leaves a window where every
+      // query does a collection scan.
+      await ensureIndexes();
 
-  // Rings first: accounts.ring_id, alerts.ring_id and recruits.ring_id all
-  // point at them. Everything happens in one transaction, so a failure part way
-  // through leaves the previous data intact.
-  await withTransaction(async (tx) => {
-    await truncateAll(tx);
-    await rings.insertMany(data!.rings, tx);
-    await accounts.insertMany(data!.accounts, tx);
-    await identifiers.insertMany(data!.identifiers, tx);
-    await transactions.insertMany(data!.transactions, tx);
-    await alerts.insertMany(data!.alerts, tx);
-    await recruits.insertMany(data!.recruits, tx);
-    if (data!.metrics) await metrics.set({ rows: data!.metrics.rows, note: data!.metrics.note }, tx);
-    if (data!.fund_flows) {
-      await fundFlows.setSummary(profile, data!.fund_flows.summary, tx);
-      await fundFlows.insertMany(data!.fund_flows.paths, tx);
+      // Rings first: accounts.ring_id, alerts.ring_id and recruits.ring_id all
+      // point at them. Everything happens in one transaction, so a failure part way
+      // through leaves the previous data intact.
+      stage = 'transaction';
+      await withTransaction(async (tx) => {
+        await truncateAll(tx);
+        await rings.insertMany(data!.rings, tx);
+        await accounts.insertMany(data!.accounts, tx);
+        await identifiers.insertMany(data!.identifiers, tx);
+        await transactions.insertMany(data!.transactions, tx);
+        await alerts.insertMany(data!.alerts, tx);
+        await recruits.insertMany(data!.recruits, tx);
+        if (data!.metrics) await metrics.set({ rows: data!.metrics.rows, note: data!.metrics.note }, tx);
+        if (data!.fund_flows) {
+          await fundFlows.setSummary(profile, data!.fund_flows.summary, tx);
+          await fundFlows.insertMany(data!.fund_flows.paths, tx);
+        }
+      });
+      committed = true;
+      stage = 'counts';
+
+      const counts: Record<string, number> = {
+        accounts: await accounts.count(),
+        identifiers: await identifiers.count(),
+        transactions: await transactions.count(),
+        rings: await rings.count(),
+        alerts: await alerts.count(),
+      };
+
+      stage = 'seed_metadata';
+      await setLastSeed({ source, profile, seeded_at: new Date().toISOString(), fixture_seed: FIXTURE_SEED, counts });
+
+      logEvent('info', 'seed.completed', { profile, source, duration_ms: elapsedMs(started), counts,
+        fund_flows_present: data.fund_flows !== null, truncated: data.fund_flows?.summary?.truncated,
+        commit_state: 'committed', direction: 'internal' });
+      return { source, profile, counts, groundTruth: data.ground_truth };
+    } catch (error) {
+      logEvent('error', 'seed.failed', { profile, stage, duration_ms: elapsedMs(started),
+        commit_state: committed ? 'committed' : 'not_confirmed', direction: 'internal', ...errorFields(error) });
+      throw error;
     }
   });
-
-  const counts: Record<string, number> = {
-    accounts: await accounts.count(),
-    identifiers: await identifiers.count(),
-    transactions: await transactions.count(),
-    rings: await rings.count(),
-    alerts: await alerts.count(),
-  };
-
-  await setLastSeed({ source, profile, seeded_at: new Date().toISOString(), fixture_seed: FIXTURE_SEED, counts });
-
-  return { source, profile, counts, groundTruth: data.ground_truth };
-};

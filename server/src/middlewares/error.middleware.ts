@@ -9,6 +9,8 @@
 import type { NextFunction, Request, Response } from 'express';
 import { PayloadTooLargeError } from '../exceptions/index.js';
 import { isAppError } from '../exceptions/index.js';
+import { errorFields } from '../services/logger.service.js';
+import { setLogContext } from '../utilities/log-context.util.js';
 
 export const notFoundHandler = (req: Request, res: Response): void => {
   res.status(404).json({ error: `no route ${req.method} ${req.originalUrl}` });
@@ -16,6 +18,7 @@ export const notFoundHandler = (req: Request, res: Response): void => {
 
 export const errorHandler = (err: unknown, req: Request, res: Response, _next: NextFunction): void => {
   if (res.headersSent) return;
+  setLogContext(errorFields(err));
 
   // express.json() rejects an oversized body before any route runs.
   if (err instanceof PayloadTooLargeError) {
@@ -33,12 +36,10 @@ export const errorHandler = (err: unknown, req: Request, res: Response, _next: N
   }
 
   if (isAppError(err)) {
-    if (err.status >= 500) console.error(`${req.method} ${req.originalUrl} failed:`, err);
     res.status(err.status).json(err.details ? { error: err.message, ...err.details } : { error: err.message });
     return;
   }
 
-  console.error(`${req.method} ${req.originalUrl} failed:`, err);
   res.status(500).json({ error: 'internal error' });
 };
 

@@ -18,11 +18,11 @@ done. Read `HOW_DATA_FLOWS.md` if you need to know how to feed it;
 ## Status
 
 Previously verified against **MongoDB Atlas**. The latest backend verification,
-including fund-flow persistence, used isolated local MongoDB replica sets:
+including fund-flow persistence and activity logging, used isolated local MongoDB replica sets:
 
 ```
 pnpm run typecheck   clean
-pnpm test            145 passed, 13 files, 0 failed, 0 skipped
+pnpm test            171 passed, 15 files, 0 failed, 0 skipped
 ```
 
 The demo file profile seeded twice with identical counts: 926 accounts, 8,041
@@ -31,13 +31,13 @@ fund-flow population remains pending. The 15 fund-flow tests verify populated
 collections, summaries, idempotency and rollback using isolated test artifacts.
 
 Stack: Express 4, TypeScript (strict), Mongoose 9, class-validator, Socket.IO,
-~6,750 lines across `src/` and `test/`.
+Pino with optional pino-pretty local output.
 
 ### The three services, as they actually stand
 
 | Area | State |
 | --- | --- |
-| Server (`server/`) | Fund-flow persistence implemented; 145 tests passed. Actual demo fund-flow artifact pending |
+| Server (`server/`) | Fund-flow persistence and activity logging implemented; 171 tests passed. Actual demo fund-flow artifact pending |
 | ML pipeline (`ml/`) | Complete. 17 modules, ~7,500 lines, 33 tests passing |
 | Frontend (`client/`) | In progress — Next.js, graph components landed on `main` |
 
@@ -111,6 +111,25 @@ for the schema, indexes and optional-file behavior, and
 [the verification report](tests/04-FUND-FLOW-PERSISTENCE.md) for the changed
 files, 15 new checks and demo seed results.
 
+### 8. Correlated backend activity logs
+
+Pino emits one structured JSON record per line, or local pretty output. HTTP
+middleware establishes request context before CORS/body parsing; repositories
+and ML clients retain it through `AsyncLocalStorage`. Background engines use
+their run ids. Database execution wrappers preserve queries, sessions, results
+and errors while recording safe query shape, application-side duration and
+actual available result counts.
+
+Seed transaction callbacks carry attempt numbers; individual writes remain
+pending until commit. Post-commit metadata failure and unknown commit results
+have distinct outcomes. Stream counters aggregate on existing ticks instead of
+adding timers or per-transaction log records. Raw payloads, filter values and
+error messages are excluded from metadata.
+
+See the [logging guide](REALTIME_BACKEND_LOGGING_PLAN.md) for configuration and
+events, and [report 05](tests/05-BACKEND-LOGGING.md) for the 26 new checks and
+load comparison.
+
 ---
 
 ## Architecture
@@ -180,8 +199,8 @@ fields under `details.fields`.
 
 ## Tests
 
-145 checks across 13 files, **all passing with none skipped** in the latest run.
-That is 130 existing checks plus 15 new fund-flow checks; the older 103/117
+171 checks across 15 files, **all passing with none skipped** in the latest run.
+That is 145 existing checks plus 26 logging checks; the older 103/117
 figures describe earlier snapshots.
 
 | File | Checks | Covers |
@@ -199,6 +218,8 @@ figures describe earlier snapshots.
 | `freeze-edge.test.ts` | 3 | Nothing-at-risk and exclusion behavior |
 | `stream.service.test.ts` | 13 | Live streaming, retries, resynchronisation and lifecycle |
 | `fund_flows.test.ts` | 15 | File ingestion, summary/units, reseeding, missing/empty input, indexes and rollback |
+| `logging.test.ts` | 13 | HTTP/ML correlation, lifecycle, fallback, safe metadata and run summaries |
+| `db-logging.test.ts` | 13 | Query outcomes, execute-once semantics, sessions, retries and seed commit boundaries |
 
 With no `MONGO_URL`, `global-setup.ts` starts its own single-node replica set
 in-process, so `pnpm test` needs nothing. With a URL, it uses that, pointed at
@@ -387,7 +408,7 @@ ML side running.
 | `pnpm run typecheck` | Typecheck everything including tests |
 | `pnpm run db:indexes` | Create declared indexes. Run after an ML push |
 | `SEED_FIXTURES=false pnpm run seed demo` | Replace the dataset from `data/demo/`, including optional fund flows |
-| `pnpm test` | 145 checks; starts its own mongod if needed |
+| `pnpm test` | 171 checks; starts its own mongod if needed |
 
 ---
 

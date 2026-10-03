@@ -12,6 +12,7 @@
  */
 import { config } from '../configs/env.js';
 import type { LiveScore, PredictorAlert, PredictorRing } from './live.store.js';
+import { withMlLog } from '../utilities/ml-log.util.js';
 
 export interface PredictRequest {
   run_id: string;
@@ -38,8 +39,9 @@ export class PredictorError extends Error {
     /** 0 when the predictor could not be reached at all. */
     readonly status: number,
     readonly detail?: unknown,
+    cause?: unknown,
   ) {
-    super(message);
+    super(message, { cause });
     this.name = 'PredictorError';
   }
 }
@@ -57,22 +59,28 @@ export const createPredictorClient = ({
   fetchImpl = fetch,
 }: { url?: string; timeoutMs?: number; fetchImpl?: Fetch } = {}): PredictorClient => {
   const post = async <T>(route: string, body: unknown): Promise<T> => {
-    let response: Response;
-    try {
-      response = await fetchImpl(`${url.replace(/\/$/, '')}${route}`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(body),
-        signal: AbortSignal.timeout(timeoutMs),
-      });
-    } catch (err) {
-      throw new PredictorError(`predictor unreachable: ${(err as Error).message}`, 0);
-    }
-    if (!response.ok) {
-      const detail = await response.json().catch(() => null);
-      throw new PredictorError(`predictor answered HTTP ${response.status}`, response.status, detail);
-    }
-    return (await response.json()) as T;
+    const input = body as Partial<PredictRequest>;
+    return withMlLog({ path: route, method: 'POST', timeout_ms: timeoutMs, run_id: input.run_id, seq: input.seq,
+      counts: { txns: input.txns?.length ?? 0, accounts: input.accounts?.length ?? 0, identifiers: input.identifiers?.length ?? 0 },
+    }, async (receivedStatus) => {
+      let response: Response;
+      try {
+        response = await fetchImpl(`${url.replace(/\/$/, '')}${route}`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(body),
+          signal: AbortSignal.timeout(timeoutMs),
+        });
+      } catch (err) {
+        throw new PredictorError(`predictor unreachable: ${(err as Error).message}`, 0, undefined, err);
+      }
+      receivedStatus(response.status);
+      if (!response.ok) {
+        const detail = await response.json().catch(() => null);
+        throw new PredictorError(`predictor answered HTTP ${response.status}`, response.status, detail);
+      }
+      return (await response.json()) as T;
+    });
   };
 
   return {

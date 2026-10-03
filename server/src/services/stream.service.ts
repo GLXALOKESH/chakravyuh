@@ -29,6 +29,9 @@ import { spawnGenerator, type GeneratorHandle, type SpawnGenerator } from './gen
 import { LiveStore, SALARY, type LiveAccount, type LiveScore, type LiveTxn } from './live.store.js';
 import { createPredictorClient, PredictorError, type PredictorClient, type PredictRequest, type PredictResponse } from './predictor.client.js';
 import type { Transaction } from '../interfaces/domain.interface.js';
+import { ActivityLog } from './activity-log.service.js';
+import { logEvent } from './logger.service.js';
+import { withLogContext } from '../utilities/log-context.util.js';
 
 export type StreamEmit = (event: string, payload?: unknown) => void;
 type SetTimer = (fn: () => void, ms: number) => unknown;
@@ -134,6 +137,8 @@ export class StreamService {
   private backoffMs = BACKOFF_MIN_MS;
   private retryAt = 0;
   private rejected = 0;
+  private readonly activity: ActivityLog;
+  private loggedPredictorStatus: PredictorStatus = 'idle';
 
   constructor(options: StreamServiceOptions = {}) {
     this.emit = options.emit ?? (() => {});
@@ -146,6 +151,7 @@ export class StreamService {
     this.batchMax = options.batchMax ?? config.stream.predictBatchMax;
     this.maxTxns = options.maxTxns ?? config.stream.maxTxns;
     this.now = options.now ?? Date.now;
+    this.activity = new ActivityLog('stream', this.now);
     this.onStart = options.onStart;
   }
 
@@ -164,6 +170,9 @@ export class StreamService {
     this.onStart?.();
 
     const runId = `run-${this.now().toString(36)}`;
+    this.activity.reset(runId);
+    this.loggedPredictorStatus = 'idle';
+    logEvent('info', 'stream.started', { run_id: runId, rate, seed, mode: external ? 'external' : 'generator', direction: 'internal' });
     this.store.reset(runId);
     this.store.rate = rate;
     this.queue = [];
@@ -190,7 +199,7 @@ export class StreamService {
     } else {
       this.generatorStatus = 'running';
       let exited = false;
-      this.generator = this.spawn({
+      this.generator = withLogContext({ run_id: runId }, () => this.spawn({
         seed,
         rate,
         onEvent: (event) => {
@@ -209,11 +218,13 @@ export class StreamService {
             this.generatorStatus = 'exited';
           }
         },
-      });
+      }), { replace: true });
     }
 
-    this.tickTimer = this.setTimer(() => this.tick(), this.tickMs);
-    this.pumpTimer = this.setTimer(() => void this.pump(), this.predictIntervalMs);
+    withLogContext({ run_id: runId }, () => {
+      this.tickTimer = this.setTimer(() => this.tick(), this.tickMs);
+      this.pumpTimer = this.setTimer(() => void this.pump(), this.predictIntervalMs);
+    }, { replace: true });
     this.emitState(true);
     return { ok: true, run_id: runId, rate, seed: seed ?? null };
   }
@@ -233,6 +244,7 @@ export class StreamService {
    * predictor is left alone; the next run resets it.
    */
   clear(): { ok: true } {
+    logEvent('info', 'stream.cleared', { run_id: this.store.runId, direction: 'internal' });
     if (this.running || this.draining) this.stop('cleared');
     this.store.reset(null);
     this.queue = [];
@@ -254,6 +266,7 @@ export class StreamService {
 
   /** The generator is done: deliver what the predictor has not seen yet, then end. */
   private finish(reason: string): void {
+    logEvent('info', 'stream.draining', { run_id: this.store.runId, direction: 'internal' });
     this.killGenerator();
     this.running = false;
     this.draining = true;
@@ -269,6 +282,10 @@ export class StreamService {
     if (this.pumpTimer) this.clearTimer(this.pumpTimer);
     this.tickTimer = this.pumpTimer = null;
     this.flush();
+    this.activity.flush(true);
+    // The reason can arrive from an external generator: only known reasons are logged.
+    logEvent('info', 'stream.ended', { run_id: this.store.runId, direction: 'internal',
+      reason: ['stopped', 'cleared', 'duration', 'capacity', 'replay started', 'generator stopped', 'server shutting down'].includes(reason) ? reason : 'generator ended' });
     this.emit(STREAM_EVENTS.END, { run_id: this.store.runId, reason });
     this.emitState(true);
   }
@@ -293,6 +310,7 @@ export class StreamService {
       else rejected += 1;
     }
     this.rejected += rejected;
+    if (rejected) this.activity.count('rejected_events', rejected);
     return { accepted, rejected };
   }
 
@@ -355,6 +373,7 @@ export class StreamService {
         };
         const gt = event.gt as { is_fraud?: boolean } | undefined;
         store.addTxn(txn, Boolean(gt?.is_fraud));
+        this.activity.count('received_txns');
         // The label stops here: the predictor gets the transaction alone.
         this.queue.push({ kind: 'txn', data: { ...txn } });
         // Salary credits feed the model's features but are not shown.
@@ -396,6 +415,7 @@ export class StreamService {
   /** Every tick: new transactions, the clock, and now and then the state. */
   tick(): void {
     this.flush();
+    this.activity.flush();
     if (this.store.clock && this.store.clock !== this.lastClockSent) {
       this.lastClockSent = this.store.clock;
       this.emit(STREAM_EVENTS.CLOCK, { run_id: this.store.runId, ts: this.store.clock });
@@ -405,11 +425,19 @@ export class StreamService {
 
   private flush(): void {
     while (this.outbox.length) {
-      this.emit(STREAM_EVENTS.TXNS, { run_id: this.store.runId, txns: this.outbox.splice(0, TXNS_PER_EMIT) });
+      const txns = this.outbox.splice(0, TXNS_PER_EMIT);
+      this.activity.count('emitted_txns', txns.length);
+      this.emit(STREAM_EVENTS.TXNS, { run_id: this.store.runId, txns });
     }
   }
 
   private emitState(force: boolean): void {
+    if (this.predictorStatus !== this.loggedPredictorStatus) {
+      this.loggedPredictorStatus = this.predictorStatus;
+      logEvent(this.predictorStatus === 'down' || this.predictorStatus === 'lagging' ? 'warn' : 'info', 'stream.predictor_status', {
+        run_id: this.store.runId, predictor_status: this.predictorStatus, direction: 'internal',
+      });
+    }
     const at = this.now();
     if (!force && at - this.lastStateAt < 1000) return;
     this.lastStateAt = at;
@@ -460,6 +488,7 @@ export class StreamService {
     this.inFlight = true;
     try {
       if (!this.predictorReady) {
+        logEvent('info', 'stream.predictor_reset', { run_id: runId, direction: 'out', peer: 'ml' });
         await this.predictor.reset(runId!, this.store.simStart);
         if (this.store.runId !== runId) return;
         this.predictorReady = true;
@@ -478,6 +507,8 @@ export class StreamService {
       this.backoffMs = BACKOFF_MIN_MS;
       this.lastError = null;
       this.apply(answer);
+      this.activity.count('predictor_batches');
+      this.activity.count('predictor_txns_acknowledged', batch.body.txns.length);
       this.predictorStatus = this.pendingTxns() > this.batchMax * 2 ? 'lagging' : 'ok';
       if (this.draining && this.cursor >= this.queue.length) this.end(this.ended ?? 'duration');
     } catch (err) {
@@ -491,10 +522,12 @@ export class StreamService {
         this.pending = null;
         for (const ring of this.store.rings.values()) ring.version = 0;
         this.lastError = 'The predictor restarted; resending the run so far.';
+        logEvent('warn', 'stream.predictor_resync', { run_id: runId, seq: this.seq, direction: 'internal', status_code: 409 });
       } else {
         this.predictorStatus = 'down';
         this.lastError = (err as Error).message;
         this.retryAt = this.now() + this.backoffMs;
+        logEvent('warn', 'stream.predictor_backoff', { run_id: runId, seq: this.pending?.seq, retry_ms: this.backoffMs, direction: 'internal' });
         this.backoffMs = Math.min(BACKOFF_MAX_MS, this.backoffMs * 2);
       }
       this.emitState(true);
@@ -518,15 +551,20 @@ export class StreamService {
         ...(s.signals ? { signals: s.signals } : {}),
       }));
       this.store.setScores(scores);
+      this.activity.count('emitted_scores', scores.length);
       this.emit(STREAM_EVENTS.SCORES, { run_id: runId, scores });
     }
     for (const ring of answer.rings ?? []) {
       if (!this.store.upsertRing(ring)) continue;
+      logEvent('info', 'stream.ring', { run_id: runId, ring_id: ring.id, version: ring.version, direction: 'out', peer: 'client' });
       this.emit(STREAM_EVENTS.RING, { run_id: runId, version: ring.version, ring: this.store.ringGraph(ring.id) });
     }
     for (const alert of answer.alerts ?? []) {
       const live = this.store.addAlert(alert);
-      if (live) this.emit(STREAM_EVENTS.ALERT, { run_id: runId, alert: live });
+      if (live) {
+        logEvent('info', 'stream.alert', { run_id: runId, ring_id: live.ring_id, alert_id: live.id, direction: 'out', peer: 'client' });
+        this.emit(STREAM_EVENTS.ALERT, { run_id: runId, alert: live });
+      }
     }
   }
 

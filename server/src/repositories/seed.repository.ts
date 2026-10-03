@@ -8,6 +8,7 @@
  * five thousand transactions is the one thing the demo cannot afford to be slow.
  */
 import { SeedMeta, SEED_META_ID, ALL_MODELS } from '../models/index.js';
+import { logQuery, withDbLog } from '../utilities/db-log.util.js';
 import type { Writer } from '../interfaces/repository.interface.js';
 
 /** Collection names, in the order truncateAll clears them. See models/index.ts. */
@@ -24,7 +25,8 @@ export const truncateAll = async (tx: Writer): Promise<void> => {
   for (const model of ALL_MODELS) {
     // deleteMany({}) on a collection that does not exist yet creates nothing and
     // matches nothing, which is what a first seed wants.
-    await model.collection.deleteMany({}, { session: tx });
+    await withDbLog({ collection: model.collection.collectionName, operation: 'deleteMany' },
+      () => model.collection.deleteMany({}, { session: tx }));
   }
 };
 
@@ -44,14 +46,14 @@ export interface SeedRecord {
  * survive a load that rolled back.
  */
 export const setLastSeed = async (value: SeedRecord, tx?: Writer): Promise<void> => {
-  await SeedMeta.findOneAndUpdate(
+  await logQuery(SeedMeta.findOneAndUpdate(
     { _id: SEED_META_ID },
     { $set: { value } },
     { upsert: true, returnDocument: 'after', session: tx },
-  ).exec();
+  ));
 };
 
 export const getLastSeed = async (): Promise<SeedRecord | null> => {
-  const row = await SeedMeta.findById(SEED_META_ID).lean().exec();
+  const row = await logQuery(SeedMeta.findById(SEED_META_ID).lean());
   return (row?.value as SeedRecord | null) ?? null;
 };

@@ -1,5 +1,6 @@
 /** Alerts (TRD section 6) and the alert list projection of TRD section 8. */
 import { Alert, Ring } from '../models/index.js';
+import { logQuery } from '../utilities/db-log.util.js';
 import { iso } from '../utilities/serialize.util.js';
 import { insertBatches } from './bulk.repository.js';
 import type { AlertRow } from '../mappers/row.mapper.js';
@@ -31,10 +32,9 @@ interface RingSummaryRow {
 const joinRings = async (rows: AlertJoinRow[]): Promise<AlertWithRing[]> => {
   const ringIds = [...new Set(rows.map((r) => r.ring_id).filter((id): id is string => Boolean(id)))];
   const rings = ringIds.length
-    ? await Ring.find({ _id: { $in: ringIds } })
+    ? await logQuery(Ring.find({ _id: { $in: ringIds } })
         .select('_id risk volume member_ids')
-        .lean()
-        .exec()
+        .lean())
     : [];
 
   const byId = new Map((rings as unknown as RingSummaryRow[]).map((r) => [r._id, r]));
@@ -55,7 +55,7 @@ const joinRings = async (rows: AlertJoinRow[]): Promise<AlertWithRing[]> => {
 
 /** TRD section 8 GET /alerts, newest first. */
 export const listWithRingSummary = async (): Promise<AlertWithRing[]> => {
-  const rows = await Alert.find().sort({ fired_at: -1, _id: 1 }).lean().exec();
+  const rows = await logQuery(Alert.find().sort({ fired_at: -1, _id: 1 }).lean());
   return joinRings(rows as unknown as AlertJoinRow[]);
 };
 
@@ -66,11 +66,11 @@ export const listWithRingSummary = async (): Promise<AlertWithRing[]> => {
  * ascending regardless of how the alert list is displayed.
  */
 export const listWithRingByFiredAt = async (): Promise<AlertWithRing[]> => {
-  const rows = await Alert.find().sort({ fired_at: 1, _id: 1 }).lean().exec();
+  const rows = await logQuery(Alert.find().sort({ fired_at: 1, _id: 1 }).lean());
   return joinRings(rows as unknown as AlertJoinRow[]);
 };
 
-export const count = async (): Promise<number> => Alert.countDocuments({}).exec();
+export const count = async (): Promise<number> => logQuery(Alert.countDocuments({}));
 
 export const insertMany = async (
   rows: { id: string; ring_id: string | null; fired_at: string; reason: string | null }[],

@@ -13,6 +13,7 @@
  */
 import { CASH_ACCOUNT_ID } from '../constants/index.js';
 import { Transaction } from '../models/index.js';
+import { logQuery } from '../utilities/db-log.util.js';
 import { toReplayTxn, toTransaction, type TransactionRow } from '../mappers/row.mapper.js';
 import { insertBatches } from './bulk.repository.js';
 import type { TransactionWrite, Writer } from '../interfaces/repository.interface.js';
@@ -25,7 +26,7 @@ const PUBLIC = '_id from to amount ts channel location';
 const REPLAY_COLUMNS = '_id from to amount ts channel';
 
 export const getById = async (id: string): Promise<Txn | null> => {
-  const row = await Transaction.findById(id).select(PUBLIC).lean().exec();
+  const row = await logQuery(Transaction.findById(id).select(PUBLIC).lean());
   return row ? toTransaction(row as unknown as TransactionRow) : null;
 };
 
@@ -49,7 +50,7 @@ export const listOrdered = async (
     // "Everything after this transaction" means strictly later than its own
     // timestamp. An unknown id simply contributes no cursor rather than
     // returning nothing, so a stale checkpoint cannot silently stall a caller.
-    const anchor = await Transaction.findById(fromId).select('ts').lean().exec();
+    const anchor = await logQuery(Transaction.findById(fromId).select('ts').lean());
     if (anchor) {
       const after = { ts: { $gt: anchor.ts } };
       filter.ts = asOf ? { $and: [{ ts: { $lte: asOf } }, after] } : after;
@@ -58,7 +59,7 @@ export const listOrdered = async (
 
   const query = Transaction.find(filter).select(REPLAY_COLUMNS).sort({ ts: 1, _id: 1 });
   if (limit) query.limit(limit);
-  const rows = await query.lean().exec();
+  const rows = await logQuery(query.lean());
   return (rows as unknown as TransactionRow[]).map(toReplayTxn);
 };
 
@@ -76,11 +77,10 @@ export const listOrdered = async (
  */
 export const cashoutsForRing = async (memberIds: string[]): Promise<Txn[]> => {
   if (!memberIds.length) return [];
-  const rows = await Transaction.find({ channel: 'ATM', from: { $in: memberIds } })
+  const rows = await logQuery(Transaction.find({ channel: 'ATM', from: { $in: memberIds } })
     .select(PUBLIC)
     .sort({ ts: 1, _id: 1 })
-    .lean()
-    .exec();
+    .lean());
   const located = (rows as unknown as TransactionRow[]).filter(
     (r) => r.location !== null && typeof r.location === 'object',
   );
@@ -89,19 +89,18 @@ export const cashoutsForRing = async (memberIds: string[]): Promise<Txn[]> => {
 
 /** Most recent activity touching an account, for the entity panel. */
 export const recentForAccount = async (accountId: string, limit = 10): Promise<Txn[]> => {
-  const rows = await Transaction.find({ $or: [{ from: accountId }, { to: accountId }] })
+  const rows = await logQuery(Transaction.find({ $or: [{ from: accountId }, { to: accountId }] })
     .select(PUBLIC)
     .sort({ ts: -1, _id: -1 })
     .limit(limit)
-    .lean()
-    .exec();
+    .lean());
   return (rows as unknown as TransactionRow[]).map(toTransaction);
 };
 
 // countDocuments rather than estimatedDocumentCount: the seed reports these
 // counts and the tests assert them, so an estimate that may lag a write is not
 // good enough.
-export const count = async (): Promise<number> => Transaction.countDocuments({}).exec();
+export const count = async (): Promise<number> => logQuery(Transaction.countDocuments({}));
 
 /**
  * A page of transactions, oldest first, for GET /api/transactions.
@@ -120,14 +119,13 @@ export const listPage = async (
   limit = 50,
 ): Promise<{ rows: Txn[]; total: number; page: number; pages: number }> => {
   const [total, rows] = await Promise.all([
-    Transaction.countDocuments({}).exec(),
-    Transaction.find({})
+    logQuery(Transaction.countDocuments({})),
+    logQuery(Transaction.find({})
       .select(PUBLIC)
       .sort({ ts: 1, _id: 1 })
       .skip((page - 1) * limit)
       .limit(limit)
-      .lean()
-      .exec(),
+      .lean()),
   ]);
 
   return {

@@ -20,6 +20,9 @@ import { iso } from '../utilities/serialize.util.js';
 import * as transactions from '../repositories/transactions.repository.js';
 import * as alerts from '../repositories/alerts.repository.js';
 import type { AlertWithRing, ReplayState, ReplayTxn } from '../interfaces/domain.interface.js';
+import { ActivityLog } from './activity-log.service.js';
+import { logEvent } from './logger.service.js';
+import { logId, withLogContext } from '../utilities/log-context.util.js';
 
 export { REPLAY_EVENTS };
 
@@ -85,6 +88,8 @@ export class ReplayEngine {
   private timer: unknown = null;
   private nextClockEmitMs = 0;
   private lastEmittedSecond = -1;
+  private runId: string | undefined;
+  private readonly activity = new ActivityLog('replay');
 
   constructor(options: ReplayEngineOptions = {}) {
     this.emit = options.emit ?? (() => {});
@@ -106,6 +111,7 @@ export class ReplayEngine {
   async load(): Promise<{ transactions: number; alerts: number }> {
     const script = await this.loadScript();
     this.setScript(script);
+    logEvent('info', 'replay.loaded', { counts: { transactions: script.transactions.length, alerts: script.alerts.length }, direction: 'internal' });
     return { transactions: script.transactions.length, alerts: script.alerts.length };
   }
 
@@ -159,7 +165,12 @@ export class ReplayEngine {
     this.alertIndex = 0;
     this.lastEmittedSecond = -1;
 
-    this.timer = this.setTimer(() => this.tick(), this.tickMs);
+    this.runId = `replay-${logId()}`;
+    this.activity.reset(this.runId);
+    logEvent('info', 'replay.started', { run_id: this.runId, speed: this.speed, direction: 'internal' });
+    withLogContext({ run_id: this.runId }, () => {
+      this.timer = this.setTimer(() => this.tick(), this.tickMs);
+    }, { replace: true });
     return { ok: true, speed: this.speed, queued: this.queue.length };
   }
 
@@ -167,6 +178,8 @@ export class ReplayEngine {
     if (!this.running) return { ok: true, alreadyStopped: true };
     this.clearTimer(this.timer);
     this.timer = null;
+    this.activity.flush(true);
+    logEvent('info', 'replay.stopped', { run_id: this.runId, direction: 'internal' });
     return { ok: true };
   }
 
@@ -184,6 +197,7 @@ export class ReplayEngine {
       if (Date.parse(txn.ts) > clockMs) break;
       this.queueIndex += 1;
       emittedTxns.push(txn);
+      this.activity.count('emitted_txns');
       this.emit(REPLAY_EVENTS.TXN, txn);
     }
 
@@ -193,6 +207,7 @@ export class ReplayEngine {
       if (entry.fired_at_ms > clockMs) break;
       this.alertIndex += 1;
       emittedAlerts.push(entry.alert);
+      logEvent('info', 'replay.alert', { run_id: this.runId, alert_id: entry.alert.id, ring_id: entry.alert.ring_id, direction: 'out', peer: 'client' });
       this.emit(REPLAY_EVENTS.ALERT, entry.alert);
     }
 
@@ -209,10 +224,12 @@ export class ReplayEngine {
     }
 
     let ended = false;
+    this.activity.flush();
     if (this.queueIndex >= this.queue.length) {
       this.stop();
       ended = true;
       this.emit(REPLAY_EVENTS.END);
+      logEvent('info', 'replay.ended', { run_id: this.runId, direction: 'internal' });
     }
 
     return { clockMs: this.clockMs, emittedTxns, emittedAlerts, emittedClock, ended };

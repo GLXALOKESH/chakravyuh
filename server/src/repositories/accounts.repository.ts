@@ -6,13 +6,14 @@
  * document is the API response with `_id` renamed to `id`.
  */
 import { Account } from '../models/index.js';
+import { logQuery } from '../utilities/db-log.util.js';
 import { toAccount, type AccountRow } from '../mappers/row.mapper.js';
 import { insertBatches } from './bulk.repository.js';
 import type { AccountWrite, Writer } from '../interfaces/repository.interface.js';
 import type { Account as AccountDomain } from '../interfaces/domain.interface.js';
 
 export const getById = async (id: string): Promise<AccountDomain | null> => {
-  const row = await Account.findById(id).lean().exec();
+  const row = await logQuery(Account.findById(id).lean());
   return row ? toAccount(row as unknown as AccountRow) : null;
 };
 
@@ -25,23 +26,22 @@ export const getById = async (id: string): Promise<AccountDomain | null> => {
  */
 export const listByIds = async (ids: string[]): Promise<AccountDomain[]> => {
   if (!ids.length) return [];
-  const rows = await Account.find({ _id: { $in: ids } }).lean().exec();
+  const rows = await logQuery(Account.find({ _id: { $in: ids } }).lean());
   const byId = new Map((rows as unknown as AccountRow[]).map((r) => [r._id, toAccount(r)]));
   return ids.map((id) => byId.get(id)).filter((a): a is AccountDomain => Boolean(a));
 };
 
 export const listByRing = async (ringId: string): Promise<AccountDomain[]> => {
-  const rows = await Account.find({ ring_id: ringId }).sort({ _id: 1 }).lean().exec();
+  const rows = await logQuery(Account.find({ ring_id: ringId }).sort({ _id: 1 }).lean());
   return (rows as unknown as AccountRow[]).map(toAccount);
 };
 
 /** Node projection for the ring graph (TRD section 8). */
 export const graphNodesForRing = async (ringId: string) => {
-  const rows = await Account.find({ ring_id: ringId })
+  const rows = await logQuery(Account.find({ ring_id: ringId })
     .select('_id role risk_v2')
     .sort({ _id: 1 })
-    .lean()
-    .exec();
+    .lean());
   return (rows as { _id: string; role: string | null; risk_v2: number | null }[]).map((r) => ({
     id: r._id,
     role: r.role,
@@ -49,7 +49,7 @@ export const graphNodesForRing = async (ringId: string) => {
   }));
 };
 
-export const count = async (): Promise<number> => Account.countDocuments({}).exec();
+export const count = async (): Promise<number> => logQuery(Account.countDocuments({}));
 
 /** Bulk insert, used by the seeder. See insertBatches for the batch semantics. */
 export const insertMany = async (rows: AccountWrite[], tx?: Writer): Promise<void> => {

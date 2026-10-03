@@ -7,6 +7,7 @@
  * pipeline writes it; this route only ever reads.
  */
 import { Recruit } from '../models/index.js';
+import { logQuery } from '../utilities/db-log.util.js';
 import { toRecruit } from '../mappers/api.mapper.js';
 import { recruitId } from '../models/recruit.model.js';
 import { insertBatches } from './bulk.repository.js';
@@ -15,11 +16,10 @@ import type { Recruit as RecruitDomain } from '../interfaces/domain.interface.js
 
 /** Descending by probability so the dashboard renders the list as-is. */
 export const listForRing = async (ringId: string): Promise<RecruitDomain[]> => {
-  const rows = await Recruit.find({ ring_id: ringId })
+  const rows = await logQuery(Recruit.find({ ring_id: ringId })
     .select('_id account_id probability reasons')
     .sort({ probability: -1, account_id: 1 })
-    .lean()
-    .exec();
+    .lean());
   return rows.map((r) =>
     toRecruit({
       account_id: r.account_id,

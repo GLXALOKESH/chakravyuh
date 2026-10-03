@@ -60,8 +60,7 @@ export const getTaint = async (req: Request, res: Response): Promise<void> => {
   const victimTxnId = query.txn ?? ring.victim_txn_ids[0] ?? null;
   const asOf = query.as_of ?? null;
 
-  const { payload, error } = await ml.taint({ ring_id: ring.id, victim_txn_id: victimTxnId, as_of: asOf }, ring.default_taint);
-  if (error) console.warn(`GET /rings/${id}/taint served from cache: ${error}`);
+  const { payload } = await ml.taint({ ring_id: ring.id, victim_txn_id: victimTxnId, as_of: asOf }, ring.default_taint);
 
   // Guard the contract even if Python misbehaves: never emit a null payload.
   // as_of goes through iso() because the cached default arrives from a jsonb
@@ -93,11 +92,10 @@ export const postFreeze = async (req: Request, res: Response): Promise<void> => 
   const victimTxnId = body.txn ?? ring.victim_txn_ids[0] ?? null;
   const asOf = body.as_of ?? null;
 
-  const { payload, error } = await ml.freeze(
+  const { payload } = await ml.freeze(
     { ring_id: ring.id, victim_txn_id: victimTxnId, as_of: asOf, k, exclude },
     ring.default_freeze,
   );
-  if (error) console.warn(`POST /rings/${id}/freeze served from cache: ${error}`);
 
   const freeze = (payload.freeze ?? []).filter((accountId) => !exclude.includes(accountId)).slice(0, k);
 

@@ -12,6 +12,7 @@ import { createApp, isStreamOnly } from '../app.js';
 import { STREAM_EVENTS } from '../constants/index.js';
 import { ReplayEngine, REPLAY_EVENTS } from '../services/replay.service.js';
 import { StreamService } from '../services/stream.service.js';
+import { errorFields, flushLogs, logEvent } from '../services/logger.service.js';
 
 // The app is attached once it exists, below: the engines it is built with
 // emit through the Socket.IO server, which needs the HTTP server first.
@@ -54,6 +55,14 @@ const app = createApp({ engine, stream });
 server.on('request', app);
 
 io.on('connection', (socket) => {
+  logEvent('info', 'socket.connected', { socket_id: socket.id, direction: 'in', peer: 'client' });
+  socket.on('disconnect', () => logEvent('info', 'socket.disconnected', { socket_id: socket.id, direction: 'internal' }));
+  socket.onAny((event: string) => {
+    const commands: readonly string[] = [STREAM_EVENTS.START, STREAM_EVENTS.STOP, STREAM_EVENTS.CLEAR, REPLAY_EVENTS.START, REPLAY_EVENTS.STOP];
+    if (commands.includes(event)) {
+      logEvent('info', 'socket.command', { socket_id: socket.id, operation: event, direction: 'in', peer: 'client' });
+    }
+  });
   socket.emit(REPLAY_EVENTS.STATE, engine.state());
   socket.emit(STREAM_EVENTS.STATE, stream.state());
   // A dashboard that opens mid-run draws everything so far from one message.
@@ -94,9 +103,9 @@ const main = async (): Promise<void> => {
   // live MongoDB then would defeat the point of having mocks.
   let script = { transactions: 0, alerts: 0 };
   if (config.useMocks) {
-    console.log('mock mode: no database connection will be opened');
+    logEvent('info', 'server.mode', { mode: 'mock', direction: 'internal' });
   } else if (isStreamOnly()) {
-    console.log('STREAM_ONLY: no database; live mode only, replay and the stored-data routes are off');
+    logEvent('info', 'server.mode', { mode: 'stream_only', direction: 'internal' });
   } else if (!hasDatabase()) {
     // Fail here with the actionable message rather than as a driver stack trace
     // from three frames down.
@@ -113,39 +122,28 @@ const main = async (): Promise<void> => {
     // on a five-thousand row query.
     script = await engine.load();
     if (script.transactions === 0) {
-      console.warn('warning: no transactions found. Run `npm run seed` before starting.');
+      logEvent('warn', 'replay.empty', { direction: 'internal' });
     }
   }
 
   server.listen(config.port, () => {
-    console.log(`chakravyuh api on http://localhost:${config.port}`);
-    console.log(`  database   ${config.useMocks ? '(mock mode)' : describeHost()}`);
-    console.log(`  ml service ${config.mlUrl} (${config.mlTimeoutMs}ms timeout)`);
-    console.log(`  mocks      ${config.useMocks ? 'on' : 'off'}`);
-    console.log(
-      config.useMocks
-        ? '  replay     mocked'
-        : isStreamOnly()
-          ? '  replay     off (STREAM_ONLY)'
-          : `  replay     ${script.transactions} transactions, ${script.alerts} alerts ready`,
-    );
-    console.log(`  live       ${config.stream.pythonBin} ${config.stream.generatorScript}`);
+    const database = describeDatabase();
+    logEvent('info', 'server.ready', {
+      port: config.port, mode: config.useMocks ? 'mock' : isStreamOnly() ? 'stream_only' : 'database',
+      host: database.host, database: database.database, timeout_ms: config.mlTimeoutMs,
+      counts: { replay_transactions: script.transactions, replay_alerts: script.alerts }, direction: 'internal',
+    });
   });
 };
 
-/** "host:port/database", for the startup banner. */
-const describeHost = (): string => {
-  const database = describeDatabase();
-  return `${database.driver} ${database.host}/${database.database}`;
-};
-
 const shutdown = async (signal: string): Promise<void> => {
-  console.log(`\n${signal} received, closing`);
+  logEvent('info', 'server.stopping', { signal, direction: 'internal' });
   engine.stop();
   stream.stop('server shutting down');
   io.close();
   server.close();
   await disconnect().catch(() => {});
+  await flushLogs();
   process.exit(0);
 };
 
@@ -153,7 +151,8 @@ process.on('SIGINT', () => void shutdown('SIGINT'));
 process.on('SIGTERM', () => void shutdown('SIGTERM'));
 
 main().catch(async (err: unknown) => {
-  console.error('failed to start:', (err as Error).message);
+  logEvent('error', 'server.start_failed', { ...errorFields(err), direction: 'internal' });
   await disconnect().catch(() => {});
+  await flushLogs();
   process.exit(1);
 });
