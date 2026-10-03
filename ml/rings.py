@@ -218,13 +218,21 @@ def discover_rings(accounts, transactions, identifiers, scored_df,
                     "account_ids": ring_overlap,
                 })
 
-        # Find victim transactions (external inflow to ring members)
+        # Find victim transactions (external inflow to ring members).
+        #
+        # The sender must be this ring's own victim, not merely any victim. The
+        # generator labels each ring's deposit `VICTIM_<ring_id>`, so matching on
+        # the bare "VICTIM" prefix picked up whichever ring happened to sort
+        # first when several rings' communities overlapped on a shared account.
+        # That assigned RING01 another ring's deposit, and because TRD 7.6 traces
+        # taint from this id, the whole trace started from the wrong deposit.
+        victim_label = f"VICTIM_{ring_id}"
         victim_txn_ids = []
         for t in transactions:
             if (t.get("is_fraud") and
                     t["from"] not in comm and
                     t["to"] in comm and
-                    t["from"].startswith("VICTIM")):
+                    t["from"] == victim_label):
                 victim_txn_ids.append(t["_id"])
 
         rings.append({

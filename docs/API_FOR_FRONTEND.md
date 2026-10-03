@@ -137,6 +137,9 @@ interface FreezePayload {
   secured: number;
   pct_stopped: number;    // 0 to 1 — multiply by 100 to display
   cached: boolean;
+  // true when no tainted money has reached a cash-out point. A valid state,
+  // not an error — see §4.
+  nothing_at_risk: boolean;
 }
 
 interface Recruit { id: string; probability: number; reasons: string[] }
@@ -334,7 +337,8 @@ curl -X POST localhost:4000/api/rings/RING01/freeze \
   "at_risk_before": 1090629,
   "secured": 700771,
   "pct_stopped": 0.643,
-  "cached": true
+  "cached": false,
+  "nothing_at_risk": false
 }
 ```
 
@@ -345,16 +349,37 @@ Exclusion works and the percentage drops:
 # {"freeze":["ACC0060","ACC0063"],"secured":329299,"pct_stopped":0.302}
 ```
 
-```
-k:3                              pct_stopped 0.643
-k:3, exclude:["ACC0040"]         pct_stopped 0.302
-k:10, exclude:[two accounts]     pct_stopped 0.129
-```
-
-An excluded account never appears in `freeze`. That is enforced server-side —
-you do not need to filter it out, though it does no harm.
+An excluded account never appears in `freeze`. That is enforced server-side.
 
 `pct_stopped` is 0 to 1. Multiply by 100 for display.
+
+#### `nothing_at_risk` — render this, do not treat it as an error
+
+```json
+{
+  "freeze": [], "at_risk_before": 0, "secured": 0, "pct_stopped": 0,
+  "cached": false, "nothing_at_risk": true
+}
+```
+
+**This is a real analytical state, not a failure.** It means no tainted money has
+reached a cash-out point yet, so there is nothing at risk and the optimiser
+correctly recommends nothing.
+
+Without the flag this is indistinguishable from a broken response — an empty
+freeze list with a zero. The frontend's only options would be "render an empty
+panel" or "render an error", and neither was true.
+
+```
+RING01   at_risk=0       nothing_at_risk=true    no cash-out reached
+RING02   at_risk=0       nothing_at_risk=true    no cash-out reached
+RING03   at_risk=887630  nothing_at_risk=false   money still moving
+```
+
+Suggested copy: *"No tainted funds have reached a cash-out point yet."* Render
+the panel, do not raise an error.
+
+It is always consistent: `nothing_at_risk === (at_risk_before === 0)`.
 
 ### `GET /api/rings/RING01/recruits`
 
@@ -522,10 +547,11 @@ Never retry a 400 — the request is wrong, not the server.
 |---|---|
 | `role` is `undefined` on a graph node | Identifier nodes have no `role`. Narrow on `type` |
 | `amount` is `undefined` on an edge | `identity` edges have no amount. Narrow on `kind` |
+| Freeze returns an empty list | Check `nothing_at_risk` — a valid state, not an error |
 | Taint percentages look wrong | Server sends **rupees**, not paise. Do not divide by 100 |
 | `pct_stopped` shows `0.64%` | It is 0–1. Multiply by 100 |
 | Recruits panel empty | Response is `[]`, not an error |
-| Every response `cached: true` | Expected until the Python service is running |
+| Every response `cached: true` | Python service not running |
 | Money 100× too large | Dividing by 100 when the server already sends rupees |
 | A route 404s | Check the path — `/rings/:id/taint` is **GET**, `freeze` and `evidence` are **POST** |
 

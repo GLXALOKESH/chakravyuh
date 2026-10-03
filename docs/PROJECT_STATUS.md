@@ -232,13 +232,30 @@ checking whether `trace()` rounds per-account and the total separately.
 The dashboard shows a conservation line, so a visible gap undermines the number
 beside it.
 
-### 5. Scratch files in the repo root
+### 5. Victim transaction labels are shifted by one
+
+The `from` label on each ring's victim deposit names the wrong ring:
+
+```
+RING01  victim=TXN002276  from=VICTIM_RING03   ← should be VICTIM_RING01
+RING02  victim=TXN003415  from=VICTIM_RING02   ok
+RING03  victim=TXN002188  from=VICTIM_RING01   ← should be VICTIM_RING03
+```
+
+The attribution is correct — each victim transaction genuinely lands in a member
+of its own ring, which is why taint still traces correctly. Only the label is
+off by one position, so it looks like a ring-construction ordering bug rather
+than a data-model error.
+
+ML-side. Found while verifying the freeze endpoint end to end.
+
+### 6. Scratch files in the repo root
 
 `patch_answers.py`, `patch_gen.py`, `revert_gen.py`. `patch_answers.py` edits
 `ml/BACKEND_ANSWERS.md` in place, which is how the answer text changed after the
 code it described. Not ours to remove, but confusing to anyone reading the repo.
 
-### 6. `generate.py` emits `amount_paise` on purpose
+### 7. `generate.py` emits `amount_paise` on purpose
 
 25 occurrences. The design is that the internal pipeline needs paise for taint
 arithmetic, and `run.py` converts to rupees on export.
