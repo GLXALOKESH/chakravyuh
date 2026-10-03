@@ -163,15 +163,15 @@ ML svc :8000   {"status":"ok","service":"chakravyuh-ml"}
 API    :4000   ready in 2s, 9,391 transactions queued
 
 11/11 endpoints 200
-ML tests        25 passed
-Server tests    114 passed, 0 skipped
+ML tests        33 passed
+Server tests    117 passed, 0 skipped
 Taint           cached: false   (live Python answering)
 ```
 
 15 server tests initially failed. All were `ml-fallback.test.ts` and
 `pipeline.test.ts` — **because the ML service was running**, and those tests
 assert the fallback path, which requires Python to be down. Stopping the service
-returned 114/114. Not a defect; a test-isolation note worth recording: those
+returned 117/117. Not a defect; a test-isolation note worth recording: those
 files now need ML stopped to be meaningful.
 
 ---
@@ -242,7 +242,7 @@ mongosh --eval 'rs.initiate({_id:"rs0",members:[{_id:0,host:"127.0.0.1:27017"}]}
 pnpm run db:indexes && pnpm start
 
 # benchmarks
-pnpm test                                   # 114 checks
+pnpm test                                   # 117 checks
 pnpm run loadtest                           # 65s, four phases
 node scripts/bench-1m.mjs                   # ingest + read ceilings
 ```

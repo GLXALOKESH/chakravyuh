@@ -6,15 +6,16 @@ Contracts, status and design for the three services. **Start with
 ## Current state
 
 ```
-server/   Member 1  Express + TypeScript + Mongoose 9    complete, 114 tests
-ml/       Member 3  Python pipeline, 17 modules          complete, 25 tests
+server/   Member 1  Express + TypeScript + Mongoose 9    complete, 117 tests
+ml/       Member 3  Python pipeline, 17 modules          complete, 33 tests
 client/   Member 2  Next.js dashboard                    in progress
 docs/     this folder
 ```
 
 The three work together against a local MongoDB 9.0 replica set or MongoDB Atlas.
-`ml/service.py` answers `/taint` and `/mincut` live; everything else is served
-from the database.
+`ml/service.py` answers `/taint` and `/mincut` live — responses carry
+`"cached": false`, meaning Python is computing rather than serving a stored
+default. Everything else is served from the database.
 
 ## Read this first
 

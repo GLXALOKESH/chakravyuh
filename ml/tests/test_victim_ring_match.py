@@ -1,16 +1,23 @@
 """
-Regression test for the ring/victim mismatch (fixed 3 Oct 2026).
+Regression test for the ring/victim invariant (3 Oct 2026).
 
-Ring discovery picked up any transaction whose sender merely started with
-"VICTIM", rather than the deposit labelled for that specific ring. When several
-rings' communities shared an account, RING01 could be assigned another ring's
-victim deposit.
+Written after an investigation that started from a suspected bug and ended
+without one, which is worth recording so nobody repeats it.
 
-The visible symptom was mislabelled data: a ring whose `victim_txn_ids[0]` had
-`from: "VICTIM_RING03"`. The consequence was worse than cosmetic — TRD 7.6 traces
-taint from that id, so the entire taint trace started from the wrong deposit and
-freeze recommendations were computed against money that was never stolen from
-this ring.
+What looked like a bug: each ring's `victim_txn_ids[0]` carried a sender label
+naming a different ring — RING01's victim was sent by `VICTIM_RING03`. Since
+TRD 7.6 traces taint from this id, that reads like the whole trace starts from
+the wrong deposit.
+
+It does not. `rings.py` assigns `ring_id` by community discovery order, so a
+discovered RING01 is not the planted RING01 — the label text is incidental and
+never was a reliable identifier. Tightening the match to `VICTIM_{ring_id}` was
+tried and left every ring with zero victims, which is how the false lead was
+ruled out.
+
+The invariant that actually matters is structural and is what these tests
+assert: the deposit is from an external victim, and it lands on a member of the
+ring that claims it. Both have to hold for the taint trace to mean anything.
 
 Checked against the produced artifacts rather than by calling `discover_rings`,
 which needs a scored DataFrame and therefore a full model run. The artifact is
@@ -48,19 +55,23 @@ def artifacts():
 
 
 class TestVictimBelongsToItsRing:
-    def test_each_ring_victim_is_labelled_for_that_ring(self, artifacts):
+    def test_victim_deposit_is_a_victim_at_all(self, artifacts):
+        # The label text cannot be checked against the ring id. Ring ids are
+        # assigned by community discovery order in rings.py, not by which planted
+        # ring a community came from, so a discovered RING01 is not necessarily
+        # related to a planted RING01. What must hold is that the sender is some
+        # external victim rather than a ring member or a sentinel.
         transactions, rings = artifacts
         by_id = {t["_id"]: t for t in transactions}
 
         assert rings, "expected rings in the demo profile"
         for ring in rings:
-            ring_id = ring["_id"]
             for vid in ring["victim_txn_ids"]:
                 txn = by_id.get(vid)
-                assert txn is not None, f"{ring_id} references unknown txn {vid}"
-                assert txn["from"] == f"VICTIM_{ring_id}", (
-                    f"{ring_id} claims {vid} as its victim deposit, but that "
-                    f"transaction was sent by {txn['from']}"
+                assert txn is not None, f"{ring['_id']} references unknown txn {vid}"
+                assert txn["from"].startswith("VICTIM"), (
+                    f"{ring['_id']} claims {vid}, sent by {txn['from']}, "
+                    f"which is not a victim"
                 )
 
     def test_victim_deposit_lands_on_a_member(self, artifacts):

@@ -220,19 +220,22 @@ def discover_rings(accounts, transactions, identifiers, scored_df,
 
         # Find victim transactions (external inflow to ring members).
         #
-        # The sender must be this ring's own victim, not merely any victim. The
-        # generator labels each ring's deposit `VICTIM_<ring_id>`, so matching on
-        # the bare "VICTIM" prefix picked up whichever ring happened to sort
-        # first when several rings' communities overlapped on a shared account.
-        # That assigned RING01 another ring's deposit, and because TRD 7.6 traces
-        # taint from this id, the whole trace started from the wrong deposit.
-        victim_label = f"VICTIM_{ring_id}"
+        # The prefix match is deliberate and cannot be tightened to
+        # `VICTIM_{ring_id}`: ring_id here is assigned by community discovery
+        # order, not by which planted ring the community came from, so a
+        # discovered RING01 has no relationship to a planted RING01. Matching the
+        # label would leave every ring with zero victims.
+        #
+        # What matters is that the deposit lands on a member of THIS community,
+        # which the `to in comm` clause already guarantees. That is the invariant
+        # ml/tests/test_victim_ring_match.py asserts, rather than the label text,
+        # which is incidental.
         victim_txn_ids = []
         for t in transactions:
             if (t.get("is_fraud") and
                     t["from"] not in comm and
                     t["to"] in comm and
-                    t["from"] == victim_label):
+                    t["from"].startswith("VICTIM")):
                 victim_txn_ids.append(t["_id"])
 
         rings.append({

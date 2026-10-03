@@ -6,7 +6,7 @@ own subject — read the newest, not all of them.
 | # | Report | What it establishes |
 | --- | --- | --- |
 | 01 | [Local Mongo setup and benchmark](01-LOCAL-MONGO-SETUP-AND-BENCHMARK.md) | Install method, replica set setup, 1M transactions in 2.45s, Atlas-vs-local matrix, saturation ceilings |
-| 02 | [Full-stack test report](02-FULL-STACK-TEST-REPORT.md) | All three services tested together for the first time: 25 ML tests, 114 server tests, live Python integration, venv setup |
+| 02 | [Full-stack test report](02-FULL-STACK-TEST-REPORT.md) | All three services tested together: 33 ML tests, 117 server tests, live Python integration, venv setup, and the paise/rupee unit bug |
 | 03 | [Throughput strategy](03-THROUGHPUT-STRATEGY.md) | The 1M-in-30-40s requirement, the three readings of it, and what each costs |
 
 ## Current numbers
@@ -20,8 +20,10 @@ ingest throughput                 407,498 docs/sec
 API ceiling                       ~6,200 req/s
 Mongo read ceiling (1M docs)      ~5,500 ops/sec  at 50-way parallelism
 API p50 at 100 req/s              1ms            (was 7,440ms on Atlas)
-server tests                      114 passed, 0 skipped
-ML tests                          25 passed
+server tests                      117 passed, 0 skipped
+ML tests                          33 passed
+taint conservation                holds, 0–1 rupee, live and cached
+/taint + /freeze                  cached: false  (Python answering live)
 ```
 
 Atlas free tier, for comparison: **100 operations/sec documented ceiling**,
@@ -41,9 +43,11 @@ reachable locally and not on the free tier.
 ## A note on running these
 
 Reports 01 and 02 both assume the ML service is **stopped** for the fallback
-tests. `ml-fallback.test.ts` and `pipeline.test.ts` assert the degraded path,
-which requires Python to be unreachable. Running them with `ml/service.py` up
-produces 15 failures that are not defects.
+tests. `ml-fallback.test.ts`, `pipeline.test.ts` and `freeze-edge.test.ts`
+assert the degraded path, which requires Python to be unreachable. Running them
+with `ml/service.py` up produces failures that are not defects: the suite seeds
+`chakravyuh_test` from the built-in fixtures while a running service loads the
+pipeline's own `data/demo`, so the two datasets share ring ids but nothing else.
 
 ## Not test reports
 

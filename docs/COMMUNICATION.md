@@ -244,7 +244,8 @@ about 25 clock ticks. Transactions arrive in `ts` order — you do not need to s
 > collections and load `src/fixtures` over your data. It exists for the case
 > where data arrives as files on the backend machine.
 >
-> Live data as of now: 926 accounts, 8,041 transactions, 3 rings, 3 alerts,
+> Live data as of now: 926 accounts, 8,041 transactions, 3 rings, 3 alerts.
+> `/taint` and `/freeze` return `cached: false`, so Python is answering live.
 > last pushed `2026-10-02T23:47:25`.
 
 You write JSON. The server reads it once at seed time and serves from MongoDB

@@ -2,6 +2,11 @@
 
 **From:** Member 1 (server). **For:** Member 3 (ML).
 
+> **Status 3 Oct 2026.** Questions 1–7 were answered and four of the answers
+> turned out to need work on the ML side, which has since been done on the
+> `impl_pipeline_ml_n_server` branch. Kept for reference; the open items are at
+> the bottom.
+
 I have your data in Atlas and the server serves it. Ten questions, ordered by
 how much they block the demo. Each one says what I observed and what I need.
 
@@ -208,17 +213,44 @@ timeout, so I need to know the port is fixed at 8000.
 Short answers to **1**, **2** and **5** would unblock the most. The rest I can
 work around.
 
-## What is already working, so you know what not to re-check
+**All ten were answered.** What the answers turned up, fixed on the
+`impl_pipeline_ml_n_server` branch:
 
-- 926 accounts, 475 identifiers, **8,041 transactions**, 3 rings, 3 alerts
-  served from Atlas
-- All 10 endpoints return 200 against your data
-- `GET /api/transactions` paginated, 161 pages at 50 per page
-- Replay queue loaded: 8,041 transactions, 3 alerts
-- Taint conservation holds on the cached path
+- `models.py` no longer calls `_normalise_to_100` — the 0–100 scale bug is
+  genuinely fixed, scores are true 0–1.
+- `mongo_pusher.py` was writing `amount_paise: 0` on every transaction. It read
+  the pre-conversion field name while `run.py` had already converted the JSON to
+  `amount`, so the ledger was effectively empty against live data.
+- Taint conservation was failing by up to **257,214**, not "a few rupees" as I
+  first wrote. `run.py` and `service.py` each converted paise to rupees using a
+  magnitude threshold as a proxy for unit, so one response contained both
+  currencies. Both now convert unconditionally, round rather than truncate, and
+  share one `paise_to_rupees`.
+- Question 3's victim-label mismatch turned out **not** to be a bug. Ring ids come
+  from community discovery order, not from planted ring ids, so the label text is
+  incidental. Tightening the match to `VICTIM_{ring_id}` was tried and left every
+  ring with zero victims. The structural invariant is now asserted in
+  `ml/tests/test_victim_ring_match.py`.
+
+## Still open for Member 3
+
+| | |
+| --- | --- |
+| Ring risk ~0.999 on all three rings | The scale fix did not change the stored values. Is the model genuinely that confident, or did the push predate the fix? |
+| `signals` on 27 of 926 accounts | Understood as deliberate (SHAP above `risk_v2 >= 0.5`). The frontend will render "below the risk threshold" rather than a blank panel |
+| `recruits` empty | F10 fell back to a hand-weighted score. Labelled "risk score" as agreed |
+| PR-AUC 1.0 / ring recall 1.0 | Acknowledged as "too clean" data |
+| **Ring recall is 0.0000** | Found while verifying the fix. Reproduces on unmodified code, so pre-existing. Worth a look |
+| `ml/README.md` missing `brew install libomp` | The only non-Python prerequisite, and it fails late and confusingly |
+| pytest must run from the repo root | From `ml/`, all 8 files fail to collect |
+| 3 scratch files in the repo root | `patch_answers.py`, `patch_gen.py`, `revert_gen.py` |
+
+## What is working, so you know what not to re-check
+
+- 926 accounts, 475 identifiers, 8,041 transactions, 3 rings, 3 alerts
+- All 11 endpoints return 200 against your data
+- `/api/transactions` paginated, 161 pages at 50 per page
+- `/taint` and `/freeze` return `cached: false` — **your service answering live**
+- Taint conservation holds, live and cached, gaps 0–1 rupee
 - `is_fraud` never appears in any response
-- Freeze exclusion works: excluding `ACC0040` drops `pct_stopped` 0.643 → 0.302
-
-Once question 1 is settled I can rebuild the frontend's risk display against the
-right scale, and once 2 is settled the explainability panel has something to
-show.
+- ML suite 33 passed · server suite 117 passed

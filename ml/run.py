@@ -62,8 +62,18 @@ def save_json(data, path):
 
 
 def paise_to_rupees(paise):
-    """Convert integer paise to rupees. Server contract: amounts in rupees."""
-    return max(0, int(paise) // 100)
+    """Convert integer paise to rupees. Server contract: amounts in rupees.
+
+    Rounds to nearest rather than truncating. Truncation lost up to a rupee per
+    field, and because taint conservation (TRD 7.6) is checked by summing the
+    converted account values, those losses accumulated into a visible gap — 6
+    rupees across a ten-account ring, all of it rounding.
+
+    Conservation is why this matters: the invariant is defined on the converted
+    values, so the conversion has to preserve the total, not just each field
+    approximately.
+    """
+    return max(0, round(int(paise) / 100))
 
 
 def haversine_km(lat1, lng1, lat2, lng2):
@@ -223,36 +233,52 @@ def build_geo_predictions(accounts, rings):
 # =========================================================================
 
 def _taint_rupees(taint):
+    """Convert a taint payload from paise to rupees.
+
+    Unconditional, because the source unit is known rather than inferred.
+    taint.py documents its arithmetic as integer paise throughout, and
+    compute_default_taint returns paise for every field it emits.
+
+    This previously converted only values above 100,000, on the theory that
+    larger numbers were "obviously" already in rupees. That turned a unit
+    conversion into a magnitude guess and split a single document across two
+    units: a 17,321-paise victim stayed paise while a 250,000-paise account
+    balance became rupees. Any sum over that document was meaningless, which
+    is what broke TRD 7.6's conservation invariant — the gaps reached 257,214
+    rather than a few rupees of rounding.
+
+    A threshold cannot tell paise from rupees. Know the unit and convert.
+    """
     if not isinstance(taint, dict):
         return taint
     out = dict(taint)
     for fld in ("victim_amount", "lost_to_cash"):
-        if fld in out and out[fld] > 1_000_000:
+        if fld in out:
             out[fld] = paise_to_rupees(out[fld])
     if "accounts" in out:
         conv = []
         for a in out["accounts"]:
             ca = dict(a)
             for fld in ("balance", "tainted", "lien"):
-                if fld in ca and ca[fld] > 100_000:
+                if fld in ca:
                     ca[fld] = paise_to_rupees(ca[fld])
             conv.append(ca)
         out["accounts"] = conv
     if "links" in out:
         out["links"] = [
-            {**lnk, "value": paise_to_rupees(lnk["value"])
-             if lnk.get("value", 0) > 100_000 else lnk.get("value", 0)}
+            {**lnk, "value": paise_to_rupees(lnk.get("value", 0))}
             for lnk in out["links"]
         ]
     return out
 
 
 def _freeze_rupees(freeze):
+    """Convert freeze totals from paise to rupees. Unconditional, as above."""
     if not isinstance(freeze, dict):
         return freeze
     out = dict(freeze)
     for fld in ("at_risk_before", "secured"):
-        if fld in out and out[fld] > 100_000:
+        if fld in out:
             out[fld] = paise_to_rupees(out[fld])
     return out
 
@@ -262,17 +288,17 @@ def convert_rings(rings, acc_by_id):
     for ring in rings:
         rid = ring.get("_id") or ring.get("ring_id")
 
+        # Edges and volume come from rings.py, which accumulates
+        # t["amount_paise"], so both are paise by construction. Converted
+        # unconditionally for the same reason as _taint_rupees: a magnitude
+        # threshold cannot distinguish paise from rupees.
         edges = []
         for e in ring.get("edges", []):
-            amt = e.get("amount", 0)
-            if amt > 100_000:
-                amt = paise_to_rupees(amt)
             edges.append({"from": e["from"], "to": e["to"],
-                          "amount": amt, "count": e.get("count", 1)})
+                          "amount": paise_to_rupees(e.get("amount", 0)),
+                          "count": e.get("count", 1)})
 
-        volume = ring.get("volume", 0)
-        if volume > 10_000_000:
-            volume = paise_to_rupees(volume)
+        volume = paise_to_rupees(ring.get("volume", 0))
 
         dtaint  = _taint_rupees(ring.get("default_taint", {}))
         dfreeze = _freeze_rupees(ring.get("default_freeze", {}))

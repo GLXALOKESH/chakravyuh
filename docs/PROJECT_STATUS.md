@@ -22,8 +22,8 @@ recalled.
 
 | Service | State | Blocker |
 | --- | --- | --- |
-| Server (`server/`) | **Complete.** 15 endpoints, 114 tests, verified live | none |
-| ML pipeline (`ml/`) | **Complete.** 17 modules, 7,521 LOC, 25 tests | none |
+| Server (`server/`) | **Complete.** 15 endpoints, 117 tests, verified live | none |
+| ML pipeline (`ml/`) | **Complete.** 17 modules, 7,521 LOC, 33 tests | none |
 | Frontend (`client/`) | In progress, not ours to assess | — |
 | Integration | **Live.** `/taint` and `/mincut` answered by real Python | none |
 
@@ -36,7 +36,7 @@ server — is closed and verified.
 
 ```
 typecheck      clean
-tests          114 checks, 10 files, 0 skipped
+tests          117 checks, 11 files, 0 skipped
 endpoints      15 registered
 models         7 Mongoose schemas
 repositories   9
@@ -111,7 +111,7 @@ Two real bugs were invisible until the database-backed tests could actually run:
 17 modules · 8 test files · 7,521 LOC
 syntax          all modules parse
 third-party     10 deps, all installed in ml/.venv (38 packages)
-tests           25 passed
+tests           33 passed
 service         running on :8000
 ```
 
@@ -181,6 +181,43 @@ TXN000276  amount=16835  channel=ATM  ts=Date object
 
 Ordered by how much they hurt the demo.
 
+### Fixed 3 Oct 2026 — in the ML code
+
+Three bugs, all found by measurement rather than reading:
+
+**1. `amount_paise` was the wrong key for the Mongo push.** `mongo_pusher.py`
+read `amount_paise` while the on-disk JSON had already been converted to `amount`
+by `run.py`. Every transaction pushed to Atlas was stored with
+`amount_paise: 0`, so `/api/transactions` returned rows the schema rejected and
+the ledger was effectively empty against live data. Fixed by having the pusher
+use the same field the exporter writes.
+
+**2. Taint conservation failed by up to 257,214.** TRD §7.6's stated main
+invariant — taint summed across all accounts including `CASH` must equal the
+victim amount — was violated because `run.py` and `service.py` each converted
+paise to rupees using a *magnitude threshold* rather than a known unit:
+
+```python
+int(v) // 100 if int(v) > 10_000 else int(v)   # service.py
+int(v) // 100 if int(v) > 100_000 else int(v)  # run.py
+```
+
+`trace()` is unconditionally paise, so any value at or below the threshold was
+emitted as paise while larger values were divided — one response in two
+currencies. Both now convert unconditionally and round rather than truncate, and
+both call a single shared `paise_to_rupees` so the batch path and the live
+service cannot drift apart again. Gaps are now 0–1 rupee.
+
+**3. Victim deposit labels were shifted.** Each ring's `victim_txn_ids[0]`
+carried a sender naming a different ring (`VICTIM_RING03` on RING01). The
+generator is correct; the labels are incidental because `rings.py` assigns ring
+ids by community discovery order, not by planted ring. **Not fixed and not a
+bug** — tightening the match to `VICTIM_{ring_id}` was tried and left every ring
+with zero victims. The invariant that matters is structural and is now asserted
+in `ml/tests/test_victim_ring_match.py`.
+
+Regression tests added: `test_victim_ring_match.py` and `test_taint_conservation.py`.
+
 ### 1. Ring risk is ~0.999 on all three rings
 
 ```
@@ -213,49 +250,13 @@ frontend will do exactly that.
 
 The panel renders empty until the predictor runs.
 
-### 4. Taint conservation is off by a few rupees
-
-TRD §7.6's stated main unit test: taint summed across all accounts including
-`CASH` should equal the victim amount.
-
-```
-RING01   victim    17,321   summed    17,349   gap  +28  (0.16%)
-RING02   victim   771,670   summed   771,666   gap   -4
-RING03   victim 1,005,849   summed 1,005,843   gap   -6
-```
-
-Small and in both directions, which points at rounding — TRD §7.6 says lien is
-`min(taint[a], bal[a])` rounded to the rupee. The RING01 gap of 28 across 10
-accounts averages 2.8 each, larger than pure rounding explains. Worth the ML side
-checking whether `trace()` rounds per-account and the total separately.
-
-The dashboard shows a conservation line, so a visible gap undermines the number
-beside it.
-
-### 5. Victim transaction labels are shifted by one
-
-The `from` label on each ring's victim deposit names the wrong ring:
-
-```
-RING01  victim=TXN002276  from=VICTIM_RING03   ← should be VICTIM_RING01
-RING02  victim=TXN003415  from=VICTIM_RING02   ok
-RING03  victim=TXN002188  from=VICTIM_RING01   ← should be VICTIM_RING03
-```
-
-The attribution is correct — each victim transaction genuinely lands in a member
-of its own ring, which is why taint still traces correctly. Only the label is
-off by one position, so it looks like a ring-construction ordering bug rather
-than a data-model error.
-
-ML-side. Found while verifying the freeze endpoint end to end.
-
-### 6. Scratch files in the repo root
+### 4. Scratch files in the repo root
 
 `patch_answers.py`, `patch_gen.py`, `revert_gen.py`. `patch_answers.py` edits
 `ml/BACKEND_ANSWERS.md` in place, which is how the answer text changed after the
 code it described. Not ours to remove, but confusing to anyone reading the repo.
 
-### 7. `generate.py` emits `amount_paise` on purpose
+### 5. `generate.py` emits `amount_paise` on purpose
 
 25 occurrences. The design is that the internal pipeline needs paise for taint
 arithmetic, and `run.py` converts to rupees on export.

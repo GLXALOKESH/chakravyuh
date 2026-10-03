@@ -48,7 +48,7 @@ in `ml/README.md` — anyone else on macOS hits the identical wall.
 
 ```
 ml/.venv/bin/python -m pytest ml/tests/ -q
-25 passed, 6 warnings in 2.27s
+33 passed, 6 warnings in 2.38s
 ```
 
 All 15 modules import cleanly:
@@ -69,12 +69,12 @@ Two notes on running them:
   `ModuleNotFoundError: No module named 'ml'`. From the root: `pytest ml/tests/`.
 - `use_label_encoder` warnings are benign deprecation noise from xgboost 3.4.
 
-### Server — 114/114 passing
+### Server — 117/117 passing
 
 ```
 pnpm test
 Test Files  10 passed (10)
-Tests       114 passed (114)
+Tests       117 passed (117)
 exit        0
 ```
 
@@ -102,28 +102,57 @@ only ever seen fixture data and directly-pushed data.
 
 ---
 
-## Issue 1: taint conservation fails by a few rupees
+## Issue 1: taint conservation failed — FIXED 3 Oct 2026
 
 **TRD §7.6's stated main unit test.** The invariant is that taint summed across
 all accounts including `CASH` equals the victim amount.
 
+What this report originally recorded as "off by a few rupees, probably
+rounding" was badly wrong. Once the ML code was readable, the real gap was
+**257,214**, and the cause was not rounding at all.
+
+### Root cause: magnitude used as a proxy for unit
+
+`run.py` and `service.py` each converted paise to rupees with a threshold:
+
+```python
+int(v) // 100 if int(v) > 10_000 else int(v)    # service.py
+int(v) // 100 if int(v) > 100_000 else int(v)   # run.py
 ```
-RING01   victim:    17,321   summed:    17,349   gap:  +28   (0.16%)
-RING02   victim:   771,670   summed:   771,666   gap:   -4   (-0.00%)
-RING03   victim: 1,005,849   summed: 1,005,843   gap:   -6   (-0.00%)
+
+`trace()` is unconditionally paise — `taint.py` documents its arithmetic as
+integer paise throughout. So any value at or below the threshold was emitted as
+paise while larger values were divided by 100. **One response in two
+currencies.** Summing the accounts was therefore meaningless.
+
+```
+RING01  victim=  17,321   summed=  274,535   gap +257,214
+RING02  victim= 771,670   summed=  771,667   gap      -3
+RING03  victim=1,005,849  summed=1,005,843   gap      -6
 ```
 
-Small and in both directions, which points at rounding rather than a logic error.
-TRD §7.6 says lien is `min(taint[a], bal[a])` **rounded to the rupee** — so the
-sum of rounded values will drift from the rounded total by up to half a rupee per
-account.
+The two small gaps were the truncation residue of the same bug — `// 100` loses
+up to a rupee per field, and conservation is checked on the converted values.
 
-The RING01 gap of 28 over 10 accounts averages 2.8 each, which is larger than
-pure rounding explains. Worth the ML side checking whether `trace()` rounds
-per-account and the total separately.
+### Fix
 
-Impact: small, but the dashboard shows a conservation line, so a visible gap
-undermines the number next to it. Not ours to fix.
+Conversion is now unconditional (the unit is known, not guessed), rounds rather
+than truncates, and both call sites share one `paise_to_rupees` so the batch path
+and the live service cannot drift apart again.
+
+```
+RING01  victim=1,005,849  held=1,005,849  gap 0  OK
+RING02  victim=    17,321  held=    17,322  gap 1  OK
+RING03  victim=  771,670  held=  771,671  gap 1  OK
+```
+
+Asserted by `ml/tests/test_taint_conservation.py`.
+
+### Issue 2: `amount_paise: 0` in every pushed transaction
+
+Also fixed. `mongo_pusher.py` read `amount_paise` while `run.py` had already
+converted the JSON to `amount`, so Atlas stored `amount_paise: 0` on every
+transaction and `/api/transactions` returned rows the schema rejected.
 
 ## Issue 2: ring risk ~0.999 across all three rings
 
@@ -240,9 +269,17 @@ storage. Both were fine throughout this run.
 
 ## What still needs doing
 
+Fixed since this report was written:
+
+| Was | State |
+| --- | --- |
+| Taint conservation off by up to 257,214 | **Fixed** — unit conversion was magnitude-guessed |
+| `amount_paise: 0` on every pushed transaction | **Fixed** — pusher read the pre-conversion field name |
+
+Still open:
+
 | | Owner |
 | --- | --- |
-| Taint conservation off by ±28 (RING01) | ML |
 | Ring risk ~0.999 on all three rings | ML |
 | `signals` populated on 27 of 926 accounts | ML — deliberate, frontend should explain |
 | `recruits` collection still empty | ML — F10 fell back to hand-weighted |
@@ -262,16 +299,23 @@ python3 -m venv ml/.venv
 ml/.venv/bin/pip install -r ml/requirements.txt
 brew install libomp                     # xgboost's native dep, macOS only
 
+# database — replica set required for the seeder's transaction
+brew tap mongodb/brew && brew trust mongodb/brew
+brew install mongodb-community@9.0
+cd server && nohup mongod --config .mongorc-local &
+mongosh --eval 'rs.initiate({_id:"rs0",members:[{_id:0,host:"127.0.0.1:27017"}]})'
+
 # ML
 ml/.venv/bin/python ml/service.py       # :8000
-ml/.venv/bin/python -m pytest ml/tests/ -q
+ml/.venv/bin/python ml/run.py           # generate + pipeline + push
+ml/.venv/bin/python -m pytest ml/tests/ -q      # from the repo root
 
 # server
 cd server
 pnpm install
 pnpm run db:indexes                     # only after a fresh ML push
 pnpm start                              # :4000
-pnpm test                               # 114 checks
+pnpm test                               # 117 checks
 pnpm run loadtest                       # 65s, four phases plus recovery
 
 # confirm the integration

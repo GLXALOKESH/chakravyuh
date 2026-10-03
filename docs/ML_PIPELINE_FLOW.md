@@ -66,14 +66,20 @@ than `<repo>/data/<profile>/`.
 
 ### Open
 
-**No dependencies installed.** `fastapi`, `uvicorn`, `pydantic`, `numpy`,
-`pandas`, `sklearn`, `xgboost`, `shap`, `networkx`, `pymongo` — none present on
-the backend machine. So `ml/service.py` has never started there, and the live
-`/taint` and `/mincut` calls remain unverified. This is the last untested seam in
-the project.
+**Dependencies are installed** — `ml/.venv/`, 38 packages from a reconstructed
+`ml/requirements.txt`. `ml/service.py` runs and the server gets `cached: false`,
+so the live `/taint` and `/mincut` calls are verified rather than assumed.
+
+The one prerequisite that is not a Python package is `brew install libomp` for
+xgboost. Because the import is guarded by `try/except ImportError`, `models.py`
+imports fine without it and fails later at `XGBClassifier.fit()`.
 
 **Ring risk reads ~0.999 on all three rings.** The scale bug is fixed but the
 stored values are unchanged, so three bars render at 99.9%.
+
+**Ring recall is 0.0000.** Found while verifying a conservation fix. It
+reproduces on unmodified code, so pre-existing rather than a regression, but it
+is the most consequential number in the report being wrong.
 
 **`recruits` is empty.** F10 fell back to a hand-weighted score; agreed to label
 it "risk score" rather than "probability".

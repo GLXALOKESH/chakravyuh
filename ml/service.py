@@ -18,6 +18,16 @@ ML_DIR = Path(__file__).resolve().parent
 if str(ML_DIR) not in sys.path:
     sys.path.insert(0, str(ML_DIR))
 
+# Shared with run.py so the batch export and this live service cannot convert
+# paise to rupees differently. They previously each had their own inline copy,
+# and the two disagreed on the threshold, which is how the same ring could pass
+# conservation as a cached default and fail it live.
+try:
+    from run import paise_to_rupees
+except ImportError:  # pragma: no cover - only when run.py is unavailable
+    def paise_to_rupees(paise):
+        return max(0, round(int(paise) / 100))
+
 try:
     from fastapi import FastAPI, HTTPException
     from fastapi.middleware.cors import CORSMiddleware
@@ -133,9 +143,19 @@ if FASTAPI_AVAILABLE:
             bal, taint_map, flows, victim_amt = trace(
                 normalised_txns, open_bal, victim_txn, req.as_of)
 
-            # Build TaintPayload — convert paise -> rupees for wire format
-            def p2r(v):
-                return max(0, int(v) // 100) if int(v) > 10_000 else int(v)
+            # Build TaintPayload — convert paise -> rupees for wire format.
+            #
+            # Unconditional, and rounding rather than truncating. This was
+            # previously `int(v) // 100 if int(v) > 10_000 else int(v)`, which
+            # used magnitude as a proxy for unit: trace() is unconditionally
+            # paise, so any value at or below the threshold was emitted as
+            # paise while larger values were divided. That split one response
+            # across two currencies and broke TRD 7.6 conservation, with gaps
+            # reaching 28 rupees on a single ring.
+            #
+            # Shares run.paise_to_rupees so the batch path in run.py and this
+            # live path cannot drift apart again.
+            p2r = paise_to_rupees
 
             account_rows = []
             for aid in ring_members:
@@ -209,9 +229,9 @@ if FASTAPI_AVAILABLE:
                 as_of=req.as_of,
             )
 
-            # Convert paise amounts to rupees in the response
-            def p2r(v):
-                return max(0, int(v) // 100) if int(v) > 10_000 else int(v)
+            # Convert paise amounts to rupees in the response. Same helper as the taint
+            # path above, for the same reason.
+            p2r = paise_to_rupees
 
             return {
                 "freeze":         rec.get("freeze", []),

@@ -119,9 +119,9 @@ explains the design; `docs/API_FOR_FRONTEND.md` is the endpoint reference;
 
 As of 3 Oct 2026:
 
-- Server: complete. 15 endpoints, 114 tests, passing against both Atlas and a
+- Server: complete. 15 endpoints, 117 tests, passing against both Atlas and a
   local MongoDB replica set.
-- ML pipeline: 17 modules, ~7,500 lines, 25 tests passing. The venv is
+- ML pipeline: 17 modules, ~7,500 lines, 33 tests passing. The venv is
   `ml/.venv/` with 38 packages installed from `ml/requirements.txt`.
 - **xgboost needs `brew install libomp`** — a system library, not a pip package.
   Without it `ml/models.py` imports fine and then fails at `XGBClassifier.fit()`,
@@ -133,9 +133,24 @@ As of 3 Oct 2026:
   seeding would truncate their collections and load fixtures over the top. After
   a push, run `pnpm run db:indexes` only.
 - Run ML tests from the **repo root**, not `ml/` — they import `from ml.x`.
-- `ml-fallback.test.ts` and `pipeline.test.ts` need the ML service **stopped**;
-  they assert the degraded path. Running them with `service.py` up gives 15
-  failures that are not defects.
+- `ml-fallback.test.ts`, `pipeline.test.ts` and `freeze-edge.test.ts` need the ML
+  service **stopped**; they assert the degraded path. The suite seeds
+  `chakravyuh_test` from fixtures while a running service loads the pipeline's
+  `data/demo`, and the two datasets share ring ids but nothing else.
+
+## Unit conversions must not guess
+
+Fixed 3 Oct 2026 in `ml/run.py` and `ml/service.py`. Both converted paise to
+rupees using a magnitude threshold (`int(v) // 100 if int(v) > N else int(v)`),
+which split a single response across two currencies and broke TRD §7.6 taint
+conservation by up to 257,214.
+
+`trace()` is unconditionally paise, so the unit is known and the conversion must
+be unconditional. Both sites now share one `paise_to_rupees` that also rounds
+rather than truncates. **Never reintroduce a threshold on a unit conversion** —
+assert the unit is known and convert everything.
+
+`ml/tests/test_taint_conservation.py` guards this.
 
 Open issues are listed in `docs/PROJECT_STATUS.md` § Open issues. Most are on the
 ML side — report them, do not act on them.

@@ -21,7 +21,7 @@ Working and verified against **MongoDB Atlas** (`hackathon.gqtv7yg.mongodb.net`)
 
 ```
 pnpm typecheck   clean
-pnpm test        114 passed, 0 failed, 0 skipped
+pnpm test        117 passed, 0 failed, 0 skipped
 ```
 
 Serving the ML team's pushed dataset: 926 accounts, 8,041 transactions, 3 rings,
@@ -34,8 +34,8 @@ Stack: Express 4, TypeScript (strict), Mongoose 9, class-validator, Socket.IO,
 
 | Area | State |
 | --- | --- |
-| Server (`server/`) | Complete. 15 endpoints, 114 tests, verified live against Atlas |
-| ML pipeline (`ml/`) | Written. 17 modules, ~7,500 lines. 12 deps not installed, so untested from here |
+| Server (`server/`) | Complete. 15 endpoints, 117 tests, verified live against Atlas |
+| ML pipeline (`ml/`) | Complete. 17 modules, ~7,500 lines, 33 tests passing |
 | Frontend (`client/`) | In progress — Next.js, graph components landed on `main` |
 
 ---
@@ -276,11 +276,15 @@ would overwrite their data with fixtures.
 
 ### Also outstanding
 
-**The live Python path has still never run.** `ml/service.py` defines `/health`,
-`/taint`, `/mincut`, `/pipeline/run` and `/ouroboros/run`, so the route names
-line up. But `fastapi`, `uvicorn` and 10 other dependencies are not installed on
-the backend machine, so the service has never started and `/taint` and `/freeze`
-have only ever taken the cached-fallback path.
+**The live Python path now works.** `ml/service.py` defines `/health`, `/taint`,
+`/mincut`, `/pipeline/run` and `/ouroboros/run`, and the route names line up. The
+dependencies are installed in `ml/.venv/` (38 packages) and the service has been
+run against this server — `/taint` and `/freeze` return `cached: false`, meaning
+Python is answering rather than a stored default.
+
+One prerequisite is not a Python package: `brew install libomp`. Without it
+`ml/models.py` imports fine and then fails at `XGBClassifier.fit()`, because the
+import is guarded by `try/except ImportError`.
 
 **`recruits` is empty.** The ML side confirmed F10 fell back to a hand-weighted
 score rather than a true probability. Per TRD §7.8 the frontend must label it
@@ -308,8 +312,18 @@ pnpm start                # http://localhost:4000
 No schema step. Mongoose needs no generated client and MongoDB has no
 migrations.
 
-**The ML team pushes directly to Atlas**, so there is normally nothing to seed —
-the server reads whatever is in the database. After they push a new dataset:
+**A replica set is required.** The seeder wraps its load in a transaction and
+MongoDB only permits transactions on a replica set. For a local database:
+
+```bash
+brew tap mongodb/brew && brew trust mongodb/brew
+brew install mongodb-community@9.0
+nohup mongod --config .mongorc-local &
+mongosh --eval 'rs.initiate({_id:"rs0",members:[{_id:0,host:"127.0.0.1:27017"}]})'
+```
+
+**The ML team pushes directly to the database**, so there is normally nothing to
+seed — the server reads whatever is in it. After they push a new dataset:
 
 ```bash
 pnpm run db:indexes        # a direct push skips index creation
@@ -335,7 +349,7 @@ ML side running.
 | `pnpm run typecheck` | Typecheck everything including tests |
 | `pnpm run db:indexes` | Create declared indexes. Run after an ML push |
 | `pnpm run seed` | Load `data/<profile>/`. File-based path only |
-| `pnpm test` | 114 checks; starts its own mongod if needed |
+| `pnpm test` | 117 checks; starts its own mongod if needed |
 
 ---
 
