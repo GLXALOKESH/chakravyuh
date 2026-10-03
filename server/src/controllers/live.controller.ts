@@ -3,6 +3,7 @@
  *
  *   POST /stream/start          a new run: { seed?, rate?, external? }
  *   POST /stream/stop
+ *   POST /stream/clear         stop the run if it is going and throw its data away
  *   GET  /stream/state
  *   POST /stream/ingest         generator lines, for a generator the server did not start
  *
@@ -68,6 +69,12 @@ export const liveRouter = (stream: StreamService): Router => {
     '/stream/stop',
     asyncHandler(async (_req: Request, res: Response) => {
       res.json(stream.stop());
+    }),
+  );
+  router.post(
+    '/stream/clear',
+    asyncHandler(async (_req: Request, res: Response) => {
+      res.json(stream.clear());
     }),
   );
   router.get(

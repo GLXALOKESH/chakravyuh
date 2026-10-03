@@ -108,6 +108,7 @@ class TestPredictorOnTheStream(unittest.TestCase):
         # Rings whose victim deposit came at least a day before the run ended,
         # so their cascades had time to play out.
         settled = (parse_ts(lines[-2]["ts"]) - timedelta(days=1)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        cls.all_truth = {line["ring"]: set(line["member_ids"]) for line in lines if line["type"] == "truth"}
         cls.truth = {
             line["ring"]: set(line["member_ids"])
             for line in lines
@@ -150,7 +151,8 @@ class TestPredictorOnTheStream(unittest.TestCase):
         self.assertEqual(set(ids), set(self.rings))
 
     def test_few_rings_that_were_never_planted(self):
-        planted = list(self.truth.values())
+        # Against every planted ring, including those planted in the last day.
+        planted = list(self.all_truth.values())
         false = [rid for rid, r in self.rings.items() if max((len(r & m) / len(r | m) for m in planted), default=0) < 0.5]
         self.assertLessEqual(len(false), max(2, len(self.rings) // 3), false)
 

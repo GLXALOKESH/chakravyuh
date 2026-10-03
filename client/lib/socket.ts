@@ -36,6 +36,7 @@ export interface ClientEvents {
   "replay:reset": undefined;
   "stream:start": { seed?: number; rate: number };
   "stream:stop": undefined;
+  "stream:clear": undefined;
 }
 
 export type Dispatch = <K extends keyof ServerEvents>(event: K, payload: ServerEvents[K]) => void;
